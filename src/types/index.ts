@@ -71,10 +71,15 @@ export interface PlannedMeal {
   temporaryIngredients: TemporaryIngredient[]
 }
 
+export interface MealAssignment {
+  mealId: string
+  portions: number   // portions cooked at this specific slot
+}
+
 export interface ScheduleSlot {
   date: string       // "YYYY-MM-DD"
   type: MealType
-  assignedMealIds: string[]
+  assignments: MealAssignment[]   // replaces old assignedMealIds
   portionsNeeded: number
   event: string
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType } from '../types'
+import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType, MealAssignment } from '../types'
 import { currentWeekId, createEmptyWeek, applyWeekWindow } from '../utils/weekUtils'
 
 interface WeekStore {
@@ -27,7 +27,7 @@ interface WeekStore {
   deleteMeal: (id: string) => void
 
   // Schedule assignment
-  assignMeal: (date: string, type: MealType, mealId: string) => void
+  assignMeal: (date: string, type: MealType, mealId: string, portions: number) => void
   unassignMeal: (date: string, type: MealType, mealId: string) => void
 
   // Shopping list
@@ -120,24 +120,23 @@ export const useWeekStore = create<WeekStore>((set, get) => {
         meals: p.meals.filter((m) => m.id !== id),
         schedule: p.schedule.map((sl) => ({
           ...sl,
-          assignedMealIds: sl.assignedMealIds.filter((mid) => mid !== id),
+          assignments: sl.assignments.filter((a: MealAssignment) => a.mealId !== id),
         })),
       })),
 
-    assignMeal: (date, type, mealId) =>
+    assignMeal: (date, type, mealId, portions) =>
       mutateActive((p) =>
-        mutateSlot(p, date, type, (sl) =>
-          sl.assignedMealIds.includes(mealId)
-            ? sl
-            : { ...sl, assignedMealIds: [...sl.assignedMealIds, mealId] },
-        ),
+        mutateSlot(p, date, type, (sl) => {
+          if (sl.assignments.some((a: MealAssignment) => a.mealId === mealId)) return sl
+          return { ...sl, assignments: [...sl.assignments, { mealId, portions }] }
+        }),
       ),
 
     unassignMeal: (date, type, mealId) =>
       mutateActive((p) =>
         mutateSlot(p, date, type, (sl) => ({
           ...sl,
-          assignedMealIds: sl.assignedMealIds.filter((id) => id !== mealId),
+          assignments: sl.assignments.filter((a: MealAssignment) => a.mealId !== mealId),
         })),
       ),
 

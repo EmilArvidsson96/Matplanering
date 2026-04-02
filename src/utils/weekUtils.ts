@@ -82,8 +82,8 @@ export function createEmptyWeek(weekId: string, householdSize: number, opts: Wee
     const isLast  = date === endDate
     const hasLunch  = !isFirst || startMeal === 'lunch'
     const hasDinner = !isLast  || endMeal   === 'middag'
-    if (hasLunch)  schedule.push({ date, type: 'lunch',  assignedMealIds: [], portionsNeeded: householdSize, event: '' })
-    if (hasDinner) schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
+    if (hasLunch)  schedule.push({ date, type: 'lunch',  assignments: [], portionsNeeded: householdSize, event: '' })
+    if (hasDinner) schedule.push({ date, type: 'middag', assignments: [], portionsNeeded: householdSize, event: '' })
     current = addDays(current, 1)
   }
 
@@ -151,7 +151,7 @@ export function applyWeekWindow(
   const oldByKey  = new Map(week.schedule.map(s => [`${s.date}-${s.type}`, s]))
   const merged    = fresh.schedule.map(slot => {
     const old = oldByKey.get(`${slot.date}-${slot.type}`)
-    return old ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignedMealIds: old.assignedMealIds } : slot
+    return old ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignments: old.assignments } : slot
   })
   return { ...week, startDate, startMealType: startMeal, endDate, endMealType: endMeal, schedule: merged }
 }
@@ -172,8 +172,6 @@ export function removLastDayFromSchedule(week: WeekPlan): WeekPlan {
 
 /** Running portion balance after each schedule slot. */
 export function computeBalances(week: WeekPlan): Map<string, number> {
-  const portionsByMeal = new Map(week.meals.map(m => [m.id, m.portions]))
-
   let balance = week.meals
     .filter(m => m.isRemainder)
     .reduce((s, m) => s + m.portions, 0)
@@ -182,10 +180,10 @@ export function computeBalances(week: WeekPlan): Map<string, number> {
 
   for (const slot of week.schedule) {
     const key = slotKey(slot)
-    for (const mealId of slot.assignedMealIds) {
+    for (const { mealId, portions } of slot.assignments) {
       const meal = week.meals.find(m => m.id === mealId)
       if (meal && !meal.isRemainder) {
-        balance += portionsByMeal.get(mealId) ?? 0
+        balance += portions   // only the portions cooked at this specific slot
       }
     }
     balance -= slot.portionsNeeded
@@ -253,18 +251,32 @@ export const MONTH_NAMES = [
  * or old 7-day Sat–Fri window). Adds missing fields and regenerates the schedule if needed.
  */
 export function migrateWeek(plan: WeekPlan): WeekPlan {
-  // Fill missing meal-type fields (old saves won't have them)
-  const startMeal: 'lunch' | 'middag' = (plan.startMealType as 'lunch' | 'middag' | undefined) ?? 'middag'
-  const endMeal:   'lunch' | 'middag' = (plan.endMealType   as 'lunch' | 'middag' | undefined) ?? 'lunch'
+  // 1. Convert old assignedMealIds → assignments
+  const migratedSchedule = plan.schedule.map(slot => {
+    const s = slot as ScheduleSlot & { assignedMealIds?: string[] }
+    if (s.assignedMealIds && !s.assignments?.length) {
+      const assignments = s.assignedMealIds.map(mealId => ({
+        mealId,
+        portions: plan.meals.find(m => m.id === mealId)?.portions ?? 1,
+      }))
+      const { assignedMealIds: _dropped, ...rest } = s as typeof s & Record<string, unknown>
+      return { ...rest, assignments } as ScheduleSlot
+    }
+    return { ...slot, assignments: slot.assignments ?? [] }
+  })
+  const migrated = { ...plan, schedule: migratedSchedule }
 
-  const expectedEnd = format(addDays(parseISO(plan.startDate), 7), 'yyyy-MM-dd')
-  if (plan.endDate === expectedEnd && plan.startMealType && plan.endMealType) return plan
+  // 2. Fill missing meal-type fields
+  const startMeal: 'lunch' | 'middag' = (migrated.startMealType as 'lunch' | 'middag' | undefined) ?? 'middag'
+  const endMeal:   'lunch' | 'middag' = (migrated.endMealType   as 'lunch' | 'middag' | undefined) ?? 'lunch'
+  const expectedEnd = format(addDays(parseISO(migrated.startDate), 7), 'yyyy-MM-dd')
+
+  if (migrated.endDate === expectedEnd && migrated.startMealType && migrated.endMealType) return migrated
 
   return applyWeekWindow(
-    { ...plan, startMealType: startMeal, endMealType: endMeal },
-    plan.startDate,
-    startMeal,
-    plan.endDate === expectedEnd ? plan.endDate : expectedEnd,
+    { ...migrated, startMealType: startMeal, endMealType: endMeal },
+    migrated.startDate, startMeal,
+    migrated.endDate === expectedEnd ? migrated.endDate : expectedEnd,
     endMeal,
   )
 }

@@ -62,7 +62,7 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
             <div className="mt-2 space-y-0.5">
               {week.schedule.map(s => (
                 <div key={`${s.date}-${s.type}`} className="text-gray-400">
-                  {s.date} {s.type.padEnd(6)} port:{s.portionsNeeded} assigned:{s.assignedMealIds.length}
+                  {s.date} {s.type.padEnd(6)} port:{s.portionsNeeded} assigned:{s.assignments.length}
                 </div>
               ))}
             </div>

@@ -20,16 +20,6 @@ export default function PortionsStep() {
     store.updateSlot(date, type, { portionsNeeded: Math.max(0, value) })
   }
 
-  function updateEvent(date: string, value: string) {
-    week.schedule
-      .filter(s => s.date === date)
-      .forEach(s => store.updateSlot(date, s.type, { event: value }))
-  }
-
-  function eventForDate(date: string): string {
-    return week.schedule.find(s => s.date === date)?.event ?? ''
-  }
-
   function slotPortions(date: string, type: MealType): number {
     return week.schedule.find(s => s.date === date && s.type === type)?.portionsNeeded ?? week.householdSize
   }
@@ -94,9 +84,9 @@ export default function PortionsStep() {
         </div>
       </section>
 
-      {/* Per-day overrides */}
+      {/* Per-day portion overrides */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
-        <h2 className="font-semibold text-gray-700 mb-4">Portioner per dag &amp; händelser</h2>
+        <h2 className="font-semibold text-gray-700 mb-4">Portioner per dag</h2>
         <div className="space-y-3">
           {dates.map((date) => (
             <div key={date} className="border border-gray-100 rounded-xl p-3 flex flex-wrap items-center gap-3">
@@ -105,7 +95,6 @@ export default function PortionsStep() {
                   {formatDayLabel(date)}
                 </span>
               </div>
-
               <div className="flex flex-wrap gap-3 flex-1">
                 {hasSlot(date, 'lunch') && (
                   <PortionPicker
@@ -122,14 +111,6 @@ export default function PortionsStep() {
                   />
                 )}
               </div>
-
-              <input
-                type="text"
-                placeholder="Händelse…"
-                value={eventForDate(date)}
-                onChange={e => updateEvent(date, e.target.value)}
-                className="flex-1 min-w-[140px] text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-300"
-              />
             </div>
           ))}
         </div>
