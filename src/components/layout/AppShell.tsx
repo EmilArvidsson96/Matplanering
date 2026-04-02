@@ -2,13 +2,15 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
-import type { SaveStatus } from '../../hooks/useAutoSave'
+import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 import type { NlUser } from '../../hooks/useNetlifyIdentity'
 
 interface Props {
   user: NlUser
   logout: () => void
   saveStatus: SaveStatus
+  saveError: SaveError
+  onRetrySave: () => void
 }
 
 const NAV_ITEMS = [
@@ -40,7 +42,7 @@ function NavItem({ to, label, icon }: { to: string; label: string; icon: string 
   )
 }
 
-export default function AppShell({ user, logout, saveStatus }: Props) {
+export default function AppShell({ user, logout, saveStatus, saveError, onRetrySave }: Props) {
   const isDesktop = useIsDesktop()
 
   if (isDesktop) {
@@ -55,7 +57,7 @@ export default function AppShell({ user, logout, saveStatus }: Props) {
             <NavItem key={item.to} {...item} />
           ))}
           <div className="mt-auto flex flex-col gap-2 px-3">
-            <SaveIndicator status={saveStatus} />
+            <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
             <button
               onClick={logout}
               className="text-xs text-gray-400 hover:text-gray-600 text-left"
@@ -85,7 +87,7 @@ export default function AppShell({ user, logout, saveStatus }: Props) {
       {/* Mobile top bar */}
       <header className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between">
         <WeekNavigator />
-        <SaveIndicator status={saveStatus} />
+        <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
       </header>
 
       {/* Scrollable content */}

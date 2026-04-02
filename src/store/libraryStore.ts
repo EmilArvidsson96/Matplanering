@@ -7,7 +7,8 @@ interface LibraryStore {
   sha: string | undefined
   isDirty: boolean
   load: (dishes: Dish[], sha: string | undefined) => void
-  addDish: (dish: Omit<Dish, 'id' | 'cookingHistory'>) => void
+  seed: (dishes: Dish[]) => void
+  addDish: (dish: Omit<Dish, 'id' | 'cookingHistory'>) => string
   updateDish: (id: string, patch: Partial<Dish>) => void
   deleteDish: (id: string) => void
   markClean: (sha: string | undefined) => void
@@ -20,14 +21,16 @@ export const useLibraryStore = create<LibraryStore>((set) => ({
 
   load: (dishes, sha) => set({ dishes, sha, isDirty: false }),
 
-  addDish: (dish) =>
+  seed: (dishes) => set({ dishes, sha: undefined, isDirty: true }),
+
+  addDish: (dish) => {
+    const id = uuid()
     set((s) => ({
-      dishes: [
-        ...s.dishes,
-        { ...dish, id: uuid(), cookingHistory: [] },
-      ],
+      dishes: [...s.dishes, { ...dish, id, cookingHistory: [] }],
       isDirty: true,
-    })),
+    }))
+    return id
+  },
 
   updateDish: (id, patch) =>
     set((s) => ({

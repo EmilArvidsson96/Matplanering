@@ -6,11 +6,13 @@ import { useSettingsStore } from '../store/settingsStore'
 import type { AppSettings, LibraryData, WeekPlan } from '../types'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+export type SaveError = string | null
 
 const DEBOUNCE_MS = 5000
 
 export function useAutoSave(getToken: () => Promise<string | null>) {
-  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [status, setStatus]   = useState<SaveStatus>('idle')
+  const [saveError, setSaveError] = useState<SaveError>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
   const weekStore     = useWeekStore()
@@ -19,8 +21,8 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
 
   const save = useCallback(async () => {
     const token = await getToken()
-    if (!token) return
-    setAuthToken(token)
+    // In dev mode token is null but we call GitHub directly — that's fine
+    if (token) setAuthToken(token)
 
     setStatus('saving')
     try {
@@ -58,9 +60,11 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
       }
 
       setStatus('saved')
+      setSaveError(null)
     } catch (e) {
       console.error('AutoSave failed', e)
       setStatus('error')
+      setSaveError(e instanceof Error ? e.message : String(e))
     }
   }, [weekStore, libraryStore, settingsStore, getToken])
 
@@ -74,14 +78,13 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
     return () => clearTimeout(timerRef.current)
   }, [isDirty, save])
 
-  return { status, saveNow: save }
+  return { status, saveError, saveNow: save }
 }
 
 /** Load initial data from GitHub on app startup. */
 export async function loadInitialData(getToken: () => Promise<string | null>) {
   const token = await getToken()
-  if (!token) return
-  setAuthToken(token)
+  if (token) setAuthToken(token)
 
   const weekStore     = useWeekStore.getState()
   const libraryStore  = useLibraryStore.getState()
@@ -97,12 +100,17 @@ export async function loadInitialData(getToken: () => Promise<string | null>) {
   const libFile = await getFile('library.json')
   if (libFile) {
     const data = JSON.parse(libFile.content) as LibraryData
-    libraryStore.load(data.dishes, libFile.sha)
+    if (data.dishes && data.dishes.length > 0) {
+      libraryStore.load(data.dishes, libFile.sha)
+    } else {
+      // File exists but is empty — seed and save
+      const { INITIAL_DISHES } = await import('../data/library')
+      libraryStore.seed(INITIAL_DISHES)
+    }
   } else {
-    // First run: seed with initial library
+    // File doesn't exist yet — seed and save
     const { INITIAL_DISHES } = await import('../data/library')
-    libraryStore.load(INITIAL_DISHES, undefined)
-    libraryStore['isDirty'] = true  // trigger first save
+    libraryStore.seed(INITIAL_DISHES)
   }
 
   // Load active week

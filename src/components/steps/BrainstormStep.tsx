@@ -1,20 +1,41 @@
 import { useState } from 'react'
+import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
+import { useLibraryStore } from '../../store/libraryStore'
 import {
   totalPlannedPortions,
   totalNeededPortions,
   remainderPortions,
 } from '../../utils/weekUtils'
 import DishPicker from './DishPicker'
-import type { PlannedMeal, Dish } from '../../types'
+import DishEditor from '../library/DishEditor'
+import type { Dish, PlannedMeal, TemporaryIngredient, ShoppingCategory } from '../../types'
+
+const SHOPPING_CATS: ShoppingCategory[] = [
+  'grönsaker','frukt','mejeri','kött','fisk','bröd','torrvaror','konserver','frys','kryddor','övrigt',
+]
 
 export default function BrainstormStep() {
-  const store = useWeekStore()
-  const week  = activeWeek(store)
-  const [showPicker, setShowPicker] = useState(false)
-  const [editingId, setEditingId]   = useState<string | null>(null)
-  const [newName, setNewName]       = useState('')
-  const [addMode, setAddMode]       = useState<'free' | 'library'>('library')
+  const store       = useWeekStore()
+  const week        = activeWeek(store)
+  const { dishes }  = useLibraryStore()
+  const [showPicker, setShowPicker]   = useState(false)
+  const [editingId, setEditingId]     = useState<string | null>(null)
+  const [newName, setNewName]         = useState('')
+  const [addMode, setAddMode]         = useState<'free' | 'library' | null>(null)
+  const [dishTarget, setDishTarget]   = useState<{ dish: Dish | null; mealId: string; mealName: string } | null>(null)
+
+  function openDishEditor(meal: PlannedMeal) {
+    const dish = meal.dishId ? dishes.find(d => d.id === meal.dishId) ?? null : null
+    setDishTarget({ dish, mealId: meal.id, mealName: meal.name })
+  }
+
+  function handleDishSaved(savedId: string) {
+    if (dishTarget && !dishTarget.dish) {
+      store.updateMeal(dishTarget.mealId, { dishId: savedId })
+    }
+    setDishTarget(null)
+  }
 
   const needed   = totalNeededPortions(week.schedule)
   const planned  = totalPlannedPortions(week.meals)
@@ -25,36 +46,28 @@ export default function BrainstormStep() {
   function addFreeText() {
     if (!newName.trim()) return
     store.addMeal({
-      dishId: null,
-      name: newName.trim(),
-      portions: week.householdSize * 2,
-      isRemainder: false,
-      notes: '',
-      usesIngredientsFromHome: '',
+      dishId: null, name: newName.trim(),
+      portions: week.householdSize * 2, isRemainder: false,
+      notes: '', usesIngredientsFromHome: '', temporaryIngredients: [],
     })
     setNewName('')
+    setAddMode(null)
   }
 
   function addFromLibrary(dish: Dish) {
     store.addMeal({
-      dishId: dish.id,
-      name: dish.name,
-      portions: week.householdSize * 2,
-      isRemainder: false,
-      notes: '',
-      usesIngredientsFromHome: '',
+      dishId: dish.id, name: dish.name,
+      portions: week.householdSize * 2, isRemainder: false,
+      notes: '', usesIngredientsFromHome: '', temporaryIngredients: [],
     })
     setShowPicker(false)
   }
 
   function addRemainder() {
     store.addMeal({
-      dishId: null,
-      name: 'Rester',
-      portions: week.householdSize,
-      isRemainder: true,
-      notes: '',
-      usesIngredientsFromHome: '',
+      dishId: null, name: 'Rester',
+      portions: week.householdSize, isRemainder: true,
+      notes: '', usesIngredientsFromHome: '', temporaryIngredients: [],
     })
   }
 
@@ -66,7 +79,7 @@ export default function BrainstormStep() {
       >
         <Stat label="Behövs" value={needed} />
         <Stat label="Planerat" value={planned} />
-        <Stat label="Rester" value={rester} />
+        {rester > 0 && <Stat label="Rester" value={rester} />}
         <div className="border-l border-gray-200 pl-4">
           <Stat
             label={leftover < 0 ? 'Saknas' : 'Över'}
@@ -88,37 +101,42 @@ export default function BrainstormStep() {
             Inga rätter planerade än. Lägg till nedan!
           </p>
         )}
-        {week.meals.map((meal) => (
-          <MealRow
-            key={meal.id}
-            meal={meal}
-            isEditing={editingId === meal.id}
-            onEdit={() => setEditingId(meal.id)}
-            onClose={() => setEditingId(null)}
-            onUpdate={(p) => store.updateMeal(meal.id, p)}
-            onDelete={() => store.deleteMeal(meal.id)}
-          />
-        ))}
+        {week.meals.map(meal => {
+          const dish = meal.dishId ? dishes.find(d => d.id === meal.dishId) : null
+          const missingIngredients = dish && dish.ingredients.length === 0
+          return (
+            <MealRow
+              key={meal.id}
+              meal={meal}
+              missingIngredients={!!missingIngredients}
+              isEditing={editingId === meal.id}
+              onEdit={() => setEditingId(editingId === meal.id ? null : meal.id)}
+              onUpdate={p => store.updateMeal(meal.id, p)}
+              onDelete={() => store.deleteMeal(meal.id)}
+              onOpenDish={() => openDishEditor(meal)}
+            />
+          )
+        })}
       </div>
 
       {/* Add controls */}
       <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
-            onClick={() => { setAddMode('library'); setShowPicker(true) }}
-            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm transition-colors"
+            onClick={() => { setAddMode(null); setShowPicker(true) }}
+            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm"
           >
             + Välj från bibliotek
           </button>
           <button
-            onClick={() => setAddMode('free')}
-            className="flex-1 border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-xl text-sm transition-colors"
+            onClick={() => setAddMode(addMode === 'free' ? null : 'free')}
+            className="flex-1 border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-xl text-sm"
           >
             + Skriv fritt
           </button>
           <button
             onClick={addRemainder}
-            className="border border-gray-200 hover:bg-gray-50 text-gray-500 font-medium px-3 py-2 rounded-xl text-sm transition-colors"
+            className="border border-gray-200 hover:bg-amber-50 text-amber-600 font-medium px-4 py-2 rounded-xl text-sm"
             title="Lägg till rester från förra veckan"
           >
             ♻️ Rester
@@ -132,8 +150,8 @@ export default function BrainstormStep() {
               type="text"
               placeholder="Namn på rätten…"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addFreeText()}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addFreeText()}
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
             <button
@@ -153,6 +171,15 @@ export default function BrainstormStep() {
           weekMealIds={week.meals.map(m => m.dishId).filter(Boolean) as string[]}
         />
       )}
+
+      {dishTarget && (
+        <DishEditor
+          dish={dishTarget.dish}
+          initialName={dishTarget.dish ? undefined : dishTarget.mealName}
+          onClose={() => setDishTarget(null)}
+          onSaved={handleDishSaved}
+        />
+      )}
     </div>
   )
 }
@@ -166,33 +193,72 @@ function Stat({ label, value, color }: { label: string; value: number; color?: s
   )
 }
 
-function MealRow({
-  meal, isEditing, onEdit, onClose, onUpdate, onDelete,
-}: {
+function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDelete, onOpenDish }: {
   meal: PlannedMeal
+  missingIngredients: boolean
   isEditing: boolean
   onEdit: () => void
-  onClose: () => void
   onUpdate: (p: Partial<PlannedMeal>) => void
   onDelete: () => void
+  onOpenDish: () => void
 }) {
+  function addTempIngredient() {
+    const ing: TemporaryIngredient = {
+      id: uuid(), name: '', amount: '', unit: '', category: 'övrigt',
+    }
+    onUpdate({ temporaryIngredients: [...(meal.temporaryIngredients ?? []), ing] })
+  }
+
+  function updateTempIngredient(id: string, patch: Partial<TemporaryIngredient>) {
+    onUpdate({
+      temporaryIngredients: (meal.temporaryIngredients ?? []).map(i =>
+        i.id === id ? { ...i, ...patch } : i
+      ),
+    })
+  }
+
+  function removeTempIngredient(id: string) {
+    onUpdate({
+      temporaryIngredients: (meal.temporaryIngredients ?? []).filter(i => i.id !== id),
+    })
+  }
+
   return (
     <div className={`bg-white rounded-xl shadow-sm border transition-all
       ${meal.isRemainder ? 'border-amber-200' : 'border-gray-100'}`}
     >
-      <div className="flex items-center gap-3 p-3">
-        {/* Remainder badge */}
-        {meal.isRemainder && (
-          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">
-            Rester
-          </span>
-        )}
+      {/* Main row */}
+      <div className="flex items-center gap-2 p-3">
+        {/* Rester toggle — always visible */}
+        <button
+          onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
+          title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
+          className={`text-base leading-none shrink-0 transition-opacity ${meal.isRemainder ? 'opacity-100' : 'opacity-25 hover:opacity-60'}`}
+        >
+          ♻️
+        </button>
 
         {/* Name */}
-        <span className="flex-1 font-medium text-sm text-gray-800 truncate">{meal.name}</span>
+        <button
+          onClick={onOpenDish}
+          className="flex-1 font-medium text-sm text-gray-800 truncate text-left hover:text-brand-600 transition-colors"
+        >
+          {meal.name}
+        </button>
+
+        {/* Missing ingredients warning */}
+        {missingIngredients && (
+          <button
+            onClick={onOpenDish}
+            className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 hover:bg-amber-100 transition-colors"
+            title="Inga ingredienser konfigurerade – klicka för att konfigurera"
+          >
+            inga ingredienser
+          </button>
+        )}
 
         {/* Portion counter */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onUpdate({ portions: Math.max(1, meal.portions - 1) })}
             className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
@@ -205,46 +271,69 @@ function MealRow({
           <span className="text-xs text-gray-400 ml-0.5">port.</span>
         </div>
 
-        {/* Actions */}
-        <button
-          onClick={isEditing ? onClose : onEdit}
-          className="text-gray-400 hover:text-gray-600 text-sm px-1"
-        >
+        <button onClick={onEdit} className="text-gray-400 hover:text-gray-600 text-sm px-1">
           {isEditing ? '▲' : '▼'}
         </button>
-        <button
-          onClick={onDelete}
-          className="text-gray-300 hover:text-red-400 text-sm px-1"
-        >
-          ✕
-        </button>
+        <button onClick={onDelete} className="text-gray-300 hover:text-red-400 text-sm px-1">✕</button>
       </div>
 
+      {/* Expanded section */}
       {isEditing && (
         <div className="px-3 pb-3 space-y-2 border-t border-gray-50 pt-2">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={meal.isRemainder}
-              onChange={(e) => onUpdate({ isRemainder: e.target.checked })}
-              className="rounded accent-brand-600"
-            />
-            Rester (räknas som tillgängliga från start)
-          </label>
           <input
             type="text"
-            placeholder="Ingredienser hemma / notering…"
+            placeholder="Notering…"
             value={meal.notes}
-            onChange={(e) => onUpdate({ notes: e.target.value })}
+            onChange={e => onUpdate({ notes: e.target.value })}
             className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
           <input
             type="text"
             placeholder="Ingredienser jag använder hemifrån…"
             value={meal.usesIngredientsFromHome}
-            onChange={(e) => onUpdate({ usesIngredientsFromHome: e.target.value })}
+            onChange={e => onUpdate({ usesIngredientsFromHome: e.target.value })}
             className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
+
+          {/* Temporary ingredients */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-gray-500">Tillfälliga ingredienser (för den här veckan)</span>
+              <button onClick={addTempIngredient} className="text-xs text-brand-600 hover:text-brand-800 font-medium">
+                + Lägg till
+              </button>
+            </div>
+            {(meal.temporaryIngredients ?? []).map(ing => (
+              <div key={ing.id} className="flex flex-wrap gap-1.5 mb-1 items-center bg-gray-50 rounded-lg p-1.5">
+                <input
+                  placeholder="Ingrediens"
+                  value={ing.name}
+                  onChange={e => updateTempIngredient(ing.id, { name: e.target.value })}
+                  className="flex-1 min-w-[100px] border border-gray-200 rounded px-2 py-1 text-xs"
+                />
+                <input
+                  placeholder="Mängd"
+                  value={ing.amount}
+                  onChange={e => updateTempIngredient(ing.id, { amount: e.target.value })}
+                  className="w-16 border border-gray-200 rounded px-2 py-1 text-xs"
+                />
+                <input
+                  placeholder="Enhet"
+                  value={ing.unit}
+                  onChange={e => updateTempIngredient(ing.id, { unit: e.target.value })}
+                  className="w-14 border border-gray-200 rounded px-2 py-1 text-xs"
+                />
+                <select
+                  value={ing.category}
+                  onChange={e => updateTempIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
+                  className="border border-gray-200 rounded px-1 py-1 text-xs bg-white"
+                >
+                  {SHOPPING_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button onClick={() => removeTempIngredient(ing.id)} className="text-gray-300 hover:text-red-400">✕</button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

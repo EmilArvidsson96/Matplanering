@@ -8,15 +8,16 @@ function d(
   return {
     id,
     name,
-    protein:    opts.protein    ?? [],
-    carb:       opts.carb       ?? [],
-    cuisine:    opts.cuisine    ?? 'övrigt',
-    type:       opts.type       ?? [],
-    tags:       opts.tags       ?? [],
-    recipeUrl:  '',
-    ingredients: [],
-    notes:      '',
-    cookingHistory: [],
+    protein:         opts.protein    ?? [],
+    carb:            opts.carb       ?? [],
+    cuisine:         opts.cuisine    ?? 'övrigt',
+    type:            opts.type       ?? [],
+    tags:            opts.tags       ?? [],
+    recipeUrl:       '',
+    ingredients:     [],
+    notes:           '',
+    cookingHistory:  [],
+    preferredMonths: opts.preferredMonths ?? [],
   }
 }
 

@@ -14,7 +14,7 @@ import SettingsPage from './components/settings/SettingsPage'
 export default function App() {
   const { user, loading, login, logout, getToken } = useNetlifyIdentity()
   const [dataLoaded, setDataLoaded] = useState(false)
-  const { status: saveStatus } = useAutoSave(getToken)
+  const { status: saveStatus, saveError, saveNow } = useAutoSave(getToken)
   const loadWeek = useWeekLoader()
   const activeWeekId = useWeekStore(s => s.activeWeekId)
 
@@ -45,7 +45,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppShell user={user} logout={logout} saveStatus={saveStatus} />}>
+        <Route element={<AppShell user={user} logout={logout} saveStatus={saveStatus} saveError={saveError} onRetrySave={saveNow} />}>
           <Route index element={<WeekPlanPage />} />
           <Route path="bibliotek" element={<LibraryPage />} />
           <Route path="inkop"     element={<ShoppingPage />} />

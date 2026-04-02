@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
+import { useWeekStore } from '../../store/weekStore'
+import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
@@ -10,8 +12,9 @@ const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','l
 const ALL_CARBS:    Carb[]    = ['ris','pasta','potatis','nudlar','bröd','ingen']
 const ALL_CUISINES: Cuisine[] = ['svensk','italiensk','asiatisk','japansk','koreansk','indisk','mellanöstern','mexikansk','fransk','nordafrikansk','övrigt']
 const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza']
-const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark']
+const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark','lågfett']
 const ALL_CATS:     ShoppingCategory[] = ['mejeri','kött','fisk','grönsaker','frukt','torrvaror','konserver','frys','bröd','kryddor','övrigt']
+const ALL_MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const LABEL: Record<string, string> = {
   kyckling:'Kyckling', nöt:'Nöt', fläsk:'Fläsk', fisk:'Fisk', skaldjur:'Skaldjur',
@@ -23,7 +26,7 @@ const LABEL: Record<string, string> = {
   soppa:'Soppa', sallad:'Sallad', paj:'Paj', gryta:'Gryta', grillat:'Grillat',
   bowl:'Bowl', burgare:'Burgare', taco:'Taco', wrap:'Wrap', pizza:'Pizza',
   snabb:'Snabb', festlig:'Festlig', barnvänlig:'Barnvänlig',
-  lowfodmap:'Low FODMAP', lchf:'LCHF', stark:'Stark',
+  lowfodmap:'Low FODMAP', lchf:'LCHF', stark:'Stark', lågfett:'Låg fetthalt',
   mejeri:'Mejeri', kött:'Kött',
   grönsaker:'Grönsaker', frukt:'Frukt', torrvaror:'Torrvaror',
   konserver:'Konserver', frys:'Frys', kryddor:'Kryddor',
@@ -31,22 +34,27 @@ const LABEL: Record<string, string> = {
 
 interface Props {
   dish: Dish | null
+  initialName?: string
   onClose: () => void
+  onSaved?: (id: string) => void
 }
 
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
   return {
     name: '', protein: [], carb: [], cuisine: 'övrigt',
-    type: [], tags: [], recipeUrl: '', ingredients: [], notes: '',
+    type: [], tags: [], recipeUrl: '', ingredients: [], notes: '', preferredMonths: [],
   }
 }
 
-export default function DishEditor({ dish, onClose }: Props) {
+export default function DishEditor({ dish, initialName, onClose, onSaved }: Props) {
   const { addDish, updateDish, deleteDish } = useLibraryStore()
+  const weeks = Object.values(useWeekStore().weeks)
   const [form, setForm] = useState<Omit<Dish, 'id' | 'cookingHistory'>>(
-    dish ? { ...dish } : blank()
+    dish ? { ...dish } : { ...blank(), name: initialName ?? '' }
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const historyMonth = dish ? dishMostCommonMonth(dish.id, weeks) : null
 
   const isNew = !dish
 
@@ -57,9 +65,11 @@ export default function DishEditor({ dish, onClose }: Props) {
   function save() {
     if (!form.name.trim()) return
     if (isNew) {
-      addDish(form)
+      const id = addDish(form)
+      onSaved?.(id)
     } else {
       updateDish(dish.id, form)
+      onSaved?.(dish.id)
     }
     onClose()
   }
@@ -219,6 +229,42 @@ export default function DishEditor({ dish, onClose }: Props) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Preferred months */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Föredragna månader
+            {historyMonth && (
+              <span className="ml-2 text-gray-400 font-normal">
+                (vanligast i historiken: {MONTH_NAMES[historyMonth]})
+              </span>
+            )}
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_MONTHS.map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setForm(f => ({
+                  ...f,
+                  preferredMonths: f.preferredMonths.includes(m)
+                    ? f.preferredMonths.filter(x => x !== m)
+                    : [...f.preferredMonths, m],
+                }))}
+                className={`text-xs px-2 py-1 rounded-full border font-medium transition-colors
+                  ${form.preferredMonths.includes(m)
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                {MONTH_NAMES[m]}
+              </button>
+            ))}
+          </div>
+          {form.preferredMonths.length === 0 && (
+            <p className="text-xs text-gray-300 mt-1">Inga valda — används året runt</p>
+          )}
         </div>
 
         {/* Notes */}

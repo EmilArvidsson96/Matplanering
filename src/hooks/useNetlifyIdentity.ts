@@ -23,11 +23,20 @@ declare global {
   }
 }
 
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true'
+
+// Fake user for local development
+const DEV_USER: NlUser = {
+  email: 'dev@local',
+  token: { access_token: 'dev-token' },
+}
+
 export function useNetlifyIdentity() {
-  const [user, setUser]       = useState<NlUser | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]       = useState<NlUser | null>(DEV_MODE ? DEV_USER : null)
+  const [loading, setLoading] = useState(!DEV_MODE)
 
   useEffect(() => {
+    if (DEV_MODE) return  // skip Identity in dev mode
     const ni = window.netlifyIdentity
     if (!ni) { setLoading(false); return }
 

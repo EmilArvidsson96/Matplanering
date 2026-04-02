@@ -12,7 +12,7 @@ export type DishType =
   | 'soppa' | 'sallad' | 'paj' | 'gryta' | 'grillat'
   | 'bowl' | 'burgare' | 'taco' | 'wrap' | 'pizza'
 
-export type Tag = 'snabb' | 'festlig' | 'barnvänlig' | 'lowfodmap' | 'lchf' | 'stark'
+export type Tag = 'snabb' | 'festlig' | 'barnvänlig' | 'lowfodmap' | 'lchf' | 'stark' | 'lågfett'
 
 export type SortOrder = 'popularitet' | 'säsong' | 'alfabetisk'
 
@@ -27,6 +27,14 @@ export interface Ingredient {
   unit: string
   category: ShoppingCategory
   portionsBase: number
+}
+
+export interface TemporaryIngredient {
+  id: string
+  name: string
+  amount: string
+  unit: string
+  category: ShoppingCategory
 }
 
 export interface CookingRecord {
@@ -47,6 +55,7 @@ export interface Dish {
   ingredients: Ingredient[]
   notes: string
   cookingHistory: CookingRecord[]
+  preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
 }
 
 export type MealType = 'lunch' | 'middag'
@@ -59,6 +68,7 @@ export interface PlannedMeal {
   isRemainder: boolean
   notes: string
   usesIngredientsFromHome: string
+  temporaryIngredients: TemporaryIngredient[]
 }
 
 export interface ScheduleSlot {
@@ -84,7 +94,7 @@ export interface ShoppingItem {
 export interface WeekPlan {
   id: string           // Saturday "YYYY-MM-DD"
   startDate: string
-  endDate: string
+  endDate: string      // next Saturday by default
   householdSize: number
   meals: PlannedMeal[]
   schedule: ScheduleSlot[]

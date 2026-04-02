@@ -1,6 +1,12 @@
 /** GitHub data API — all writes go through the Netlify proxy function
  *  so the Personal Access Token never leaves the server.
+ *  In local dev mode (VITE_DEV_MODE=true) we call GitHub directly.
  */
+
+const DEV_MODE    = import.meta.env.VITE_DEV_MODE === 'true'
+const DEV_TOKEN   = import.meta.env.VITE_GITHUB_TOKEN as string | undefined
+const REPO_OWNER  = 'EmilArvidsson96'
+const REPO_NAME   = 'matplanering-data'
 
 let _token: string | null = null
 
@@ -9,7 +15,22 @@ export function setAuthToken(token: string) {
 }
 
 async function proxy(method: string, path: string, body?: unknown) {
-  const res = await fetch('/.netlify/functions/github-proxy', {
+  if (DEV_MODE && DEV_TOKEN) {
+    // In dev mode: call GitHub API directly
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`
+    return fetch(url, {
+      method,
+      headers: {
+        Authorization: `token ${DEV_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
+
+  return fetch('/.netlify/functions/github-proxy', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -17,7 +38,6 @@ async function proxy(method: string, path: string, body?: unknown) {
     },
     body: JSON.stringify({ method, path, body }),
   })
-  return res
 }
 
 export interface GHFile {

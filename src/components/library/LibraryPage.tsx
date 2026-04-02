@@ -24,7 +24,7 @@ const TYPE_LABELS: Record<DishType, string> = {
 }
 const TAG_LABELS: Record<Tag, string> = {
   snabb: 'Snabb', festlig: 'Festlig', barnvänlig: 'Barnvänlig',
-  lowfodmap: 'Low FODMAP', lchf: 'LCHF', stark: 'Stark',
+  lowfodmap: 'Low FODMAP', lchf: 'LCHF', stark: 'Stark', lågfett: 'Låg fetthalt',
 }
 
 export default function LibraryPage() {

@@ -12,7 +12,6 @@ export function getSaturdayOf(date: Date): Date {
   return d
 }
 
-/** Format a Saturday date as week ID string "YYYY-MM-DD". */
 export function toWeekId(saturday: Date): string {
   return format(saturday, 'yyyy-MM-dd')
 }
@@ -29,15 +28,14 @@ export function nextWeekId(id: string): string {
   return toWeekId(addDays(parseISO(id), 7))
 }
 
-/** 7 date strings for the week starting at `startDate`. */
-export function weekDates(startDate: string): string[] {
-  const start = parseISO(startDate)
-  return Array.from({ length: 7 }, (_, i) => format(addDays(start, i), 'yyyy-MM-dd'))
+/** All unique dates in a WeekPlan's schedule, in order. */
+export function scheduleDates(week: WeekPlan): string[] {
+  return [...new Set(week.schedule.map(s => s.date))]
 }
 
 export function formatWeekLabel(weekId: string): string {
   const start = parseISO(weekId)
-  const end = addDays(start, 6)
+  const end = addDays(start, 7)   // next Saturday
   const startStr = format(start, 'd MMM', { locale: sv })
   const endStr = format(end, 'd MMM yyyy', { locale: sv })
   const week = getISOWeek(start)
@@ -52,43 +50,57 @@ export function formatDayShort(date: string): string {
   return format(parseISO(date), 'EEE d/M', { locale: sv })
 }
 
+/**
+ * Default schedule: Sat Middag → next Sat Lunch (8 days, 14 slots).
+ *
+ * Day 0 (Sat start): Middag only
+ * Day 1–6 (Sun–Fri): Lunch + Middag
+ * Day 7 (Sat end):   Lunch only
+ */
 export function createEmptyWeek(startDate: string, householdSize: number): WeekPlan {
-  const dates = weekDates(startDate)
+  const start = parseISO(startDate)
   const schedule: ScheduleSlot[] = []
 
-  dates.forEach((date, i) => {
+  for (let i = 0; i <= 7; i++) {
+    const date = format(addDays(start, i), 'yyyy-MM-dd')
     if (i === 0) {
-      // Saturday: middag only (lunch = last week's leftovers)
       schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
+    } else if (i === 7) {
+      schedule.push({ date, type: 'lunch', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
     } else {
       schedule.push({ date, type: 'lunch',  assignedMealIds: [], portionsNeeded: householdSize, event: '' })
       schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
     }
-  })
-
-  return {
-    id: startDate,
-    startDate,
-    endDate: dates[6],
-    householdSize,
-    meals: [],
-    schedule,
-    shoppingList: [],
   }
+
+  const endDate = format(addDays(start, 7), 'yyyy-MM-dd')
+  return { id: startDate, startDate, endDate, householdSize, meals: [], schedule, shoppingList: [] }
 }
 
-/** Running portion balance after each schedule slot.
- *
- * Algorithm:
- *  - Remainder meals contribute their portions at the very start (before any slot).
- *  - Non-remainder meals contribute their portions at the slot they are assigned to.
- *  - Each slot consumes `portionsNeeded` portions.
- *  - Balance is recorded *after* the slot's consumption.
- */
+/** Add a day's slots (lunch + middag, or just one) at the end of the schedule. */
+export function addDayToSchedule(week: WeekPlan, mealTypes: ('lunch' | 'middag')[]): WeekPlan {
+  const lastDate = week.schedule[week.schedule.length - 1]?.date ?? week.endDate
+  const newDate  = format(addDays(parseISO(lastDate), 1), 'yyyy-MM-dd')
+  const newSlots = mealTypes.map(type => ({
+    date: newDate, type, assignedMealIds: [], portionsNeeded: week.householdSize, event: '',
+  }))
+  return { ...week, endDate: newDate, schedule: [...week.schedule, ...newSlots] }
+}
+
+/** Remove the last day entirely from the schedule. */
+export function removLastDayFromSchedule(week: WeekPlan): WeekPlan {
+  const dates = scheduleDates(week)
+  if (dates.length <= 1) return week
+  const lastDate = dates[dates.length - 1]
+  const newSchedule = week.schedule.filter(s => s.date !== lastDate)
+  const newEnd = newSchedule[newSchedule.length - 1]?.date ?? week.startDate
+  return { ...week, endDate: newEnd, schedule: newSchedule }
+}
+
+/** Running portion balance after each schedule slot. */
 export function computeBalances(week: WeekPlan): Map<string, number> {
   const portionsByMeal = new Map(week.meals.map(m => [m.id, m.portions]))
 
-  // Remainder meals start available immediately.
   let balance = week.meals
     .filter(m => m.isRemainder)
     .reduce((s, m) => s + m.portions, 0)
@@ -97,7 +109,6 @@ export function computeBalances(week: WeekPlan): Map<string, number> {
 
   for (const slot of week.schedule) {
     const key = slotKey(slot)
-    // Add portions for non-remainder meals cooked at this slot.
     for (const mealId of slot.assignedMealIds) {
       const meal = week.meals.find(m => m.id === mealId)
       if (meal && !meal.isRemainder) {
@@ -127,13 +138,11 @@ export function remainderPortions(meals: PlannedMeal[]): number {
   return meals.filter(m => m.isRemainder).reduce((s, m) => s + m.portions, 0)
 }
 
-/** How many times a dish has been cooked (from all weeks stored locally). */
 export function dishPopularity(dishId: string, weeks: WeekPlan[]): number {
   return weeks.reduce((count, week) =>
     count + week.meals.filter(m => m.dishId === dishId && !m.isRemainder).length, 0)
 }
 
-/** The most recent week a dish was cooked, for seasonal sorting. */
 export function dishLastCooked(dishId: string, weeks: WeekPlan[]): string | null {
   const ids = weeks
     .filter(w => w.meals.some(m => m.dishId === dishId))
@@ -142,9 +151,26 @@ export function dishLastCooked(dishId: string, weeks: WeekPlan[]): string | null
   return ids.length ? ids[ids.length - 1] : null
 }
 
-/** Day-of-year number for seasonal proximity sorting. */
+/** Most common month (1–12) this dish has been cooked, based on history. */
+export function dishMostCommonMonth(dishId: string, weeks: WeekPlan[]): number | null {
+  const counts = new Array(13).fill(0)
+  for (const week of weeks) {
+    if (week.meals.some(m => m.dishId === dishId && !m.isRemainder)) {
+      const month = parseISO(week.id).getMonth() + 1
+      counts[month]++
+    }
+  }
+  const max = Math.max(...counts.slice(1))
+  if (max === 0) return null
+  return counts.indexOf(max)
+}
+
 export function dayOfYear(dateStr: string): number {
   const d = parseISO(dateStr)
   const start = new Date(getYear(d), 0, 0)
   return Math.floor((d.getTime() - start.getTime()) / 86400000)
 }
+
+export const MONTH_NAMES = [
+  '', 'Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec',
+]
