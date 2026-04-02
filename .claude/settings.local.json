@@ -6,7 +6,32 @@
       "Bash(/usr/local/bin/npm install:*)",
       "Bash(/opt/homebrew/bin/npm install:*)",
       "Bash(export PATH=\"/opt/homebrew/opt/node/bin:$PATH\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(gh pr:*)",
+      "Bash(git rm:*)",
+      "Bash(npm --version)",
+      "Bash(echo $PATH)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/lib/node_modules/npm/bin/**)",
+      "Bash(/opt/homebrew/bin/node --version)",
+      "Read(//opt/homebrew/opt/**)",
+      "Bash(/opt/homebrew/opt/node.js/bin/npm install:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/node.js/bin:$PATH\" npm install lucide-react --prefix /Users/emil/Repositories/Matplanering)",
+      "Bash(PATH=\"/opt/homebrew/opt/node.js/bin:$PATH\" npx tsc --noEmit)",
+      "Bash(git -C /Users/emil/Repositories/Matplanering status --short)",
+      "Bash(git -C /Users/emil/Repositories/Matplanering branch)",
+      "Bash(git -C /Users/emil/Repositories/Matplanering diff --stat HEAD)",
+      "Bash(git -C /Users/emil/Repositories/Matplanering add src/components/WeekPlanPage.tsx src/components/auth/LoginPage.tsx src/components/layout/AppShell.tsx src/components/layout/SaveIndicator.tsx src/components/steps/BrainstormStep.tsx src/components/steps/PortionsStep.tsx src/components/steps/ScheduleStep.tsx package.json package-lock.json)",
+      "Bash(git -C:*)",
+      "Bash(/usr/local/bin/npm run:*)",
+      "Bash(~/.nvm/versions/node/*/bin/npm)",
+      "Bash(run build:*)",
+      "Bash(export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\")"
     ]
   }
 }

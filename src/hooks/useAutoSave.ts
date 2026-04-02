@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getFile, saveFile, setAuthToken } from '../api/github'
+import { getFile, saveFile } from '../api/github'
 import { useWeekStore } from '../store/weekStore'
 import { useLibraryStore } from '../store/libraryStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -10,8 +10,8 @@ export type SaveError = string | null
 
 const DEBOUNCE_MS = 5000
 
-export function useAutoSave(getToken: () => Promise<string | null>) {
-  const [status, setStatus]   = useState<SaveStatus>('idle')
+export function useAutoSave() {
+  const [status, setStatus]       = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<SaveError>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -20,10 +20,6 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
   const settingsStore = useSettingsStore()
 
   const save = useCallback(async () => {
-    const token = await getToken()
-    // In dev mode token is null but we call GitHub directly — that's fine
-    if (token) setAuthToken(token)
-
     setStatus('saving')
     try {
       // Save dirty weeks
@@ -66,7 +62,7 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
       setStatus('error')
       setSaveError(e instanceof Error ? e.message : String(e))
     }
-  }, [weekStore, libraryStore, settingsStore, getToken])
+  }, [weekStore, libraryStore, settingsStore])
 
   const isDirty =
     weekStore.dirtyWeeks.size > 0 || libraryStore.isDirty || settingsStore.isDirty
@@ -82,10 +78,7 @@ export function useAutoSave(getToken: () => Promise<string | null>) {
 }
 
 /** Load initial data from GitHub on app startup. */
-export async function loadInitialData(getToken: () => Promise<string | null>) {
-  const token = await getToken()
-  if (token) setAuthToken(token)
-
+export async function loadInitialData() {
   const weekStore     = useWeekStore.getState()
   const libraryStore  = useLibraryStore.getState()
   const settingsStore = useSettingsStore.getState()
@@ -103,12 +96,10 @@ export async function loadInitialData(getToken: () => Promise<string | null>) {
     if (data.dishes && data.dishes.length > 0) {
       libraryStore.load(data.dishes, libFile.sha)
     } else {
-      // File exists but is empty — seed and save
       const { INITIAL_DISHES } = await import('../data/library')
       libraryStore.seed(INITIAL_DISHES)
     }
   } else {
-    // File doesn't exist yet — seed and save
     const { INITIAL_DISHES } = await import('../data/library')
     libraryStore.seed(INITIAL_DISHES)
   }

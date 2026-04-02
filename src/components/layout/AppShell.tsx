@@ -7,10 +7,8 @@ import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
 import DebugPanel from './DebugPanel'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
-import type { NlUser } from '../../hooks/useNetlifyIdentity'
 
 interface Props {
-  user: NlUser
   logout: () => void
   saveStatus: SaveStatus
   saveError: SaveError
@@ -46,7 +44,7 @@ function NavItem({ to, label, Icon }: { to: string; label: string; Icon: LucideI
   )
 }
 
-export default function AppShell({ user, logout, saveStatus, saveError, onRetrySave }: Props) {
+export default function AppShell({ logout, saveStatus, saveError, onRetrySave }: Props) {
   const isDesktop = useIsDesktop()
   const [debugOpen, setDebugOpen] = useState(false)
 
@@ -79,14 +77,13 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
               onClick={logout}
               className="text-xs text-gray-500 hover:text-gray-700 text-left"
             >
-              {user.email} · Logga ut
+              Logga ut
             </button>
           </div>
         </aside>
 
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top bar with week navigator */}
           <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
             <WeekNavigator />
           </header>
@@ -103,18 +100,15 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
   // Mobile layout
   return (
     <div className="flex flex-col h-dvh bg-gray-50">
-      {/* Mobile top bar */}
       <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
         <WeekNavigator />
         <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
       </header>
 
-      {/* Scrollable content */}
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
 
-      {/* Bottom navigation */}
       <nav className="bg-white border-t border-gray-200 px-2 py-1 flex justify-around safe-area-inset-bottom">
         {NAV_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} />
