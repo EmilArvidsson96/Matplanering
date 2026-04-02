@@ -21,6 +21,7 @@ interface WeekStore {
   updateSlot: (date: string, type: MealType, patch: Partial<Omit<ScheduleSlot, 'date' | 'type'>>) => void
   extendWeek: () => void
   shrinkWeek: () => void
+  setEndDate: (date: string) => void
 
   // Meals (brainstorm)
   addMeal: (meal: Omit<PlannedMeal, 'id'>) => string
@@ -94,6 +95,14 @@ export const useWeekStore = create<WeekStore>((set, get) => {
 
     extendWeek: () => mutateActive((p) => addDayToSchedule(p, ['lunch', 'middag'])),
     shrinkWeek: () => mutateActive((p) => removLastDayFromSchedule(p)),
+
+    setEndDate: (target) => mutateActive((p) => {
+      let plan = p
+      let guard = 0
+      while (plan.endDate < target && guard++ < 60) plan = addDayToSchedule(plan, ['lunch', 'middag'])
+      while (plan.endDate > target && guard++ < 60) plan = removLastDayFromSchedule(plan)
+      return plan
+    }),
 
     updateSlot: (date, type, patch) =>
       mutateActive((p) =>

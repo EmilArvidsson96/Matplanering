@@ -1,5 +1,5 @@
 import { useWeekStore, activeWeek } from '../../store/weekStore'
-import { formatDayLabel, formatDayShort, scheduleDates, getSaturdayOf, toWeekId } from '../../utils/weekUtils'
+import { formatDayLabel, scheduleDates, getSaturdayOf, toWeekId } from '../../utils/weekUtils'
 import type { MealType } from '../../types'
 
 export default function PortionsStep() {
@@ -7,11 +7,15 @@ export default function PortionsStep() {
   const week  = activeWeek(store)
   const dates = scheduleDates(week)
 
-  /** Navigate to the Saturday on-or-before the picked date. */
   function handleStartDateChange(raw: string) {
     if (!raw) return
     const sat = getSaturdayOf(new Date(raw + 'T12:00:00'))
     store.setActiveWeek(toWeekId(sat))
+  }
+
+  function handleEndDateChange(raw: string) {
+    if (!raw || raw <= week.startDate) return
+    store.setEndDate(raw)
   }
 
   function updatePortions(date: string, type: MealType, value: number) {
@@ -53,39 +57,34 @@ export default function PortionsStep() {
 
       {/* Week window */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
-        <h2 className="font-semibold text-gray-700 mb-3">Planeringsfönster</h2>
+        <h2 className="font-semibold text-gray-700 mb-1">Planeringsfönster</h2>
+        <p className="text-xs text-gray-400 mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
 
-        {/* Start date picker */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap gap-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Startar (lördag)</label>
+            <label className="block text-xs text-gray-500 mb-1">Från</label>
             <input
               type="date"
               value={week.startDate}
               onChange={e => handleStartDateChange(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
+            <p className="text-xs text-gray-300 mt-1">Snäpper till närmaste lördag</p>
           </div>
-          <div className="text-xs text-gray-400 mt-4">
-            {formatDayShort(week.startDate)} – {formatDayShort(week.endDate)} · {dates.length} dagar
-          </div>
-        </div>
 
-        {/* Extend / shrink */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => store.shrinkWeek()}
-            disabled={dates.length <= 2}
-            className="border border-gray-200 hover:bg-gray-50 disabled:opacity-30 text-gray-600 px-3 py-1.5 rounded-xl text-sm"
-          >
-            − Ta bort sista dag
-          </button>
-          <button
-            onClick={() => store.extendWeek()}
-            className="border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-xl text-sm"
-          >
-            + Lägg till dag
-          </button>
+          <div className="flex items-center self-end pb-6 text-gray-300 text-lg">→</div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Till</label>
+            <input
+              type="date"
+              value={week.endDate}
+              min={week.startDate}
+              onChange={e => handleEndDateChange(e.target.value)}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+            <p className="text-xs text-gray-300 mt-1">Sista dagen i planeringen</p>
+          </div>
         </div>
       </section>
 
