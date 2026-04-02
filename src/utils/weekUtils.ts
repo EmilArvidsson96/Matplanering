@@ -151,7 +151,7 @@ export function applyWeekWindow(
   const oldByKey  = new Map(week.schedule.map(s => [`${s.date}-${s.type}`, s]))
   const merged    = fresh.schedule.map(slot => {
     const old = oldByKey.get(`${slot.date}-${slot.type}`)
-    return old ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignments: old.assignments } : slot
+    return old ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignments: old.assignments ?? [] } : slot
   })
   return { ...week, startDate, startMealType: startMeal, endDate, endMealType: endMeal, schedule: merged }
 }
@@ -180,7 +180,7 @@ export function computeBalances(week: WeekPlan): Map<string, number> {
 
   for (const slot of week.schedule) {
     const key = slotKey(slot)
-    for (const { mealId, portions } of slot.assignments) {
+    for (const { mealId, portions } of (slot.assignments ?? [])) {
       const meal = week.meals.find(m => m.id === mealId)
       if (meal && !meal.isRemainder) {
         balance += portions   // only the portions cooked at this specific slot

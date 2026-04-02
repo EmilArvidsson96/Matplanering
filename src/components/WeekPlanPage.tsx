@@ -2,6 +2,7 @@ import { useState } from 'react'
 import PortionsStep from './steps/PortionsStep'
 import BrainstormStep from './steps/BrainstormStep'
 import ScheduleStep from './steps/ScheduleStep'
+import ErrorBoundary from './common/ErrorBoundary'
 
 type Step = 'portioner' | 'brainstorm' | 'schema'
 
@@ -35,9 +36,11 @@ export default function WeekPlanPage() {
       </div>
 
       {/* Step content */}
-      {step === 'portioner'  && <PortionsStep />}
-      {step === 'brainstorm' && <BrainstormStep />}
-      {step === 'schema'     && <ScheduleStep />}
+      <ErrorBoundary key={step}>
+        {step === 'portioner'  && <PortionsStep />}
+        {step === 'brainstorm' && <BrainstormStep />}
+        {step === 'schema'     && <ScheduleStep />}
+      </ErrorBoundary>
     </div>
   )
 }

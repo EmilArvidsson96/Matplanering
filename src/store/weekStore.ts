@@ -120,15 +120,15 @@ export const useWeekStore = create<WeekStore>((set, get) => {
         meals: p.meals.filter((m) => m.id !== id),
         schedule: p.schedule.map((sl) => ({
           ...sl,
-          assignments: sl.assignments.filter((a: MealAssignment) => a.mealId !== id),
+          assignments: (sl.assignments ?? []).filter((a: MealAssignment) => a.mealId !== id),
         })),
       })),
 
     assignMeal: (date, type, mealId, portions) =>
       mutateActive((p) =>
         mutateSlot(p, date, type, (sl) => {
-          if (sl.assignments.some((a: MealAssignment) => a.mealId === mealId)) return sl
-          return { ...sl, assignments: [...sl.assignments, { mealId, portions }] }
+          if ((sl.assignments ?? []).some((a: MealAssignment) => a.mealId === mealId)) return sl
+          return { ...sl, assignments: [...(sl.assignments ?? []), { mealId, portions }] }
         }),
       ),
 
@@ -136,7 +136,7 @@ export const useWeekStore = create<WeekStore>((set, get) => {
       mutateActive((p) =>
         mutateSlot(p, date, type, (sl) => ({
           ...sl,
-          assignments: sl.assignments.filter((a: MealAssignment) => a.mealId !== mealId),
+          assignments: (sl.assignments ?? []).filter((a: MealAssignment) => a.mealId !== mealId),
         })),
       ),
 

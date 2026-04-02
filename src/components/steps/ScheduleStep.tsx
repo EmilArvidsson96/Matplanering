@@ -87,7 +87,7 @@ export default function ScheduleStep() {
             {/* Slots */}
             {daySlots.map(slot => {
               const balance      = balances.get(slotKey(slot)) ?? 0
-              const assignedMeals = slot.assignments.map(a => ({
+              const assignedMeals = (slot.assignments ?? []).map(a => ({
                 assignment: a,
                 meal: week.meals.find(m => m.id === a.mealId),
               })).filter(x => x.meal !== undefined) as { assignment: { mealId: string; portions: number }; meal: PlannedMeal }[]
@@ -198,7 +198,7 @@ function MealAssignPicker({
   onClose: () => void
 }) {
   // Which meals are already assigned to THIS slot
-  const inThisSlot = new Set(slot.assignments.map(a => a.mealId))
+  const inThisSlot = new Set((slot.assignments ?? []).map(a => a.mealId))
 
   // Portions already assigned to OTHER slots per meal
   function portionsElsewhere(mealId: string): number {
@@ -277,7 +277,7 @@ function MealAssignPicker({
 
         {/* Already assigned meals — greyed out */}
         {assigned.map(meal => {
-          const a = slot.assignments.find(x => x.mealId === meal.id)!
+          const a = (slot.assignments ?? []).find(x => x.mealId === meal.id) ?? { mealId: meal.id, portions: meal.portions }
           return (
             <div key={meal.id} className="flex items-center gap-3 px-3 py-3 rounded-xl opacity-40">
               {meal.isRemainder && (
