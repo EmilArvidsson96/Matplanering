@@ -209,13 +209,17 @@ function MealAssignPicker({
       .reduce((sum, a) => sum + a.portions, 0)
   }
 
+  // Remaining = total planned minus what's already assigned to other slots (can be 0)
   function remaining(meal: PlannedMeal): number {
-    return Math.max(1, meal.portions - portionsElsewhere(meal.id))
+    return meal.portions - portionsElsewhere(meal.id)
   }
 
-  // Local portion counts for unassigned meals (stepper state)
+  // Local portion counts — initialise to remaining, min 1 for the stepper display
   const [counts, setCounts] = useState<Record<string, number>>(() =>
-    Object.fromEntries(week.meals.filter(m => !inThisSlot.has(m.id)).map(m => [m.id, remaining(m)]))
+    Object.fromEntries(
+      week.meals.filter(m => !inThisSlot.has(m.id))
+               .map(m => [m.id, Math.max(1, remaining(m))])
+    )
   )
 
   function setCount(mealId: string, max: number, delta: number) {
@@ -234,42 +238,49 @@ function MealAssignPicker({
 
         {/* Unassigned meals — assignable */}
         {unassigned.map(meal => {
-          const max   = meal.portions
-          const count = counts[meal.id] ?? remaining(meal)
-          const elsewhere = portionsElsewhere(meal.id)
+          const rem   = remaining(meal)          // may be 0 if fully assigned elsewhere
+          const max   = Math.max(1, rem)         // stepper floor of 1 for display purposes
+          const count = Math.min(counts[meal.id] ?? max, max)
+          const full  = rem <= 0                 // all portions already assigned to other slots
 
           return (
             <div
               key={meal.id}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-50 transition-colors border border-transparent hover:border-brand-100"
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors
+                ${full
+                  ? 'opacity-50 border-transparent'
+                  : 'hover:bg-brand-50 border-transparent hover:border-brand-100'}`}
             >
               {meal.isRemainder && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Rester</span>
               )}
               <span className="flex-1 font-medium text-sm text-gray-800">{meal.name}</span>
 
-              {/* Portion stepper */}
+              {/* Portion stepper — capped at remaining */}
               <div className="flex items-center gap-1 shrink-0">
                 <button
+                  disabled={full || count <= 1}
                   onClick={() => setCount(meal.id, max, -1)}
-                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-xs font-bold leading-none flex items-center justify-center"
+                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 text-xs font-bold leading-none flex items-center justify-center"
                 >−</button>
-                <span className="w-6 text-center text-sm font-semibold">{count}</span>
+                <span className="w-6 text-center text-sm font-semibold">{full ? 0 : count}</span>
                 <button
+                  disabled={full || count >= max}
                   onClick={() => setCount(meal.id, max, +1)}
-                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-xs font-bold leading-none flex items-center justify-center"
+                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 text-xs font-bold leading-none flex items-center justify-center"
                 >+</button>
-                <span className="text-xs text-gray-300 ml-0.5">/ {max}</span>
+                <span className="text-xs text-gray-300 ml-0.5">/ {meal.portions}</span>
               </div>
-              {elsewhere > 0 && (
-                <span className="text-xs text-gray-300 shrink-0">{elsewhere}p ann.</span>
-              )}
 
               <button
+                disabled={full}
                 onClick={() => onAssign(meal.id, count)}
-                className="shrink-0 text-xs bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg font-medium"
+                className={`shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
+                  ${full
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-brand-600 hover:bg-brand-700 text-white'}`}
               >
-                Tilldela
+                {full ? 'Fullt planerat' : 'Tilldela'}
               </button>
             </div>
           )
