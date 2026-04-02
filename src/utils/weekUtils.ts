@@ -174,3 +174,28 @@ export function dayOfYear(dateStr: string): number {
 export const MONTH_NAMES = [
   '', 'Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec',
 ]
+
+/**
+ * Migrate a week plan that was saved with the old 7-day structure (Sat–Fri).
+ * Regenerates the schedule slots to the correct 8-day window (Sat dinner → next Sat lunch)
+ * while preserving meals, events, portionsNeeded overrides, and meal assignments
+ * on slots that still exist in the new structure.
+ */
+export function migrateWeek(plan: WeekPlan): WeekPlan {
+  const expectedEnd = format(addDays(parseISO(plan.startDate), 7), 'yyyy-MM-dd')
+  if (plan.endDate === expectedEnd) return plan   // already correct
+
+  const fresh = createEmptyWeek(plan.startDate, plan.householdSize)
+
+  // Re-apply any per-slot overrides (portionsNeeded, event, assignedMealIds)
+  // from the old schedule where dates/types overlap.
+  const oldByKey = new Map(plan.schedule.map(s => [`${s.date}-${s.type}`, s]))
+  const mergedSchedule = fresh.schedule.map(slot => {
+    const old = oldByKey.get(`${slot.date}-${slot.type}`)
+    return old
+      ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignedMealIds: old.assignedMealIds }
+      : slot
+  })
+
+  return { ...plan, endDate: fresh.endDate, schedule: mergedSchedule }
+}

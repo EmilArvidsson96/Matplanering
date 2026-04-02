@@ -66,8 +66,25 @@ export async function saveFile(
   const encoded = btoa(unescape(encodeURIComponent(content)))
   const bodyObj: Record<string, unknown> = { message, content: encoded }
   if (sha) bodyObj.sha = sha
-  const res = await proxy('PUT', path, bodyObj)
-  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`)
+
+  let res = await proxy('PUT', path, bodyObj)
+
+  // 422 = SHA mismatch (file exists but we have a stale/missing SHA).
+  // Fetch the real current SHA from GitHub and retry once.
+  if (res.status === 422) {
+    const head = await proxy('GET', path)
+    if (head.ok) {
+      const headData = await head.json()
+      bodyObj.sha = headData.sha as string
+      res = await proxy('PUT', path, bodyObj)
+    }
+  }
+
+  if (!res.ok) {
+    let detail = res.status.toString()
+    try { detail += ' — ' + ((await res.json() as Record<string,unknown>).message ?? '') } catch { /* ignore */ }
+    throw new Error(`PUT ${path} failed: ${detail}`)
+  }
   const data = await res.json()
-  return data.content.sha as string
+  return (data as { content: { sha: string } }).content.sha
 }

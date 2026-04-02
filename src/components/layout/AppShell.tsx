@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
+import DebugPanel from './DebugPanel'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 import type { NlUser } from '../../hooks/useNetlifyIdentity'
 
@@ -44,6 +46,19 @@ function NavItem({ to, label, icon }: { to: string; label: string; icon: string 
 
 export default function AppShell({ user, logout, saveStatus, saveError, onRetrySave }: Props) {
   const isDesktop = useIsDesktop()
+  const [debugOpen, setDebugOpen] = useState(false)
+
+  // Toggle debug panel with Ctrl+Shift+D
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault()
+        setDebugOpen(o => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (isDesktop) {
     return (
@@ -58,12 +73,19 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
           ))}
           <div className="mt-auto flex flex-col gap-2 px-3">
             <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
-            <button
-              onClick={logout}
-              className="text-xs text-gray-400 hover:text-gray-600 text-left"
-            >
-              {user.email} · Logga ut
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={logout}
+                className="text-xs text-gray-400 hover:text-gray-600 text-left"
+              >
+                {user.email} · Logga ut
+              </button>
+              <button
+                onClick={() => setDebugOpen(o => !o)}
+                className="text-xs text-gray-300 hover:text-gray-500"
+                title="Debug (Ctrl+Shift+D)"
+              >🐛</button>
+            </div>
           </div>
         </aside>
 
@@ -77,6 +99,8 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
             <Outlet />
           </main>
         </div>
+
+        {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} saveStatus={saveStatus} saveError={saveError} />}
       </div>
     )
   }
@@ -87,7 +111,14 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
       {/* Mobile top bar */}
       <header className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between">
         <WeekNavigator />
-        <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+        <div className="flex items-center gap-2">
+          <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+          <button
+            onClick={() => setDebugOpen(o => !o)}
+            className="text-xs text-gray-300 hover:text-gray-500"
+            title="Debug (Ctrl+Shift+D)"
+          >🐛</button>
+        </div>
       </header>
 
       {/* Scrollable content */}
@@ -101,6 +132,8 @@ export default function AppShell({ user, logout, saveStatus, saveError, onRetryS
           <NavItem key={item.to} {...item} />
         ))}
       </nav>
+
+      {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} saveStatus={saveStatus} saveError={saveError} />}
     </div>
   )
 }
