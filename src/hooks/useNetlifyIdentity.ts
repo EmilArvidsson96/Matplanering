@@ -40,6 +40,11 @@ export function useNetlifyIdentity() {
     ni.on('logout', onLogout)
     ni.init()
 
+    // Auto-open widget for invite/recovery/confirmation token flows
+    if (window.location.hash.match(/(invite|recovery|confirmation)_token=/)) {
+      ni.open()
+    }
+
     return () => {
       ni.off('init',   onInit)
       ni.off('login',  onLogin)
