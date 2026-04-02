@@ -1,5 +1,5 @@
 import { useWeekStore, activeWeek } from '../../store/weekStore'
-import { formatDayLabel, scheduleDates, getSaturdayOf, toWeekId } from '../../utils/weekUtils'
+import { formatDayLabel, scheduleDates } from '../../utils/weekUtils'
 import type { MealType } from '../../types'
 
 export default function PortionsStep() {
@@ -7,15 +7,13 @@ export default function PortionsStep() {
   const week  = activeWeek(store)
   const dates = scheduleDates(week)
 
-  function handleStartDateChange(raw: string) {
-    if (!raw) return
-    const sat = getSaturdayOf(new Date(raw + 'T12:00:00'))
-    store.setActiveWeek(toWeekId(sat))
-  }
+  const startMeal = week.startMealType ?? 'middag'
+  const endMeal   = week.endMealType   ?? 'lunch'
 
-  function handleEndDateChange(raw: string) {
-    if (!raw || raw <= week.startDate) return
-    store.setEndDate(raw)
+  function setWindow(startDate: string, sm: MealType, endDate: string, em: MealType) {
+    if (!startDate || !endDate) return
+    if (endDate < startDate || (endDate === startDate && sm === 'middag' && em === 'lunch')) return
+    store.setWeekWindow(startDate, sm, endDate, em)
   }
 
   function updatePortions(date: string, type: MealType, value: number) {
@@ -60,30 +58,38 @@ export default function PortionsStep() {
         <h2 className="font-semibold text-gray-700 mb-1">Planeringsfönster</h2>
         <p className="text-xs text-gray-400 mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
 
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Från</label>
+        <div className="flex flex-wrap gap-6">
+          {/* Start */}
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-500">Från</label>
             <input
               type="date"
               value={week.startDate}
-              onChange={e => handleStartDateChange(e.target.value)}
+              onChange={e => setWindow(e.target.value, startMeal, week.endDate, endMeal)}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
-            <p className="text-xs text-gray-300 mt-1">Snäpper till närmaste lördag</p>
+            <MealToggle
+              value={startMeal}
+              onChange={m => setWindow(week.startDate, m, week.endDate, endMeal)}
+            />
           </div>
 
-          <div className="flex items-center self-end pb-6 text-gray-300 text-lg">→</div>
+          <div className="flex items-center pt-7 text-gray-300 text-xl">→</div>
 
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Till</label>
+          {/* End */}
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-500">Till</label>
             <input
               type="date"
               value={week.endDate}
               min={week.startDate}
-              onChange={e => handleEndDateChange(e.target.value)}
+              onChange={e => setWindow(week.startDate, startMeal, e.target.value, endMeal)}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
-            <p className="text-xs text-gray-300 mt-1">Sista dagen i planeringen</p>
+            <MealToggle
+              value={endMeal}
+              onChange={m => setWindow(week.startDate, startMeal, week.endDate, m)}
+            />
           </div>
         </div>
       </section>
@@ -137,6 +143,24 @@ function PortionPicker({ label, value, onChange }: { label: string; value: numbe
     <div className="flex items-center gap-1.5">
       <span className="text-xs text-gray-500 w-12">{label}</span>
       <Stepper value={value} min={0} onChange={onChange} small />
+    </div>
+  )
+}
+
+function MealToggle({ value, onChange }: { value: MealType; onChange: (v: MealType) => void }) {
+  return (
+    <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+      {(['lunch', 'middag'] as MealType[]).map(m => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          className={`px-3 py-1.5 font-medium transition-colors capitalize
+            ${value === m ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          {m === 'lunch' ? 'Lunch' : 'Middag'}
+        </button>
+      ))}
     </div>
   )
 }

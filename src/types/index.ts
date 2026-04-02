@@ -92,9 +92,11 @@ export interface ShoppingItem {
 }
 
 export interface WeekPlan {
-  id: string           // Saturday "YYYY-MM-DD"
-  startDate: string
-  endDate: string      // next Saturday by default
+  id: string              // Saturday "YYYY-MM-DD" — stable nav identifier
+  startDate: string       // actual first day (may differ from id)
+  startMealType: MealType // first meal of the window
+  endDate: string         // actual last day
+  endMealType: MealType   // last meal of the window
   householdSize: number
   meals: PlannedMeal[]
   schedule: ScheduleSlot[]

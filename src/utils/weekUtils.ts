@@ -50,51 +50,124 @@ export function formatDayShort(date: string): string {
   return format(parseISO(date), 'EEE d/M', { locale: sv })
 }
 
-/**
- * Default schedule: Sat Middag → next Sat Lunch (8 days, 14 slots).
- *
- * Day 0 (Sat start): Middag only
- * Day 1–6 (Sun–Fri): Lunch + Middag
- * Day 7 (Sat end):   Lunch only
- */
-export function createEmptyWeek(startDate: string, householdSize: number): WeekPlan {
-  const start = parseISO(startDate)
-  const schedule: ScheduleSlot[] = []
+export interface WeekWindowOpts {
+  startDate?: string      // defaults to weekId (Saturday)
+  startMeal?: 'lunch' | 'middag'  // defaults to 'middag'
+  endDate?: string        // defaults to weekId + 7 days
+  endMeal?: 'lunch' | 'middag'    // defaults to 'lunch'
+}
 
-  for (let i = 0; i <= 7; i++) {
-    const date = format(addDays(start, i), 'yyyy-MM-dd')
-    if (i === 0) {
-      schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
-    } else if (i === 7) {
-      schedule.push({ date, type: 'lunch', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
-    } else {
-      schedule.push({ date, type: 'lunch',  assignedMealIds: [], portionsNeeded: householdSize, event: '' })
-      schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
+/**
+ * Build a WeekPlan schedule for any arbitrary window.
+ * weekId = the stable Saturday identifier used for storage/navigation.
+ * startDate/endDate can be any dates; startMeal/endMeal define the first/last slot.
+ *
+ * First day: only slots from startMeal onwards (dinner-only if startMeal='middag')
+ * Middle days: lunch + dinner
+ * Last day: only slots up to endMeal (lunch-only if endMeal='lunch')
+ */
+export function createEmptyWeek(weekId: string, householdSize: number, opts: WeekWindowOpts = {}): WeekPlan {
+  const startDate  = opts.startDate ?? weekId
+  const startMeal  = opts.startMeal ?? 'middag'
+  const endDate    = opts.endDate   ?? format(addDays(parseISO(weekId), 7), 'yyyy-MM-dd')
+  const endMeal    = opts.endMeal   ?? 'lunch'
+
+  const schedule: ScheduleSlot[] = []
+  let current = parseISO(startDate)
+  const end   = parseISO(endDate)
+
+  while (current <= end) {
+    const date    = format(current, 'yyyy-MM-dd')
+    const isFirst = date === startDate
+    const isLast  = date === endDate
+    const hasLunch  = !isFirst || startMeal === 'lunch'
+    const hasDinner = !isLast  || endMeal   === 'middag'
+    if (hasLunch)  schedule.push({ date, type: 'lunch',  assignedMealIds: [], portionsNeeded: householdSize, event: '' })
+    if (hasDinner) schedule.push({ date, type: 'middag', assignedMealIds: [], portionsNeeded: householdSize, event: '' })
+    current = addDays(current, 1)
+  }
+
+  return {
+    id: weekId, startDate, startMealType: startMeal,
+    endDate, endMealType: endMeal,
+    householdSize, meals: [], schedule, shoppingList: [],
+  }
+}
+
+/**
+ * Compute the default window for the next planning cycle after prevWeek.
+ *
+ * Normal case (prev ends on/before its natural Saturday):
+ *   → Standard Saturday dinner → next-next Saturday lunch.
+ *
+ * Extended case (prev ends after its natural Saturday, e.g. Sunday/Monday):
+ *   → Start from the meal immediately after prev week's end.
+ *   → End on the next Saturday at lunch (to get back on the standard cadence).
+ */
+export function nextWeekWindow(prevWeek: WeekPlan): WeekWindowOpts & { weekId: string } {
+  const naturalEndSat = format(addDays(parseISO(prevWeek.id), 7), 'yyyy-MM-dd')
+  const nextId        = naturalEndSat   // next week's stable Saturday ID
+
+  if (prevWeek.endDate <= naturalEndSat) {
+    // Standard next week
+    return {
+      weekId: nextId,
+      startDate: nextId,
+      startMeal: 'middag',
+      endDate: format(addDays(parseISO(nextId), 7), 'yyyy-MM-dd'),
+      endMeal: 'lunch',
     }
   }
 
-  const endDate = format(addDays(start, 7), 'yyyy-MM-dd')
-  return { id: startDate, startDate, endDate, householdSize, meals: [], schedule, shoppingList: [] }
+  // Extended: start from next meal after prev end
+  let nextStart: string
+  let nextStartMeal: 'lunch' | 'middag'
+  if (prevWeek.endMealType === 'middag') {
+    nextStart     = format(addDays(parseISO(prevWeek.endDate), 1), 'yyyy-MM-dd')
+    nextStartMeal = 'lunch'
+  } else {
+    nextStart     = prevWeek.endDate
+    nextStartMeal = 'middag'
+  }
+
+  // End on the Saturday on-or-after nextStart (min 1 day away), at lunch
+  const startParsed  = parseISO(nextStart)
+  const dayOfWeek    = startParsed.getDay()           // 0=Sun … 6=Sat
+  const daysToSat    = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7 || 7
+  const nextEnd      = format(addDays(startParsed, daysToSat), 'yyyy-MM-dd')
+
+  return { weekId: nextId, startDate: nextStart, startMeal: nextStartMeal, endDate: nextEnd, endMeal: 'lunch' }
 }
 
-/** Add a day's slots (lunch + middag, or just one) at the end of the schedule. */
-export function addDayToSchedule(week: WeekPlan, mealTypes: ('lunch' | 'middag')[]): WeekPlan {
-  const lastDate = week.schedule[week.schedule.length - 1]?.date ?? week.endDate
-  const newDate  = format(addDays(parseISO(lastDate), 1), 'yyyy-MM-dd')
-  const newSlots = mealTypes.map(type => ({
-    date: newDate, type, assignedMealIds: [], portionsNeeded: week.householdSize, event: '',
-  }))
-  return { ...week, endDate: newDate, schedule: [...week.schedule, ...newSlots] }
+/** Rebuild the schedule for a week after changing start/end date or meal type. Preserves existing slot data. */
+export function applyWeekWindow(
+  week: WeekPlan,
+  startDate: string,
+  startMeal: 'lunch' | 'middag',
+  endDate: string,
+  endMeal: 'lunch' | 'middag',
+): WeekPlan {
+  const fresh     = createEmptyWeek(week.id, week.householdSize, { startDate, startMeal, endDate, endMeal })
+  const oldByKey  = new Map(week.schedule.map(s => [`${s.date}-${s.type}`, s]))
+  const merged    = fresh.schedule.map(slot => {
+    const old = oldByKey.get(`${slot.date}-${slot.type}`)
+    return old ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignedMealIds: old.assignedMealIds } : slot
+  })
+  return { ...week, startDate, startMealType: startMeal, endDate, endMealType: endMeal, schedule: merged }
 }
 
-/** Remove the last day entirely from the schedule. */
+/** @deprecated – use applyWeekWindow. Kept for internal migration use. */
+export function addDayToSchedule(week: WeekPlan, _mealTypes: ('lunch' | 'middag')[]): WeekPlan {
+  const newEnd  = format(addDays(parseISO(week.endDate), 1), 'yyyy-MM-dd')
+  return applyWeekWindow(week, week.startDate, week.startMealType ?? 'middag', newEnd, 'middag')
+}
+
+/** @deprecated – use applyWeekWindow. */
 export function removLastDayFromSchedule(week: WeekPlan): WeekPlan {
   const dates = scheduleDates(week)
   if (dates.length <= 1) return week
-  const lastDate = dates[dates.length - 1]
-  const newSchedule = week.schedule.filter(s => s.date !== lastDate)
-  const newEnd = newSchedule[newSchedule.length - 1]?.date ?? week.startDate
-  return { ...week, endDate: newEnd, schedule: newSchedule }
+  const newEnd = dates[dates.length - 2]
+  return applyWeekWindow(week, week.startDate, week.startMealType ?? 'middag', newEnd, 'middag')
 }
 
 /** Running portion balance after each schedule slot. */
@@ -176,26 +249,22 @@ export const MONTH_NAMES = [
 ]
 
 /**
- * Migrate a week plan that was saved with the old 7-day structure (Sat–Fri).
- * Regenerates the schedule slots to the correct 8-day window (Sat dinner → next Sat lunch)
- * while preserving meals, events, portionsNeeded overrides, and meal assignments
- * on slots that still exist in the new structure.
+ * Migrate a week plan saved with the old structure (pre startMealType/endMealType fields,
+ * or old 7-day Sat–Fri window). Adds missing fields and regenerates the schedule if needed.
  */
 export function migrateWeek(plan: WeekPlan): WeekPlan {
+  // Fill missing meal-type fields (old saves won't have them)
+  const startMeal: 'lunch' | 'middag' = (plan.startMealType as 'lunch' | 'middag' | undefined) ?? 'middag'
+  const endMeal:   'lunch' | 'middag' = (plan.endMealType   as 'lunch' | 'middag' | undefined) ?? 'lunch'
+
   const expectedEnd = format(addDays(parseISO(plan.startDate), 7), 'yyyy-MM-dd')
-  if (plan.endDate === expectedEnd) return plan   // already correct
+  if (plan.endDate === expectedEnd && plan.startMealType && plan.endMealType) return plan
 
-  const fresh = createEmptyWeek(plan.startDate, plan.householdSize)
-
-  // Re-apply any per-slot overrides (portionsNeeded, event, assignedMealIds)
-  // from the old schedule where dates/types overlap.
-  const oldByKey = new Map(plan.schedule.map(s => [`${s.date}-${s.type}`, s]))
-  const mergedSchedule = fresh.schedule.map(slot => {
-    const old = oldByKey.get(`${slot.date}-${slot.type}`)
-    return old
-      ? { ...slot, portionsNeeded: old.portionsNeeded, event: old.event, assignedMealIds: old.assignedMealIds }
-      : slot
-  })
-
-  return { ...plan, endDate: fresh.endDate, schedule: mergedSchedule }
+  return applyWeekWindow(
+    { ...plan, startMealType: startMeal, endMealType: endMeal },
+    plan.startDate,
+    startMeal,
+    plan.endDate === expectedEnd ? plan.endDate : expectedEnd,
+    endMeal,
+  )
 }

@@ -1,22 +1,28 @@
-import { useWeekStore } from '../../store/weekStore'
-import { prevWeekId, nextWeekId, formatWeekLabel, currentWeekId } from '../../utils/weekUtils'
+import { useWeekStore, activeWeek } from '../../store/weekStore'
+import { prevWeekId, formatWeekLabel, currentWeekId, nextWeekWindow } from '../../utils/weekUtils'
 import { useWeekLoader } from '../../hooks/useWeekLoader'
 
 export default function WeekNavigator() {
-  const { activeWeekId, setActiveWeek } = useWeekStore()
+  const store = useWeekStore()
+  const week  = activeWeek(store)
   const loadWeek = useWeekLoader()
 
-  const go = (id: string) => {
-    setActiveWeek(id)
-    loadWeek(id)
+  function go(weekId: string, opts?: { startDate?: string; startMeal?: 'lunch' | 'middag' }) {
+    store.setActiveWeek(weekId)
+    loadWeek(weekId, opts)
   }
 
-  const isCurrentWeek = activeWeekId === currentWeekId()
+  function goNext() {
+    const nw = nextWeekWindow(week)
+    go(nw.weekId, { startDate: nw.startDate, startMeal: nw.startMeal })
+  }
+
+  const isCurrentWeek = store.activeWeekId === currentWeekId()
 
   return (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => go(prevWeekId(activeWeekId))}
+        onClick={() => go(prevWeekId(store.activeWeekId))}
         className="p-1 rounded-lg hover:bg-gray-100 text-gray-600 font-bold text-lg leading-none"
         aria-label="Föregående vecka"
       >
@@ -31,11 +37,11 @@ export default function WeekNavigator() {
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
-        {formatWeekLabel(activeWeekId)}
+        {formatWeekLabel(store.activeWeekId)}
       </button>
 
       <button
-        onClick={() => go(nextWeekId(activeWeekId))}
+        onClick={goNext}
         className="p-1 rounded-lg hover:bg-gray-100 text-gray-600 font-bold text-lg leading-none"
         aria-label="Nästa vecka"
       >

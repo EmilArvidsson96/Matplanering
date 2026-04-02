@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType } from '../types'
-import { currentWeekId, createEmptyWeek, addDayToSchedule, removLastDayFromSchedule } from '../utils/weekUtils'
+import { currentWeekId, createEmptyWeek, applyWeekWindow } from '../utils/weekUtils'
 
 interface WeekStore {
   weeks: Record<string, WeekPlan>       // weekId -> WeekPlan
@@ -19,9 +19,7 @@ interface WeekStore {
   // Active week helpers (all mutations mark week as dirty)
   updateHouseholdSize: (size: number) => void
   updateSlot: (date: string, type: MealType, patch: Partial<Omit<ScheduleSlot, 'date' | 'type'>>) => void
-  extendWeek: () => void
-  shrinkWeek: () => void
-  setEndDate: (date: string) => void
+  setWeekWindow: (startDate: string, startMeal: 'lunch' | 'middag', endDate: string, endMeal: 'lunch' | 'middag') => void
 
   // Meals (brainstorm)
   addMeal: (meal: Omit<PlannedMeal, 'id'>) => string
@@ -93,16 +91,8 @@ export const useWeekStore = create<WeekStore>((set, get) => {
     updateHouseholdSize: (size) =>
       mutateActive((p) => ({ ...p, householdSize: size })),
 
-    extendWeek: () => mutateActive((p) => addDayToSchedule(p, ['lunch', 'middag'])),
-    shrinkWeek: () => mutateActive((p) => removLastDayFromSchedule(p)),
-
-    setEndDate: (target) => mutateActive((p) => {
-      let plan = p
-      let guard = 0
-      while (plan.endDate < target && guard++ < 60) plan = addDayToSchedule(plan, ['lunch', 'middag'])
-      while (plan.endDate > target && guard++ < 60) plan = removLastDayFromSchedule(plan)
-      return plan
-    }),
+    setWeekWindow: (startDate, startMeal, endDate, endMeal) =>
+      mutateActive((p) => applyWeekWindow(p, startDate, startMeal, endDate, endMeal)),
 
     updateSlot: (date, type, patch) =>
       mutateActive((p) =>
