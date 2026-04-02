@@ -1,0 +1,299 @@
+import { useState } from 'react'
+import { v4 as uuid } from 'uuid'
+import { useLibraryStore } from '../../store/libraryStore'
+import Modal from '../common/Modal'
+import type {
+  Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
+} from '../../types'
+
+const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','lamm','vilt','vegetarisk','vegan']
+const ALL_CARBS:    Carb[]    = ['ris','pasta','potatis','nudlar','bröd','ingen']
+const ALL_CUISINES: Cuisine[] = ['svensk','italiensk','asiatisk','japansk','koreansk','indisk','mellanöstern','mexikansk','fransk','nordafrikansk','övrigt']
+const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza']
+const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark']
+const ALL_CATS:     ShoppingCategory[] = ['mejeri','kött','fisk','grönsaker','frukt','torrvaror','konserver','frys','bröd','kryddor','övrigt']
+
+const LABEL: Record<string, string> = {
+  kyckling:'Kyckling', nöt:'Nöt', fläsk:'Fläsk', fisk:'Fisk', skaldjur:'Skaldjur',
+  lamm:'Lamm', vilt:'Vilt', vegetarisk:'Vegetarisk', vegan:'Vegan',
+  ris:'Ris', pasta:'Pasta', potatis:'Potatis', nudlar:'Nudlar', bröd:'Bröd', ingen:'Lågkolhydrat',
+  svensk:'Svensk', italiensk:'Italiensk', asiatisk:'Asiatisk', japansk:'Japansk',
+  koreansk:'Koreansk', indisk:'Indisk', mellanöstern:'Mellanöstern', mexikansk:'Mexikansk',
+  fransk:'Fransk', nordafrikansk:'Nordafrikansk', övrigt:'Övrigt',
+  soppa:'Soppa', sallad:'Sallad', paj:'Paj', gryta:'Gryta', grillat:'Grillat',
+  bowl:'Bowl', burgare:'Burgare', taco:'Taco', wrap:'Wrap', pizza:'Pizza',
+  snabb:'Snabb', festlig:'Festlig', barnvänlig:'Barnvänlig',
+  lowfodmap:'Low FODMAP', lchf:'LCHF', stark:'Stark',
+  mejeri:'Mejeri', kött:'Kött',
+  grönsaker:'Grönsaker', frukt:'Frukt', torrvaror:'Torrvaror',
+  konserver:'Konserver', frys:'Frys', kryddor:'Kryddor',
+}
+
+interface Props {
+  dish: Dish | null
+  onClose: () => void
+}
+
+function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
+  return {
+    name: '', protein: [], carb: [], cuisine: 'övrigt',
+    type: [], tags: [], recipeUrl: '', ingredients: [], notes: '',
+  }
+}
+
+export default function DishEditor({ dish, onClose }: Props) {
+  const { addDish, updateDish, deleteDish } = useLibraryStore()
+  const [form, setForm] = useState<Omit<Dish, 'id' | 'cookingHistory'>>(
+    dish ? { ...dish } : blank()
+  )
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const isNew = !dish
+
+  function toggle<T>(arr: T[], v: T): T[] {
+    return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]
+  }
+
+  function save() {
+    if (!form.name.trim()) return
+    if (isNew) {
+      addDish(form)
+    } else {
+      updateDish(dish.id, form)
+    }
+    onClose()
+  }
+
+  function addIngredient() {
+    const ing: Ingredient = {
+      id: uuid(), name: '', amount: 1, unit: 'g', category: 'övrigt', portionsBase: 4,
+    }
+    setForm(f => ({ ...f, ingredients: [...f.ingredients, ing] }))
+  }
+
+  function updateIngredient(id: string, patch: Partial<Ingredient>) {
+    setForm(f => ({
+      ...f,
+      ingredients: f.ingredients.map(i => i.id === id ? { ...i, ...patch } : i),
+    }))
+  }
+
+  function removeIngredient(id: string) {
+    setForm(f => ({ ...f, ingredients: f.ingredients.filter(i => i.id !== id) }))
+  }
+
+  return (
+    <Modal
+      title={isNew ? 'Ny rätt' : 'Redigera rätt'}
+      onClose={onClose}
+      wide
+    >
+      <div className="space-y-5">
+        {/* Name */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Namn *</label>
+          <input
+            autoFocus
+            type="text"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+        </div>
+
+        {/* Protein */}
+        <ChipGroup
+          label="Protein"
+          options={ALL_PROTEINS}
+          selected={form.protein}
+          onToggle={v => setForm(f => ({ ...f, protein: toggle(f.protein, v as Protein) }))}
+        />
+
+        {/* Carb */}
+        <ChipGroup
+          label="Kolhydrat"
+          options={ALL_CARBS}
+          selected={form.carb}
+          onToggle={v => setForm(f => ({ ...f, carb: toggle(f.carb, v as Carb) }))}
+        />
+
+        {/* Cuisine */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Kök</label>
+          <select
+            value={form.cuisine}
+            onChange={e => setForm(f => ({ ...f, cuisine: e.target.value as Cuisine }))}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-brand-300"
+          >
+            {ALL_CUISINES.map(c => <option key={c} value={c}>{LABEL[c]}</option>)}
+          </select>
+        </div>
+
+        {/* Type */}
+        <ChipGroup
+          label="Typ"
+          options={ALL_TYPES}
+          selected={form.type}
+          onToggle={v => setForm(f => ({ ...f, type: toggle(f.type, v as DishType) }))}
+        />
+
+        {/* Tags */}
+        <ChipGroup
+          label="Taggar"
+          options={ALL_TAGS}
+          selected={form.tags}
+          onToggle={v => setForm(f => ({ ...f, tags: toggle(f.tags, v as Tag) }))}
+        />
+
+        {/* Recipe URL */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Receptlänk</label>
+          <input
+            type="url"
+            value={form.recipeUrl}
+            onChange={e => setForm(f => ({ ...f, recipeUrl: e.target.value }))}
+            placeholder="https://…"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+        </div>
+
+        {/* Ingredients */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-medium text-gray-500">Ingredienser</label>
+            <button
+              onClick={addIngredient}
+              className="text-xs text-brand-600 hover:text-brand-800 font-medium"
+            >
+              + Lägg till
+            </button>
+          </div>
+          {form.ingredients.length === 0 && (
+            <p className="text-xs text-gray-300 italic">Inga ingredienser än.</p>
+          )}
+          <div className="space-y-2">
+            {form.ingredients.map(ing => (
+              <div key={ing.id} className="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-2">
+                <input
+                  type="text"
+                  placeholder="Ingrediens"
+                  value={ing.name}
+                  onChange={e => updateIngredient(ing.id, { name: e.target.value })}
+                  className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                />
+                <input
+                  type="number"
+                  placeholder="Mängd"
+                  value={ing.amount}
+                  onChange={e => updateIngredient(ing.id, { amount: Number(e.target.value) })}
+                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                />
+                <input
+                  type="text"
+                  placeholder="Enhet"
+                  value={ing.unit}
+                  onChange={e => updateIngredient(ing.id, { unit: e.target.value })}
+                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                />
+                <select
+                  value={ing.category}
+                  onChange={e => updateIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white"
+                >
+                  {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
+                </select>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <span>för</span>
+                  <input
+                    type="number"
+                    value={ing.portionsBase}
+                    onChange={e => updateIngredient(ing.id, { portionsBase: Number(e.target.value) })}
+                    className="w-12 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                  />
+                  <span>port.</span>
+                </div>
+                <button
+                  onClick={() => removeIngredient(ing.id)}
+                  className="text-gray-300 hover:text-red-400 text-sm"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Anteckningar</label>
+          <textarea
+            value={form.notes}
+            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            rows={2}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <button
+            onClick={save}
+            disabled={!form.name.trim()}
+            className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm"
+          >
+            {isNew ? 'Lägg till' : 'Spara'}
+          </button>
+          {!isNew && (
+            confirmDelete ? (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => { deleteDish(dish.id); onClose() }}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-sm font-medium"
+                >
+                  Bekräfta radering
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="border border-gray-200 px-3 py-2 rounded-xl text-sm text-gray-600"
+                >
+                  Avbryt
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="border border-red-200 text-red-400 hover:bg-red-50 px-3 py-2 rounded-xl text-sm"
+              >
+                Ta bort
+              </button>
+            )
+          )}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function ChipGroup<T extends string>({
+  label, options, selected, onToggle,
+}: { label: string; options: T[]; selected: T[]; onToggle: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onToggle(opt)}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+              ${selected.includes(opt)
+                ? 'bg-brand-600 text-white border-brand-600'
+                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+          >
+            {LABEL[opt] ?? opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}

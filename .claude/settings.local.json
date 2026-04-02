@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \":*)",
+      "Bash(npm install:*)",
+      "Bash(/usr/local/bin/npm install:*)",
+      "Bash(/opt/homebrew/bin/npm install:*)",
+      "Bash(export PATH=\"/opt/homebrew/opt/node/bin:$PATH\")",
+      "Bash(npm run:*)"
+    ]
+  }
+}
