@@ -22,7 +22,7 @@ export default function SaveIndicator({ status, error, onRetry }: Props) {
           </button>
         </div>
         {error && (
-          <span className="text-xs text-red-300 leading-tight break-words max-w-[180px]">
+          <span className="text-xs text-red-400 leading-tight break-words max-w-[180px]">
             {error.includes('404')
               ? 'Datarepo saknas – skapa "matplanering-data" på GitHub'
               : error.includes('401') || error.includes('403')
@@ -35,7 +35,7 @@ export default function SaveIndicator({ status, error, onRetry }: Props) {
   }
 
   return (
-    <span className="text-xs text-gray-400 select-none">
+    <span className="text-xs text-gray-500 select-none">
       {status === 'saving' && 'Sparar…'}
       {status === 'saved'  && 'Sparat ✓'}
     </span>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { RotateCcw } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -97,7 +98,7 @@ export default function BrainstormStep() {
       {/* Meal list */}
       <div className="space-y-2">
         {week.meals.length === 0 && (
-          <p className="text-sm text-gray-400 py-4 text-center">
+          <p className="text-sm text-gray-500 py-4 text-center">
             Inga rätter planerade än. Lägg till nedan!
           </p>
         )}
@@ -136,10 +137,11 @@ export default function BrainstormStep() {
           </button>
           <button
             onClick={addRemainder}
-            className="border border-gray-200 hover:bg-amber-50 text-amber-600 font-medium px-4 py-2 rounded-xl text-sm"
+            className="flex items-center gap-1.5 border border-gray-200 hover:bg-amber-50 text-amber-600 font-medium px-4 py-2 rounded-xl text-sm"
             title="Lägg till rester från förra veckan"
           >
-            ♻️ Rester
+            <RotateCcw className="w-3.5 h-3.5" />
+            Rester
           </button>
         </div>
 
@@ -224,8 +226,8 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border transition-all
-      ${meal.isRemainder ? 'border-amber-200' : 'border-gray-100'}`}
+    <div className={`bg-white rounded-xl border transition-all
+      ${meal.isRemainder ? 'border-amber-200' : 'border-gray-200'}`}
     >
       {/* Main row */}
       <div className="flex items-center gap-2 p-3">
@@ -233,9 +235,9 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
         <button
           onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
           title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
-          className={`text-base leading-none shrink-0 transition-opacity ${meal.isRemainder ? 'opacity-100' : 'opacity-25 hover:opacity-60'}`}
+          className={`shrink-0 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
         >
-          ♻️
+          <RotateCcw className="w-4 h-4" />
         </button>
 
         {/* Name */}
@@ -268,13 +270,13 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
             onClick={() => onUpdate({ portions: meal.portions + 1 })}
             className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
           >+</button>
-          <span className="text-xs text-gray-400 ml-0.5">port.</span>
+          <span className="text-xs text-gray-500 ml-0.5">port.</span>
         </div>
 
-        <button onClick={onEdit} className="text-gray-400 hover:text-gray-600 text-sm px-1">
+        <button onClick={onEdit} className="text-gray-500 hover:text-gray-700 text-sm px-1">
           {isEditing ? '▲' : '▼'}
         </button>
-        <button onClick={onDelete} className="text-gray-300 hover:text-red-400 text-sm px-1">✕</button>
+        <button onClick={onDelete} className="text-gray-400 hover:text-red-500 text-sm px-1">✕</button>
       </div>
 
       {/* Expanded section */}
@@ -298,7 +300,7 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
           {/* Temporary ingredients */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-gray-500">Tillfälliga ingredienser (för den här veckan)</span>
+              <span className="text-xs font-medium text-gray-600">Tillfälliga ingredienser (för den här veckan)</span>
               <button onClick={addTempIngredient} className="text-xs text-brand-600 hover:text-brand-800 font-medium">
                 + Lägg till
               </button>
@@ -330,7 +332,7 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
                 >
                   {SHOPPING_CATS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <button onClick={() => removeTempIngredient(ing.id)} className="text-gray-300 hover:text-red-400">✕</button>
+                <button onClick={() => removeTempIngredient(ing.id)} className="text-gray-400 hover:text-red-500">✕</button>
               </div>
             ))}
           </div>

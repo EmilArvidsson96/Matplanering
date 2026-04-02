@@ -39,19 +39,19 @@ export default function PortionsStep() {
             min={1}
             onChange={v => store.updateHouseholdSize(v)}
           />
-          <span className="text-sm text-gray-400">portioner per måltid som standard</span>
+          <span className="text-sm text-gray-600">portioner per måltid som standard</span>
         </div>
       </section>
 
       {/* Week window */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
         <h2 className="font-semibold text-gray-700 mb-1">Planeringsfönster</h2>
-        <p className="text-xs text-gray-400 mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
+        <p className="text-xs text-gray-500 mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
 
         <div className="flex flex-wrap gap-6">
           {/* Start */}
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-500">Från</label>
+            <label className="block text-xs font-medium text-gray-600">Från</label>
             <input
               type="date"
               value={week.startDate}
@@ -64,11 +64,11 @@ export default function PortionsStep() {
             />
           </div>
 
-          <div className="flex items-center pt-7 text-gray-300 text-xl">→</div>
+          <div className="flex items-center pt-7 text-gray-400 text-xl">→</div>
 
           {/* End */}
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-500">Till</label>
+            <label className="block text-xs font-medium text-gray-600">Till</label>
             <input
               type="date"
               value={week.endDate}
@@ -122,7 +122,7 @@ export default function PortionsStep() {
 function PortionPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-gray-500 w-12">{label}</span>
+      <span className="text-xs text-gray-600 w-12">{label}</span>
       <Stepper value={value} min={0} onChange={onChange} small />
     </div>
   )

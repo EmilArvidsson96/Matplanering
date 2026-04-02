@@ -30,10 +30,10 @@ export default function ScheduleStep() {
     <div className="max-w-3xl space-y-4">
       {/* Week window – compact */}
       <section className="bg-white rounded-2xl p-4 shadow-sm">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Planeringsfönster</h2>
+        <h2 className="text-sm font-semibold text-gray-800 mb-3">Planeringsfönster</h2>
         <div className="flex flex-wrap gap-4">
           <div className="space-y-1.5">
-            <label className="block text-xs text-gray-400">Från</label>
+            <label className="block text-xs font-medium text-gray-600">Från</label>
             <input
               type="date"
               value={week.startDate}
@@ -42,9 +42,9 @@ export default function ScheduleStep() {
             />
             <MealToggle value={startMeal} onChange={m => setWindow(week.startDate, m, week.endDate, endMeal)} />
           </div>
-          <div className="flex items-center pt-6 text-gray-300 text-xl">→</div>
+          <div className="flex items-center pt-6 text-gray-400 text-xl">→</div>
           <div className="space-y-1.5">
-            <label className="block text-xs text-gray-400">Till</label>
+            <label className="block text-xs font-medium text-gray-600">Till</label>
             <input
               type="date"
               value={week.endDate}
@@ -58,7 +58,7 @@ export default function ScheduleStep() {
       </section>
 
       {/* Legend */}
-      <div className="flex gap-4 text-xs text-gray-400">
+      <div className="flex gap-4 text-xs text-gray-600">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-brand-400 inline-block" /> Portioner räcker</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Knappt</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> Portioner saknas</span>
@@ -69,9 +69,9 @@ export default function ScheduleStep() {
         const dayEvent = daySlots[0]?.event ?? ''
 
         return (
-          <div key={date} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div key={date} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {/* Day header with editable note */}
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
               <span className="font-semibold text-sm text-gray-700 shrink-0 capitalize">
                 {formatDayShort(date)}
               </span>
@@ -80,7 +80,7 @@ export default function ScheduleStep() {
                 placeholder="Notering för dagen…"
                 value={dayEvent}
                 onChange={e => updateEvent(date, e.target.value)}
-                className="flex-1 text-xs text-gray-500 bg-transparent border-none focus:outline-none placeholder:text-gray-300 italic"
+                className="flex-1 text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
               />
             </div>
 
@@ -146,14 +146,14 @@ function SlotRow({
       <div className="pt-1 shrink-0"><div className={`w-2 h-2 rounded-full ${dotColor}`} /></div>
 
       <div className="w-14 shrink-0 pt-0.5">
-        <span className="text-xs font-medium text-gray-500">
+        <span className="text-xs font-medium text-gray-600">
           {slot.type === 'lunch' ? 'Lunch' : 'Middag'}
         </span>
       </div>
 
       <div className="flex-1 min-w-0">
         {assignedMeals.length === 0 ? (
-          <span className="text-xs text-gray-300 italic">Inget tillagat</span>
+          <span className="text-xs text-gray-500 italic">Inget tillagat</span>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {assignedMeals.map(({ assignment, meal }) => (
@@ -166,7 +166,7 @@ function SlotRow({
                 {assignment.portions < meal.portions && (
                   <span className="text-gray-400 ml-0.5">({assignment.portions}p)</span>
                 )}
-                <button onClick={() => onUnassign(meal.id)} className="text-gray-300 hover:text-red-400 ml-0.5 leading-none">✕</button>
+                <button onClick={() => onUnassign(meal.id)} className="text-gray-400 hover:text-red-500 ml-0.5 leading-none">✕</button>
               </span>
             ))}
           </div>
@@ -233,7 +233,7 @@ function MealAssignPicker({
     <Modal title={`Tilldela matlagning – ${slot.type === 'lunch' ? 'Lunch' : 'Middag'} ${slot.date}`} onClose={onClose}>
       <div className="space-y-1">
         {unassigned.length === 0 && assigned.length === 0 && (
-          <p className="text-sm text-gray-400 py-4 text-center">Inga planerade rätter.</p>
+          <p className="text-sm text-gray-500 py-4 text-center">Inga planerade rätter.</p>
         )}
 
         {/* Unassigned meals — assignable */}
@@ -269,7 +269,7 @@ function MealAssignPicker({
                   onClick={() => setCount(meal.id, max, +1)}
                   className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 text-xs font-bold leading-none flex items-center justify-center"
                 >+</button>
-                <span className="text-xs text-gray-300 ml-0.5">/ {meal.portions}</span>
+                <span className="text-xs text-gray-500 ml-0.5">/ {meal.portions}</span>
               </div>
 
               <button
