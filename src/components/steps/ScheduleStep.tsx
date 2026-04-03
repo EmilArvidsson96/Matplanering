@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { computeBalances, slotKey, formatDayShort } from '../../utils/weekUtils'
@@ -26,19 +27,10 @@ export default function ScheduleStep() {
   const startMeal = week.startMealType ?? 'middag'
   const endMeal   = week.endMealType   ?? 'lunch'
 
-  const unassignedMeals = week.meals.filter(m =>
-    !m.isRemainder && !week.schedule.some(s => (s.assignments ?? []).some(a => a.mealId === m.id))
-  )
-  const allAssigned = unassignedMeals.length === 0 && week.meals.filter(m => !m.isRemainder).length > 0
-
   function setWindow(startDate: string, sm: MealType, endDate: string, em: MealType) {
     if (!startDate || !endDate) return
     if (endDate < startDate || (endDate === startDate && sm === 'middag' && em === 'lunch')) return
     store.setWeekWindow(startDate, sm, endDate, em)
-  }
-
-  function markDoneAndFinish() {
-    // no-op navigation placeholder — tab switching handled by WeekPlanPage
   }
 
   const activeDates = dates.filter(date => {
