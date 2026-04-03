@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Users, Lightbulb, CalendarDays } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -18,11 +17,14 @@ const STEPS: { id: Step; label: string; Icon: LucideIcon }[] = [
 const VALID_STEPS = new Set<Step>(['portioner', 'brainstorm', 'schema'])
 
 export default function WeekPlanPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const paramStep = searchParams.get('steg') as Step | null
-  const [step, setStep] = useState<Step>(
-    paramStep && VALID_STEPS.has(paramStep) ? paramStep : 'brainstorm'
-  )
+  // Step is always derived from the URL so navigate() calls update it immediately
+  const step: Step = paramStep && VALID_STEPS.has(paramStep) ? paramStep : 'brainstorm'
+
+  function setStep(s: Step) {
+    setSearchParams({ steg: s }, { replace: true })
+  }
 
   return (
     <div className="space-y-4">
