@@ -259,9 +259,7 @@ function WeekOverview({ week, dishMap, today }: { week: WeekPlan; dishMap: Map<s
   const relevantDates = dates.filter(date => {
     if (date === today) return false
     const slots = week.schedule.filter(s => s.date === date)
-    // Show days that have assignments, events, or are upcoming (to allow adding notes)
-    const isPast = date < today
-    return slots.some(s => s.assignments.length > 0 || s.event) || !isPast
+    return slots.some(s => s.assignments.length > 0 || s.event?.trim())
   })
 
   if (relevantDates.length === 0) return null

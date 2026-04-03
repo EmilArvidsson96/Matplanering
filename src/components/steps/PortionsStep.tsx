@@ -24,14 +24,12 @@ export default function PortionsStep() {
     store.setWeekWindow(startDate, sm, endDate, em)
   }
 
-  function updateEvent(date: string, value: string) {
-    week.schedule
-      .filter(s => s.date === date)
-      .forEach(s => store.updateSlot(date, s.type, { event: value }))
+  function updateEvent(date: string, type: MealType, value: string) {
+    store.updateSlot(date, type, { event: value })
   }
 
-  function dayEvent(date: string): string {
-    return week.schedule.find(s => s.date === date)?.event ?? ''
+  function slotEvent(date: string, type: MealType): string {
+    return week.schedule.find(s => s.date === date && s.type === type)?.event ?? ''
   }
 
   function updatePortions(date: string, type: MealType, value: number) {
@@ -108,38 +106,27 @@ export default function PortionsStep() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {dates.map((date) => (
             <div key={date} className="border border-gray-100 rounded-xl overflow-hidden">
-              <div className="p-3 flex flex-wrap items-center gap-3">
-                <div className="w-28 shrink-0">
-                  <span className="text-sm font-medium text-gray-700 capitalize">
-                    {formatDayLabel(date)}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 flex-1">
-                  {hasSlot(date, 'lunch') && (
-                    <PortionPicker
-                      label="Lunch"
-                      value={slotPortions(date, 'lunch')}
-                      onChange={v => updatePortions(date, 'lunch', v)}
-                    />
-                  )}
-                  {hasSlot(date, 'middag') && (
-                    <PortionPicker
-                      label="Middag"
-                      value={slotPortions(date, 'middag')}
-                      onChange={v => updatePortions(date, 'middag', v)}
-                    />
-                  )}
-                </div>
+              <div className="px-3 pt-3 pb-1">
+                <span className="text-sm font-medium text-gray-700 capitalize">
+                  {formatDayLabel(date)}
+                </span>
               </div>
-              <div className="border-t border-gray-50 bg-gray-50 px-3 py-1.5">
-                <input
-                  type="text"
-                  placeholder="Notering för dagen…"
-                  value={dayEvent(date)}
-                  onChange={e => updateEvent(date, e.target.value)}
-                  className="w-full text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
-                />
-              </div>
+              {(['lunch', 'middag'] as MealType[]).filter(type => hasSlot(date, type)).map(type => (
+                <div key={type} className="border-t border-gray-50 px-3 py-2 flex flex-wrap items-center gap-3">
+                  <PortionPicker
+                    label={type === 'lunch' ? 'Lunch' : 'Middag'}
+                    value={slotPortions(date, type)}
+                    onChange={v => updatePortions(date, type, v)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Notering…"
+                    value={slotEvent(date, type)}
+                    onChange={e => updateEvent(date, type, e.target.value)}
+                    className="flex-1 min-w-[120px] text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
+                  />
+                </div>
+              ))}
             </div>
           ))}
         </div>
