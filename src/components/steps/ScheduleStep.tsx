@@ -146,31 +146,6 @@ export default function ScheduleStep() {
         </button>
       </div>
 
-      {/* Next-step CTA */}
-      <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
-        {allAssigned ? (
-          <p className="text-sm text-green-700 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4" /> Alla måltider är tilldelade
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">
-            {unassignedMeals.length === 0
-              ? 'Inga brainstormade rätter att fördela'
-              : `${unassignedMeals.length} rätt${unassignedMeals.length > 1 ? 'er' : ''} ej fördelade: ${unassignedMeals.map(m => m.name).join(', ')}`}
-          </p>
-        )}
-        <button
-          onClick={markDoneAndFinish}
-          className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
-            ${allAssigned
-              ? 'bg-brand-600 hover:bg-brand-700 text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-        >
-          {allAssigned ? 'Klar – tillbaka till sammanfattning' : 'Forcera & gå till sammanfattning'}
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
       {pickingSlot && (
         <MealAssignPicker
           slot={pickingSlot}
