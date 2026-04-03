@@ -24,6 +24,16 @@ export default function PortionsStep() {
     store.setWeekWindow(startDate, sm, endDate, em)
   }
 
+  function updateEvent(date: string, value: string) {
+    week.schedule
+      .filter(s => s.date === date)
+      .forEach(s => store.updateSlot(date, s.type, { event: value }))
+  }
+
+  function dayEvent(date: string): string {
+    return week.schedule.find(s => s.date === date)?.event ?? ''
+  }
+
   function updatePortions(date: string, type: MealType, value: number) {
     store.updateSlot(date, type, { portionsNeeded: Math.max(0, value) })
   }
@@ -37,7 +47,7 @@ export default function PortionsStep() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Household size */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
         <h2 className="font-semibold text-gray-700 mb-4">Antal i hushållet (standard)</h2>
@@ -95,29 +105,40 @@ export default function PortionsStep() {
       {/* Per-day portion overrides */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
         <h2 className="font-semibold text-gray-700 mb-4">Portioner per dag</h2>
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {dates.map((date) => (
-            <div key={date} className="border border-gray-100 rounded-xl p-3 flex flex-wrap items-center gap-3">
-              <div className="w-28 shrink-0">
-                <span className="text-sm font-medium text-gray-700 capitalize">
-                  {formatDayLabel(date)}
-                </span>
+            <div key={date} className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="p-3 flex flex-wrap items-center gap-3">
+                <div className="w-28 shrink-0">
+                  <span className="text-sm font-medium text-gray-700 capitalize">
+                    {formatDayLabel(date)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3 flex-1">
+                  {hasSlot(date, 'lunch') && (
+                    <PortionPicker
+                      label="Lunch"
+                      value={slotPortions(date, 'lunch')}
+                      onChange={v => updatePortions(date, 'lunch', v)}
+                    />
+                  )}
+                  {hasSlot(date, 'middag') && (
+                    <PortionPicker
+                      label="Middag"
+                      value={slotPortions(date, 'middag')}
+                      onChange={v => updatePortions(date, 'middag', v)}
+                    />
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-3 flex-1">
-                {hasSlot(date, 'lunch') && (
-                  <PortionPicker
-                    label="Lunch"
-                    value={slotPortions(date, 'lunch')}
-                    onChange={v => updatePortions(date, 'lunch', v)}
-                  />
-                )}
-                {hasSlot(date, 'middag') && (
-                  <PortionPicker
-                    label="Middag"
-                    value={slotPortions(date, 'middag')}
-                    onChange={v => updatePortions(date, 'middag', v)}
-                  />
-                )}
+              <div className="border-t border-gray-50 bg-gray-50 px-3 py-1.5">
+                <input
+                  type="text"
+                  placeholder="Notering för dagen…"
+                  value={dayEvent(date)}
+                  onChange={e => updateEvent(date, e.target.value)}
+                  className="w-full text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
+                />
               </div>
             </div>
           ))}
