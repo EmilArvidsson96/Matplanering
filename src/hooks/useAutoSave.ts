@@ -3,12 +3,14 @@ import { getFile, saveFile } from '../api/github'
 import { useWeekStore } from '../store/weekStore'
 import { useLibraryStore } from '../store/libraryStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { migrateWeek } from '../utils/weekUtils'
 import type { AppSettings, LibraryData, WeekPlan } from '../types'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 export type SaveError = string | null
 
 const DEBOUNCE_MS = 5000
+const POLL_INTERVAL_MS = 30_000
 
 export function useAutoSave() {
   const [status, setStatus]       = useState<SaveStatus>('idle')
@@ -73,6 +75,38 @@ export function useAutoSave() {
     timerRef.current = setTimeout(save, DEBOUNCE_MS)
     return () => clearTimeout(timerRef.current)
   }, [isDirty, save])
+
+  // Poll for remote changes every 30s and silently refresh non-dirty data.
+  const pollRef = useRef<() => Promise<void>>()
+  pollRef.current = async () => {
+    try {
+      const weekId = weekStore.activeWeekId
+      if (!weekStore.dirtyWeeks.has(weekId)) {
+        const file = await getFile(`weeks/${weekId}.json`)
+        if (file && file.sha !== weekStore.shas[weekId]) {
+          weekStore.loadWeek(migrateWeek(JSON.parse(file.content) as WeekPlan), file.sha)
+        }
+      }
+      if (!libraryStore.isDirty) {
+        const file = await getFile('library.json')
+        if (file && file.sha !== libraryStore.sha) {
+          libraryStore.load((JSON.parse(file.content) as LibraryData).dishes, file.sha)
+        }
+      }
+      if (!settingsStore.isDirty) {
+        const file = await getFile('settings.json')
+        if (file && file.sha !== settingsStore.sha) {
+          settingsStore.load(JSON.parse(file.content) as AppSettings, file.sha)
+        }
+      }
+    } catch {
+      // polling errors are non-critical
+    }
+  }
+  useEffect(() => {
+    const id = setInterval(() => { pollRef.current?.() }, POLL_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [])
 
   return { status, saveError, saveNow: save }
 }

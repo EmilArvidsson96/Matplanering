@@ -46,8 +46,8 @@ export async function saveFile(
 
   let res = await call('PUT', path, bodyObj)
 
-  // 422 = SHA mismatch. Fetch current SHA and retry once.
-  if (res.status === 422) {
+  // 409 or 422 = SHA mismatch. Fetch current SHA and retry once.
+  if (res.status === 409 || res.status === 422) {
     const head = await call('GET', path)
     if (head.ok) {
       const headData = await head.json()
