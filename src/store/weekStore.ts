@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType, MealAssignment } from '../types'
+import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType, MealAssignment, StepsCompleted } from '../types'
 import { currentWeekId, createEmptyWeek, applyWeekWindow } from '../utils/weekUtils'
 
 interface WeekStore {
@@ -29,6 +29,11 @@ interface WeekStore {
   // Schedule assignment
   assignMeal: (date: string, type: MealType, mealId: string, portions: number) => void
   unassignMeal: (date: string, type: MealType, mealId: string) => void
+
+  // Planning step completion
+  markStepCompleted: (step: keyof StepsCompleted) => void
+  unmarkStepCompleted: (step: keyof StepsCompleted) => void
+  setActualCost: (cost: number | null) => void
 
   // Shopping list
   addShoppingItem: (item: Omit<ShoppingItem, 'id'>) => void
@@ -139,6 +144,21 @@ export const useWeekStore = create<WeekStore>((set, get) => {
           assignments: (sl.assignments ?? []).filter((a: MealAssignment) => a.mealId !== mealId),
         })),
       ),
+
+    markStepCompleted: (step) =>
+      mutateActive((p) => ({
+        ...p,
+        stepsCompleted: { ...p.stepsCompleted, [step]: true },
+      })),
+
+    unmarkStepCompleted: (step) =>
+      mutateActive((p) => ({
+        ...p,
+        stepsCompleted: { ...p.stepsCompleted, [step]: false },
+      })),
+
+    setActualCost: (cost) =>
+      mutateActive((p) => ({ ...p, actualCost: cost })),
 
     addShoppingItem: (item) =>
       mutateActive((p) => ({

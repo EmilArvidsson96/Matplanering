@@ -96,6 +96,12 @@ export interface ShoppingItem {
   isExcluded: boolean
 }
 
+export interface StepsCompleted {
+  portioner?: boolean
+  brainstorm?: boolean
+  schema?: boolean
+}
+
 export interface WeekPlan {
   id: string              // Saturday "YYYY-MM-DD" — stable nav identifier
   startDate: string       // actual first day (may differ from id)
@@ -106,6 +112,8 @@ export interface WeekPlan {
   meals: PlannedMeal[]
   schedule: ScheduleSlot[]
   shoppingList: ShoppingItem[]
+  stepsCompleted?: StepsCompleted
+  actualCost?: number | null
 }
 
 export interface AppSettings {

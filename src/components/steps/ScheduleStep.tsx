@@ -1,13 +1,26 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { computeBalances, slotKey, formatDayShort } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
 import type { ScheduleSlot, PlannedMeal, MealType, WeekPlan } from '../../types'
 
 export default function ScheduleStep() {
-  const store  = useWeekStore()
-  const week   = activeWeek(store)
+  const store    = useWeekStore()
+  const week     = activeWeek(store)
+  const navigate = useNavigate()
   const [pickingSlot, setPickingSlot] = useState<ScheduleSlot | null>(null)
+
+  const unassignedMeals = week.meals.filter(meal =>
+    !week.schedule.some(slot => slot.assignments.some(a => a.mealId === meal.id))
+  )
+  const allAssigned = week.meals.length > 0 && unassignedMeals.length === 0
+
+  function markDoneAndFinish() {
+    store.markStepCompleted('schema')
+    navigate('/')
+  }
 
   const balances = computeBalances(week)
   const dates    = [...new Set(week.schedule.map(s => s.date))]
@@ -18,12 +31,6 @@ export default function ScheduleStep() {
     if (!startDate || !endDate) return
     if (endDate < startDate || (endDate === startDate && sm === 'middag' && em === 'lunch')) return
     store.setWeekWindow(startDate, sm, endDate, em)
-  }
-
-  function updateEvent(date: string, value: string) {
-    week.schedule
-      .filter(s => s.date === date)
-      .forEach(s => store.updateSlot(date, s.type, { event: value }))
   }
 
   return (
@@ -66,22 +73,14 @@ export default function ScheduleStep() {
 
       {dates.map(date => {
         const daySlots = week.schedule.filter(s => s.date === date)
-        const dayEvent = daySlots[0]?.event ?? ''
 
         return (
           <div key={date} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            {/* Day header with editable note */}
+            {/* Day header */}
             <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
               <span className="font-semibold text-sm text-gray-700 shrink-0 capitalize">
                 {formatDayShort(date)}
               </span>
-              <input
-                type="text"
-                placeholder="Notering för dagen…"
-                value={dayEvent}
-                onChange={e => updateEvent(date, e.target.value)}
-                className="flex-1 text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
-              />
             </div>
 
             {/* Slots */}
@@ -101,12 +100,38 @@ export default function ScheduleStep() {
                   onAssign={() => setPickingSlot(slot)}
                   onUnassign={mealId => store.unassignMeal(slot.date, slot.type, mealId)}
                   onUpdatePortions={v => store.updateSlot(slot.date, slot.type, { portionsNeeded: Math.max(0, v) })}
+                  onUpdateEvent={v => store.updateSlot(slot.date, slot.type, { event: v })}
                 />
               )
             })}
           </div>
         )
       })}
+
+      {/* Next-step CTA */}
+      <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
+        {allAssigned ? (
+          <p className="text-sm text-green-700 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4" /> Alla måltider är tilldelade
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {unassignedMeals.length === 0
+              ? 'Inga brainstormade rätter att fördela'
+              : `${unassignedMeals.length} rätt${unassignedMeals.length > 1 ? 'er' : ''} ej fördelade: ${unassignedMeals.map(m => m.name).join(', ')}`}
+          </p>
+        )}
+        <button
+          onClick={markDoneAndFinish}
+          className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
+            ${allAssigned
+              ? 'bg-brand-600 hover:bg-brand-700 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+        >
+          {allAssigned ? 'Klar – tillbaka till sammanfattning' : 'Forcera & gå till sammanfattning'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
       {pickingSlot && (
         <MealAssignPicker
@@ -124,7 +149,7 @@ export default function ScheduleStep() {
 }
 
 function SlotRow({
-  slot, balance, assignedMeals, onAssign, onUnassign, onUpdatePortions,
+  slot, balance, assignedMeals, onAssign, onUnassign, onUpdatePortions, onUpdateEvent,
 }: {
   slot: ScheduleSlot
   balance: number
@@ -132,6 +157,7 @@ function SlotRow({
   onAssign: () => void
   onUnassign: (mealId: string) => void
   onUpdatePortions: (v: number) => void
+  onUpdateEvent: (v: string) => void
 }) {
   const balanceColor =
     balance < 0   ? 'bg-red-100 text-red-700 border-red-200' :
@@ -174,6 +200,13 @@ function SlotRow({
         <button onClick={onAssign} className="mt-1.5 text-xs text-brand-600 hover:text-brand-800 font-medium">
           + Lägg till matlagning
         </button>
+        <input
+          type="text"
+          placeholder="Notering…"
+          value={slot.event ?? ''}
+          onChange={e => onUpdateEvent(e.target.value)}
+          className="mt-1.5 w-full text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
+        />
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
