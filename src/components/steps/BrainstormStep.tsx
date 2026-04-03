@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { RotateCcw, ChevronRight } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -20,6 +21,7 @@ export default function BrainstormStep() {
   const store       = useWeekStore()
   const week        = activeWeek(store)
   const { dishes }  = useLibraryStore()
+  const navigate    = useNavigate()
   const [showPicker, setShowPicker]   = useState(false)
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [newName, setNewName]         = useState('')
@@ -43,6 +45,12 @@ export default function BrainstormStep() {
   const rester   = remainderPortions(week.meals)
   const total    = planned + rester
   const leftover = total - needed
+  const portionsOk = needed > 0 && leftover >= 0
+
+  function markDoneAndNext() {
+    store.markStepCompleted('brainstorm')
+    navigate('/planera?steg=schema')
+  }
 
   function addFreeText() {
     if (!newName.trim()) return
@@ -181,6 +189,31 @@ export default function BrainstormStep() {
           onClose={() => setDishTarget(null)}
           onSaved={handleDishSaved}
         />
+      )}
+
+      {/* Next-step CTA */}
+      {week.meals.length > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
+          {portionsOk ? (
+            <p className="text-sm text-green-700 font-medium">Portioner täcker veckan ✓</p>
+          ) : (
+            <p className="text-sm text-amber-700">
+              {needed > 0
+                ? `${Math.abs(leftover)} portioner saknas fortfarande`
+                : 'Inga måltider i schemat ännu'}
+            </p>
+          )}
+          <button
+            onClick={markDoneAndNext}
+            className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
+              ${portionsOk
+                ? 'bg-brand-600 hover:bg-brand-700 text-white'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+          >
+            {portionsOk ? 'Klar – gå till schema' : 'Forcera & gå till schema'}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   )
