@@ -1,11 +1,19 @@
+import { useNavigate } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { formatDayLabel, scheduleDates } from '../../utils/weekUtils'
 import type { MealType } from '../../types'
 
 export default function PortionsStep() {
-  const store = useWeekStore()
-  const week  = activeWeek(store)
-  const dates = scheduleDates(week)
+  const store    = useWeekStore()
+  const week     = activeWeek(store)
+  const dates    = scheduleDates(week)
+  const navigate = useNavigate()
+
+  function markDoneAndNext() {
+    store.markStepCompleted('portioner')
+    navigate('/planera?steg=brainstorm')
+  }
 
   const startMeal = week.startMealType ?? 'middag'
   const endMeal   = week.endMealType   ?? 'lunch'
@@ -136,6 +144,17 @@ export default function PortionsStep() {
           ))}
         </div>
       </section>
+
+      {/* Next-step CTA */}
+      <div className="flex justify-end">
+        <button
+          onClick={markDoneAndNext}
+          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+        >
+          {week.stepsCompleted?.portioner ? 'Uppdaterat – gå till brainstorm' : 'Klar – gå till brainstorm'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   )
 }

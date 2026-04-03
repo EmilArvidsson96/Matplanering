@@ -6,6 +6,7 @@ import { useWeekLoader } from './hooks/useWeekLoader'
 import { useWeekStore } from './store/weekStore'
 import AppShell from './components/layout/AppShell'
 import LoginPage from './components/auth/LoginPage'
+import SummaryPage from './components/SummaryPage'
 import WeekPlanPage from './components/WeekPlanPage'
 import LibraryPage from './components/library/LibraryPage'
 import ShoppingPage from './components/shopping/ShoppingPage'
@@ -38,7 +39,8 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route element={<AppShell logout={logout} saveStatus={saveStatus} saveError={saveError} onRetrySave={saveNow} />}>
-          <Route index element={<WeekPlanPage />} />
+          <Route index element={<SummaryPage />} />
+          <Route path="planera" element={<WeekPlanPage />} />
           <Route path="bibliotek" element={<LibraryPage />} />
           <Route path="inkop"     element={<ShoppingPage />} />
           <Route path="inst"      element={<SettingsPage />} />

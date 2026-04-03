@@ -6,9 +6,20 @@ import Modal from '../common/Modal'
 import type { ScheduleSlot, PlannedMeal, MealType, WeekPlan } from '../../types'
 
 export default function ScheduleStep() {
-  const store  = useWeekStore()
-  const week   = activeWeek(store)
+  const store    = useWeekStore()
+  const week     = activeWeek(store)
+  const navigate = useNavigate()
   const [pickingSlot, setPickingSlot] = useState<ScheduleSlot | null>(null)
+
+  const unassignedMeals = week.meals.filter(meal =>
+    !week.schedule.some(slot => slot.assignments.some(a => a.mealId === meal.id))
+  )
+  const allAssigned = week.meals.length > 0 && unassignedMeals.length === 0
+
+  function markDoneAndFinish() {
+    store.markStepCompleted('schema')
+    navigate('/')
+  }
 
   const balances = computeBalances(week)
   const dates    = [...new Set(week.schedule.map(s => s.date))]
@@ -116,6 +127,31 @@ export default function ScheduleStep() {
             </div>
           )
         })}
+      </div>
+
+      {/* Next-step CTA */}
+      <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
+        {allAssigned ? (
+          <p className="text-sm text-green-700 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4" /> Alla måltider är tilldelade
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {unassignedMeals.length === 0
+              ? 'Inga brainstormade rätter att fördela'
+              : `${unassignedMeals.length} rätt${unassignedMeals.length > 1 ? 'er' : ''} ej fördelade: ${unassignedMeals.map(m => m.name).join(', ')}`}
+          </p>
+        )}
+        <button
+          onClick={markDoneAndFinish}
+          className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
+            ${allAssigned
+              ? 'bg-brand-600 hover:bg-brand-700 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+        >
+          {allAssigned ? 'Klar – tillbaka till sammanfattning' : 'Forcera & gå till sammanfattning'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Next-step CTA */}
