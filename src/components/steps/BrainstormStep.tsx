@@ -230,37 +230,41 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
       ${meal.isRemainder ? 'border-amber-200' : 'border-gray-200'}`}
     >
       {/* Main row */}
-      <div className="flex items-center gap-2 p-3">
-        {/* Rester toggle — always visible */}
-        <button
-          onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
-          title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
-          className={`shrink-0 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 p-3">
+        {/* Name row: icon + name + warning */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Rester toggle — always visible */}
+          <button
+            onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
+            title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
+            className={`shrink-0 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
 
-        {/* Name */}
-        <button
-          onClick={onOpenDish}
-          className="flex-1 font-medium text-sm text-gray-800 truncate text-left hover:text-brand-600 transition-colors"
-        >
-          {meal.name}
-        </button>
-
-        {/* Missing ingredients warning */}
-        {missingIngredients && (
+          {/* Name */}
           <button
             onClick={onOpenDish}
-            className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 hover:bg-amber-100 transition-colors"
-            title="Inga ingredienser konfigurerade – klicka för att konfigurera"
+            className="flex-1 font-medium text-sm text-gray-800 text-left hover:text-brand-600 transition-colors break-words min-w-0"
           >
-            inga ingredienser
+            {meal.name}
           </button>
-        )}
 
-        {/* Portion counter */}
-        <div className="flex items-center gap-1 shrink-0">
+          {/* Missing ingredients warning */}
+          {missingIngredients && (
+            <button
+              onClick={onOpenDish}
+              className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 hover:bg-amber-100 transition-colors"
+              title="Inga ingredienser konfigurerade – klicka för att konfigurera"
+            >
+              inga ingredienser
+            </button>
+          )}
+        </div>
+
+        {/* Controls row: portion counter + edit/delete */}
+        <div className="flex items-center gap-1 shrink-0 ml-6 sm:ml-0">
+          {/* Portion counter */}
           <button
             onClick={() => onUpdate({ portions: Math.max(1, meal.portions - 1) })}
             className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
@@ -271,12 +275,12 @@ function MealRow({ meal, missingIngredients, isEditing, onEdit, onUpdate, onDele
             className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
           >+</button>
           <span className="text-xs text-gray-500 ml-0.5">port.</span>
-        </div>
 
-        <button onClick={onEdit} className="text-gray-500 hover:text-gray-700 text-sm px-1">
-          {isEditing ? '▲' : '▼'}
-        </button>
-        <button onClick={onDelete} className="text-gray-400 hover:text-red-500 text-sm px-1">✕</button>
+          <button onClick={onEdit} className="text-gray-500 hover:text-gray-700 text-sm px-1 ml-1">
+            {isEditing ? '▲' : '▼'}
+          </button>
+          <button onClick={onDelete} className="text-gray-400 hover:text-red-500 text-sm px-1">✕</button>
+        </div>
       </div>
 
       {/* Expanded section */}
