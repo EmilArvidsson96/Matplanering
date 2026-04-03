@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { computeBalances, slotKey, formatDayShort } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
@@ -14,16 +15,19 @@ export default function ScheduleStep() {
   const startMeal = week.startMealType ?? 'middag'
   const endMeal   = week.endMealType   ?? 'lunch'
 
+  const unassignedMeals = week.meals.filter(m =>
+    !m.isRemainder && !week.schedule.some(s => (s.assignments ?? []).some(a => a.mealId === m.id))
+  )
+  const allAssigned = unassignedMeals.length === 0 && week.meals.filter(m => !m.isRemainder).length > 0
+
   function setWindow(startDate: string, sm: MealType, endDate: string, em: MealType) {
     if (!startDate || !endDate) return
     if (endDate < startDate || (endDate === startDate && sm === 'middag' && em === 'lunch')) return
     store.setWeekWindow(startDate, sm, endDate, em)
   }
 
-  function updateEvent(date: string, value: string) {
-    week.schedule
-      .filter(s => s.date === date)
-      .forEach(s => store.updateSlot(date, s.type, { event: value }))
+  function markDoneAndFinish() {
+    // no-op navigation placeholder — tab switching handled by WeekPlanPage
   }
 
   const activeDates = dates.filter(date => {
@@ -76,49 +80,67 @@ export default function ScheduleStep() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {activeDates.map(date => {
-        const daySlots = week.schedule.filter(s => s.date === date)
-        const dayEvent = daySlots[0]?.event ?? ''
+        {activeDates.map(date => {
+          const daySlots = week.schedule.filter(s => s.date === date)
 
-        return (
-          <div key={date} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            {/* Day header with editable note */}
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-              <span className="font-semibold text-sm text-gray-700 shrink-0 capitalize">
-                {formatDayShort(date)}
-              </span>
-              <input
-                type="text"
-                placeholder="Notering för dagen…"
-                value={dayEvent}
-                onChange={e => updateEvent(date, e.target.value)}
-                className="flex-1 text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
-              />
+          return (
+            <div key={date} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              {/* Day header */}
+              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                <span className="font-semibold text-sm text-gray-700 shrink-0 capitalize">
+                  {formatDayShort(date)}
+                </span>
+              </div>
+
+              {/* Slots */}
+              {daySlots.map(slot => {
+                const balance      = balances.get(slotKey(slot)) ?? 0
+                const assignedMeals = (slot.assignments ?? []).map(a => ({
+                  assignment: a,
+                  meal: week.meals.find(m => m.id === a.mealId),
+                })).filter(x => x.meal !== undefined) as { assignment: { mealId: string; portions: number }; meal: PlannedMeal }[]
+
+                return (
+                  <SlotRow
+                    key={slotKey(slot)}
+                    slot={slot}
+                    balance={balance}
+                    assignedMeals={assignedMeals}
+                    onAssign={() => setPickingSlot(slot)}
+                    onUnassign={mealId => store.unassignMeal(slot.date, slot.type, mealId)}
+                    onUpdatePortions={v => store.updateSlot(slot.date, slot.type, { portionsNeeded: Math.max(0, v) })}
+                    onUpdateEvent={v => store.updateSlot(slot.date, slot.type, { event: v })}
+                  />
+                )
+              })}
             </div>
+          )
+        })}
+      </div>
 
-            {/* Slots */}
-            {daySlots.map(slot => {
-              const balance      = balances.get(slotKey(slot)) ?? 0
-              const assignedMeals = (slot.assignments ?? []).map(a => ({
-                assignment: a,
-                meal: week.meals.find(m => m.id === a.mealId),
-              })).filter(x => x.meal !== undefined) as { assignment: { mealId: string; portions: number }; meal: PlannedMeal }[]
-
-              return (
-                <SlotRow
-                  key={slotKey(slot)}
-                  slot={slot}
-                  balance={balance}
-                  assignedMeals={assignedMeals}
-                  onAssign={() => setPickingSlot(slot)}
-                  onUnassign={mealId => store.unassignMeal(slot.date, slot.type, mealId)}
-                  onUpdatePortions={v => store.updateSlot(slot.date, slot.type, { portionsNeeded: Math.max(0, v) })}
-                />
-              )
-            })}
-          </div>
-        )
-      })}
+      {/* Next-step CTA */}
+      <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
+        {allAssigned ? (
+          <p className="text-sm text-green-700 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4" /> Alla måltider är tilldelade
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {unassignedMeals.length === 0
+              ? 'Inga brainstormade rätter att fördela'
+              : `${unassignedMeals.length} rätt${unassignedMeals.length > 1 ? 'er' : ''} ej fördelade: ${unassignedMeals.map(m => m.name).join(', ')}`}
+          </p>
+        )}
+        <button
+          onClick={markDoneAndFinish}
+          className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
+            ${allAssigned
+              ? 'bg-brand-600 hover:bg-brand-700 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+        >
+          {allAssigned ? 'Klar – tillbaka till sammanfattning' : 'Forcera & gå till sammanfattning'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {pickingSlot && (
@@ -137,7 +159,7 @@ export default function ScheduleStep() {
 }
 
 function SlotRow({
-  slot, balance, assignedMeals, onAssign, onUnassign, onUpdatePortions,
+  slot, balance, assignedMeals, onAssign, onUnassign, onUpdatePortions, onUpdateEvent,
 }: {
   slot: ScheduleSlot
   balance: number
@@ -145,6 +167,7 @@ function SlotRow({
   onAssign: () => void
   onUnassign: (mealId: string) => void
   onUpdatePortions: (v: number) => void
+  onUpdateEvent: (v: string) => void
 }) {
   const balanceColor =
     balance < 0   ? 'bg-red-100 text-red-700 border-red-200' :
@@ -187,6 +210,13 @@ function SlotRow({
         <button onClick={onAssign} className="mt-1.5 text-xs text-brand-600 hover:text-brand-800 font-medium">
           + Lägg till matlagning
         </button>
+        <input
+          type="text"
+          placeholder="Notering…"
+          value={slot.event ?? ''}
+          onChange={e => onUpdateEvent(e.target.value)}
+          className="mt-1.5 w-full text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
+        />
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
@@ -210,10 +240,8 @@ function MealAssignPicker({
   onAssign: (mealId: string, portions: number) => void
   onClose: () => void
 }) {
-  // Which meals are already assigned to THIS slot
   const inThisSlot = new Set((slot.assignments ?? []).map(a => a.mealId))
 
-  // Portions already assigned to OTHER slots per meal
   function portionsElsewhere(mealId: string): number {
     return week.schedule
       .filter(s => !(s.date === slot.date && s.type === slot.type))
@@ -222,12 +250,10 @@ function MealAssignPicker({
       .reduce((sum, a) => sum + a.portions, 0)
   }
 
-  // Remaining = total planned minus what's already assigned to other slots (can be 0)
   function remaining(meal: PlannedMeal): number {
     return meal.portions - portionsElsewhere(meal.id)
   }
 
-  // Local portion counts — initialise to remaining, min 1 for the stepper display
   const [counts, setCounts] = useState<Record<string, number>>(() =>
     Object.fromEntries(
       week.meals.filter(m => !inThisSlot.has(m.id))
@@ -249,12 +275,11 @@ function MealAssignPicker({
           <p className="text-sm text-gray-500 py-4 text-center">Inga planerade rätter.</p>
         )}
 
-        {/* Unassigned meals — assignable */}
         {unassigned.map(meal => {
-          const rem   = remaining(meal)          // may be 0 if fully assigned elsewhere
-          const max   = Math.max(1, rem)         // stepper floor of 1 for display purposes
+          const rem   = remaining(meal)
+          const max   = Math.max(1, rem)
           const count = Math.min(counts[meal.id] ?? max, max)
-          const full  = rem <= 0                 // all portions already assigned to other slots
+          const full  = rem <= 0
 
           return (
             <div
@@ -269,7 +294,6 @@ function MealAssignPicker({
               )}
               <span className="flex-1 font-medium text-sm text-gray-800">{meal.name}</span>
 
-              {/* Portion stepper — capped at remaining */}
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   disabled={full || count <= 1}
@@ -299,7 +323,6 @@ function MealAssignPicker({
           )
         })}
 
-        {/* Already assigned meals — greyed out */}
         {assigned.map(meal => {
           const a = (slot.assignments ?? []).find(x => x.mealId === meal.id) ?? { mealId: meal.id, portions: meal.portions }
           return (
