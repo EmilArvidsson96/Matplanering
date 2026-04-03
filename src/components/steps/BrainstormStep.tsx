@@ -73,7 +73,7 @@ export default function BrainstormStep() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5">
       {/* Portion counter */}
       <div className={`rounded-2xl p-4 flex flex-wrap gap-4 items-center shadow-sm
         ${leftover < 0 ? 'bg-red-50' : leftover > needed * 0.3 ? 'bg-amber-50' : 'bg-brand-50'}`}

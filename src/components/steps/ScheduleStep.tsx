@@ -26,8 +26,13 @@ export default function ScheduleStep() {
       .forEach(s => store.updateSlot(date, s.type, { event: value }))
   }
 
+  const activeDates = dates.filter(date => {
+    const daySlots = week.schedule.filter(s => s.date === date)
+    return daySlots.some(s => (s.assignments ?? []).length > 0 || s.event?.trim())
+  })
+
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="space-y-4">
       {/* Week window – compact */}
       <section className="bg-white rounded-2xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-800 mb-3">Planeringsfönster</h2>
@@ -64,7 +69,14 @@ export default function ScheduleStep() {
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> Portioner saknas</span>
       </div>
 
-      {dates.map(date => {
+      {activeDates.length === 0 && (
+        <p className="text-sm text-gray-500 py-6 text-center">
+          Inga dagar med planerade rätter eller noteringar än.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {activeDates.map(date => {
         const daySlots = week.schedule.filter(s => s.date === date)
         const dayEvent = daySlots[0]?.event ?? ''
 
@@ -107,6 +119,7 @@ export default function ScheduleStep() {
           </div>
         )
       })}
+      </div>
 
       {pickingSlot && (
         <MealAssignPicker
