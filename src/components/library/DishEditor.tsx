@@ -4,6 +4,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
+import { fetchRecipeFromUrl } from '../../utils/recipeFetcher'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
 } from '../../types'
@@ -53,6 +54,26 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     dish ? { ...dish } : { ...blank(), name: initialName ?? '' }
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [fetchError, setFetchError] = useState('')
+
+  async function importIngredients() {
+    if (!form.recipeUrl.trim()) return
+    setFetchState('loading')
+    setFetchError('')
+    try {
+      const result = await fetchRecipeFromUrl(form.recipeUrl.trim())
+      setForm(f => ({
+        ...f,
+        ingredients: result.ingredients,
+        ...(f.name === '' && result.title ? { name: result.title } : {}),
+      }))
+      setFetchState('idle')
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Okänt fel')
+      setFetchState('error')
+    }
+  }
 
   const historyMonth = dish ? dishMostCommonMonth(dish.id, weeks) : null
 
@@ -158,13 +179,29 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         {/* Recipe URL */}
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Receptlänk</label>
-          <input
-            type="url"
-            value={form.recipeUrl}
-            onChange={e => setForm(f => ({ ...f, recipeUrl: e.target.value }))}
-            placeholder="https://…"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-          />
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={form.recipeUrl}
+              onChange={e => {
+                setForm(f => ({ ...f, recipeUrl: e.target.value }))
+                if (fetchState === 'error') setFetchState('idle')
+              }}
+              placeholder="https://…"
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+            <button
+              type="button"
+              onClick={importIngredients}
+              disabled={!form.recipeUrl.trim() || fetchState === 'loading'}
+              className="shrink-0 border border-brand-200 text-brand-600 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap"
+            >
+              {fetchState === 'loading' ? 'Hämtar…' : 'Hämta ingredienser'}
+            </button>
+          </div>
+          {fetchState === 'error' && (
+            <p className="text-xs text-red-500 mt-1">{fetchError}</p>
+          )}
         </div>
 
         {/* Ingredients */}
