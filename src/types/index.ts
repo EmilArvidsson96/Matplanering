@@ -43,6 +43,11 @@ export interface CookingRecord {
   portions: number
 }
 
+export interface RecipeStep {
+  id: string
+  text: string
+}
+
 export interface Dish {
   id: string
   name: string
@@ -53,6 +58,7 @@ export interface Dish {
   tags: Tag[]
   recipeUrl: string
   ingredients: Ingredient[]
+  instructions?: RecipeStep[]
   notes: string
   cookingHistory: CookingRecord[]
   preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
