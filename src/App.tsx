@@ -11,6 +11,7 @@ import WeekPlanPage from './components/WeekPlanPage'
 import LibraryPage from './components/library/LibraryPage'
 import ShoppingPage from './components/shopping/ShoppingPage'
 import SettingsPage from './components/settings/SettingsPage'
+import RecipePage from './components/recipe/RecipePage'
 
 export default function App() {
   const { authed, login, logout } = usePinAuth()
@@ -39,6 +40,7 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route element={<AppShell logout={logout} saveStatus={saveStatus} saveError={saveError} onRetrySave={saveNow} />}>
+          <Route path="recept"    element={<RecipePage />} />
           <Route index element={<SummaryPage />} />
           <Route path="planera" element={<WeekPlanPage />} />
           <Route path="bibliotek" element={<LibraryPage />} />
