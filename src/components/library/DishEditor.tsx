@@ -113,7 +113,7 @@ function findRecipeSchema(data: unknown): Record<string, unknown> | null {
 type FetchedRecipe = { ingredients: Ingredient[]; instructions: string }
 
 async function fetchAndParseRecipe(url: string): Promise<FetchedRecipe> {
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
   const res = await fetch(proxyUrl)
   if (!res.ok) throw new Error('Kunde inte hämta receptsidan')
   const html = await res.text()
