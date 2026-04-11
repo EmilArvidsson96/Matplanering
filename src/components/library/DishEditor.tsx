@@ -6,7 +6,7 @@ import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
 import Modal from '../common/Modal'
 import type {
-  Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory, RecipeStep,
+  Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
 } from '../../types'
 
 const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','lamm','vilt','vegetarisk','vegan']
