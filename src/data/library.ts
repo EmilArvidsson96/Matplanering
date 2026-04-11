@@ -3,7 +3,7 @@ import type { Dish } from '../types'
 function d(
   id: string,
   name: string,
-  opts: Partial<Omit<Dish, 'id' | 'name' | 'cookingHistory' | 'ingredients' | 'recipeUrl' | 'notes'>>,
+  opts: Partial<Omit<Dish, 'id' | 'name' | 'cookingHistory' | 'ingredients' | 'recipeUrl' | 'notes' | 'instructions'>>,
 ): Dish {
   return {
     id,
@@ -15,6 +15,7 @@ function d(
     tags:            opts.tags       ?? [],
     recipeUrl:       '',
     ingredients:     [],
+    instructions:    [],
     notes:           '',
     cookingHistory:  [],
     preferredMonths: opts.preferredMonths ?? [],

@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import type { Ingredient, ShoppingCategory } from '../types'
+import type { Ingredient, RecipeStep, ShoppingCategory } from '../types'
 
 // ── Whitelist ─────────────────────────────────────────────────────────────────
 // Only these hostnames are allowed. Add more as needed.
@@ -329,12 +329,44 @@ function buildIngredients(strings: string[], portionsBase: number): Ingredient[]
     })
 }
 
+// ── Instructions extraction ───────────────────────────────────────────────────
+
+function extractInstructions(raw: unknown): RecipeStep[] {
+  if (!raw) return []
+
+  const texts: string[] = []
+
+  if (typeof raw === 'string') {
+    texts.push(...raw.split(/\n+/).map(s => s.trim()).filter(Boolean))
+  } else if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item === 'string') {
+        const t = item.trim(); if (t) texts.push(t)
+      } else if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>
+        if (obj['@type'] === 'HowToSection' && Array.isArray(obj.itemListElement)) {
+          for (const sub of obj.itemListElement) {
+            const t = ((sub as Record<string, unknown>).text ?? (sub as Record<string, unknown>).name ?? '') as string
+            if (t.trim()) texts.push(t.trim())
+          }
+        } else {
+          const t = ((obj.text ?? obj.name) ?? '') as string
+          if (t.trim()) texts.push(t.trim())
+        }
+      }
+    }
+  }
+
+  return texts.map(text => ({ id: uuid(), text }))
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface RecipeFetchResult {
   ingredients: Ingredient[]
   portionsBase: number
   title?: string
+  instructions?: RecipeStep[]
 }
 
 export async function fetchRecipeFromUrl(url: string): Promise<RecipeFetchResult> {
@@ -374,7 +406,9 @@ export async function fetchRecipeFromUrl(url: string): Promise<RecipeFetchResult
   const portionsBase = parseServings(recipe.recipeYield)
   const title = typeof recipe.name === 'string' ? recipe.name : undefined
   const ingredients = buildIngredients(rawIngredients, portionsBase)
+  const instructionsArr = extractInstructions(recipe.recipeInstructions)
+  const instructions = instructionsArr.length > 0 ? instructionsArr : undefined
 
   if (ingredients.length === 0) throw new Error('Receptet hittades men innehåller inga ingredienser.')
-  return { ingredients, portionsBase, title }
+  return { ingredients, portionsBase, title, instructions }
 }

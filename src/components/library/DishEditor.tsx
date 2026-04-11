@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
+import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
 import Modal from '../common/Modal'
-import { fetchRecipeFromUrl } from '../../utils/recipeFetcher'
 import type {
-  Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
+  Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory, RecipeStep,
 } from '../../types'
 
 const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','lamm','vilt','vegetarisk','vegan']
@@ -43,7 +43,7 @@ interface Props {
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
   return {
     name: '', protein: [], carb: [], cuisine: 'övrigt',
-    type: [], tags: [], recipeUrl: '', ingredients: [], notes: '', preferredMonths: [],
+    type: [], tags: [], recipeUrl: '', ingredients: [], instructions: [], notes: '', preferredMonths: [],
   }
 }
 
@@ -51,32 +51,15 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   const { addDish, updateDish, deleteDish } = useLibraryStore()
   const weeks = Object.values(useWeekStore().weeks)
   const [form, setForm] = useState<Omit<Dish, 'id' | 'cookingHistory'>>(
-    dish ? { ...dish } : { ...blank(), name: initialName ?? '' }
+    dish
+      ? { ...dish, instructions: dish.instructions ?? [] }
+      : { ...blank(), name: initialName ?? '' }
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [fetchError, setFetchError] = useState('')
-
-  async function importIngredients() {
-    if (!form.recipeUrl.trim()) return
-    setFetchState('loading')
-    setFetchError('')
-    try {
-      const result = await fetchRecipeFromUrl(form.recipeUrl.trim())
-      setForm(f => ({
-        ...f,
-        ingredients: result.ingredients,
-        ...(f.name === '' && result.title ? { name: result.title } : {}),
-      }))
-      setFetchState('idle')
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Okänt fel')
-      setFetchState('error')
-    }
-  }
+  const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string }>({ state: 'idle', error: '' })
+  const fetchCacheRef = useRef<{ url: string; promise: Promise<RecipeFetchResult> } | null>(null)
 
   const historyMonth = dish ? dishMostCommonMonth(dish.id, weeks) : null
-
   const isNew = !dish
 
   function toggle<T>(arr: T[], v: T): T[] {
@@ -95,6 +78,8 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     onClose()
   }
 
+  // ── Ingredients ──────────────────────────────────────────────────────────────
+
   function addIngredient() {
     const ing: Ingredient = {
       id: uuid(), name: '', amount: 1, unit: 'g', category: 'övrigt', portionsBase: 4,
@@ -111,6 +96,71 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
   function removeIngredient(id: string) {
     setForm(f => ({ ...f, ingredients: f.ingredients.filter(i => i.id !== id) }))
+  }
+
+  // ── Instructions ─────────────────────────────────────────────────────────────
+
+  function addStep() {
+    setForm(f => ({ ...f, instructions: [...f.instructions, { id: uuid(), text: '' }] }))
+  }
+
+  function updateStep(id: string, text: string) {
+    setForm(f => ({
+      ...f,
+      instructions: f.instructions.map(s => s.id === id ? { ...s, text } : s),
+    }))
+  }
+
+  function removeStep(id: string) {
+    setForm(f => ({ ...f, instructions: f.instructions.filter(s => s.id !== id) }))
+  }
+
+  function moveStep(id: string, dir: -1 | 1) {
+    setForm(f => {
+      const steps = [...f.instructions]
+      const idx = steps.findIndex(s => s.id === id)
+      const target = idx + dir
+      if (target < 0 || target >= steps.length) return f
+      ;[steps[idx], steps[target]] = [steps[target], steps[idx]]
+      return { ...f, instructions: steps }
+    })
+  }
+
+  // ── Recipe fetch ──────────────────────────────────────────────────────────────
+
+  function getRecipeData(): Promise<RecipeFetchResult> {
+    if (fetchCacheRef.current?.url === form.recipeUrl) return fetchCacheRef.current.promise
+    const promise = fetchRecipeFromUrl(form.recipeUrl.trim())
+    fetchCacheRef.current = { url: form.recipeUrl, promise }
+    return promise
+  }
+
+  async function handleFetch(field: 'ingredients' | 'instructions') {
+    setFetchStatus({ state: 'loading', error: '' })
+    try {
+      const data = await getRecipeData()
+      if (field === 'ingredients') {
+        if (data.ingredients.length === 0) {
+          setFetchStatus({ state: 'error', error: 'Hittade inga ingredienser i receptet.' })
+        } else {
+          setForm(f => ({
+            ...f,
+            ingredients: data.ingredients,
+            ...(f.name === '' && data.title ? { name: data.title } : {}),
+          }))
+          setFetchStatus({ state: 'idle', error: '' })
+        }
+      } else {
+        if (!data.instructions?.length) {
+          setFetchStatus({ state: 'error', error: 'Hittade inga instruktioner i receptet.' })
+        } else {
+          setForm(f => ({ ...f, instructions: data.instructions! }))
+          setFetchStatus({ state: 'idle', error: '' })
+        }
+      }
+    } catch (e) {
+      setFetchStatus({ state: 'error', error: e instanceof Error ? e.message : 'Okänt fel' })
+    }
   }
 
   return (
@@ -184,23 +234,34 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               type="url"
               value={form.recipeUrl}
               onChange={e => {
+                fetchCacheRef.current = null
+                setFetchStatus({ state: 'idle', error: '' })
                 setForm(f => ({ ...f, recipeUrl: e.target.value }))
-                if (fetchState === 'error') setFetchState('idle')
               }}
               placeholder="https://…"
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
             <button
               type="button"
-              onClick={importIngredients}
-              disabled={!form.recipeUrl.trim() || fetchState === 'loading'}
+              onClick={() => handleFetch('ingredients')}
+              disabled={!form.recipeUrl.trim() || fetchStatus.state === 'loading'}
               className="shrink-0 border border-brand-200 text-brand-600 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap"
             >
-              {fetchState === 'loading' ? 'Hämtar…' : 'Hämta ingredienser'}
+              {fetchStatus.state === 'loading' ? 'Hämtar…' : 'Hämta ingredienser'}
             </button>
           </div>
-          {fetchState === 'error' && (
-            <p className="text-xs text-red-500 mt-1">{fetchError}</p>
+          {form.recipeUrl.trim() && (
+            <button
+              type="button"
+              onClick={() => handleFetch('instructions')}
+              disabled={fetchStatus.state === 'loading'}
+              className="mt-1.5 text-xs text-brand-600 hover:text-brand-800 font-medium disabled:opacity-40"
+            >
+              {fetchStatus.state === 'loading' ? '⏳ Hämtar…' : '↓ Hämta instruktioner'}
+            </button>
+          )}
+          {fetchStatus.error && (
+            <p className="text-xs text-red-500 mt-1">{fetchStatus.error}</p>
           )}
         </div>
 
@@ -262,6 +323,55 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
                 <button
                   onClick={() => removeIngredient(ing.id)}
                   className="text-gray-300 hover:text-red-400 text-sm"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-medium text-gray-500">Tillagning</label>
+            <button
+              type="button"
+              onClick={addStep}
+              className="text-xs text-brand-600 hover:text-brand-800 font-medium"
+            >
+              + Lägg till steg
+            </button>
+          </div>
+          {form.instructions.length === 0 && (
+            <p className="text-xs text-gray-300 italic">Inga steg än.</p>
+          )}
+          <div className="space-y-2">
+            {form.instructions.map((step, idx) => (
+              <div key={step.id} className="flex gap-2 items-start bg-gray-50 rounded-xl p-2">
+                <span className="text-xs text-gray-400 font-medium pt-2 w-5 shrink-0 text-right">{idx + 1}.</span>
+                <textarea
+                  value={step.text}
+                  onChange={e => updateStep(step.id, e.target.value)}
+                  rows={2}
+                  className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-brand-300"
+                />
+                <div className="flex flex-col gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveStep(step.id, -1)}
+                    disabled={idx === 0}
+                    className="text-gray-400 hover:text-gray-600 disabled:opacity-20 text-xs leading-none px-1"
+                  >▲</button>
+                  <button
+                    type="button"
+                    onClick={() => moveStep(step.id, 1)}
+                    disabled={idx === form.instructions.length - 1}
+                    className="text-gray-400 hover:text-gray-600 disabled:opacity-20 text-xs leading-none px-1"
+                  >▼</button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeStep(step.id)}
+                  className="text-gray-300 hover:text-red-400 text-sm shrink-0 pt-1"
                 >✕</button>
               </div>
             ))}
