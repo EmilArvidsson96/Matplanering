@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Calendar, BookOpen, ShoppingCart, Settings } from 'lucide-react'
+import { Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
@@ -16,6 +16,7 @@ interface Props {
 }
 
 const NAV_ITEMS = [
+  { to: '/recept',    label: 'Recept',        Icon: UtensilsCrossed },
   { to: '/',          label: 'Veckoplanen',   Icon: Calendar },
   { to: '/bibliotek', label: 'Bibliotek',     Icon: BookOpen },
   { to: '/inkop',     label: 'Inköp',         Icon: ShoppingCart },

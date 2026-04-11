@@ -15,7 +15,7 @@ function d(
     tags:            opts.tags       ?? [],
     recipeUrl:       '',
     ingredients:     [],
-    instructions:    '',
+    instructions:    [],
     notes:           '',
     cookingHistory:  [],
     preferredMonths: opts.preferredMonths ?? [],
