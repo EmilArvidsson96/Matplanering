@@ -53,6 +53,7 @@ export interface Dish {
   tags: Tag[]
   recipeUrl: string
   ingredients: Ingredient[]
+  instructions: string
   notes: string
   cookingHistory: CookingRecord[]
   preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
