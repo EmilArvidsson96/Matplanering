@@ -1,9 +1,27 @@
 import { useState } from 'react'
 import { useSettingsStore } from '../../store/settingsStore'
+import { DEFAULT_CONVERSIONS } from '../../utils/unitConversions'
 
 export default function SettingsPage() {
-  const { settings, update, addPantryItem, removePantryItem } = useSettingsStore()
+  const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion } = useSettingsStore()
   const [newPantry, setNewPantry] = useState('')
+  const [newUnit, setNewUnit] = useState('')
+  const [newHint, setNewHint] = useState('')
+  const [newGrams, setNewGrams] = useState('')
+  const [showDefaultConversions, setShowDefaultConversions] = useState(false)
+
+  function addConversion() {
+    const g = parseFloat(newGrams)
+    if (!newUnit.trim() || isNaN(g) || g <= 0) return
+    addUnitConversion({
+      fromUnit: newUnit.trim(),
+      ingredientHint: newHint.trim() || undefined,
+      toGrams: g,
+    })
+    setNewUnit('')
+    setNewHint('')
+    setNewGrams('')
+  }
 
   function addItem() {
     if (!newPantry.trim()) return
@@ -87,6 +105,101 @@ export default function SettingsPage() {
                   className="text-gray-400 hover:text-red-400 text-xs leading-none"
                 >✕</button>
               </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Unit conversions */}
+      <section className="bg-white rounded-2xl p-5 shadow-sm">
+        <h2 className="font-semibold text-gray-700 mb-1">Enhetsomvandlare</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Används för att slå ihop ingredienser med olika enheter i inköpslistan.
+          Lägg till egna regler som gäller specifika ingredienser, t.ex. hur mycket ett dl mjöl väger.
+        </p>
+
+        {/* Custom conversions */}
+        <div className="flex flex-wrap gap-2 mb-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500">Enhet</label>
+            <input
+              type="text"
+              placeholder="t.ex. dl"
+              value={newUnit}
+              onChange={e => setNewUnit(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addConversion()}
+              className="w-24 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500">Ingrediens (valfritt)</label>
+            <input
+              type="text"
+              placeholder="t.ex. mjöl"
+              value={newHint}
+              onChange={e => setNewHint(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addConversion()}
+              className="w-32 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500">Gram per enhet</label>
+            <input
+              type="number"
+              placeholder="t.ex. 60"
+              value={newGrams}
+              onChange={e => setNewGrams(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addConversion()}
+              className="w-28 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+          </div>
+          <button
+            onClick={addConversion}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
+          >
+            Lägg till
+          </button>
+        </div>
+
+        {settings.unitConversions.length === 0 ? (
+          <p className="text-xs text-gray-300 italic mb-3">Inga egna regler än.</p>
+        ) : (
+          <div className="space-y-1 mb-3">
+            {settings.unitConversions.map(conv => (
+              <div key={conv.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                <span className="text-sm text-gray-700">
+                  1 {conv.fromUnit}
+                  {conv.ingredientHint && (
+                    <span className="text-gray-400"> ({conv.ingredientHint})</span>
+                  )}
+                  {' '}= {conv.toGrams} g
+                </span>
+                <button
+                  onClick={() => removeUnitConversion(conv.id)}
+                  className="text-gray-300 hover:text-red-400 text-xs ml-2"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Collapsible default conversions */}
+        <button
+          onClick={() => setShowDefaultConversions(v => !v)}
+          className="text-xs text-gray-400 hover:text-gray-600 underline"
+        >
+          {showDefaultConversions ? 'Dölj' : 'Visa'} inbyggda omvandlingsregler
+        </button>
+        {showDefaultConversions && (
+          <div className="mt-2 space-y-1 max-h-64 overflow-y-auto">
+            {DEFAULT_CONVERSIONS.map(conv => (
+              <div key={conv.id} className="text-xs text-gray-400 px-2 py-1 bg-gray-50 rounded-lg">
+                1 {conv.fromUnit}
+                {conv.ingredientHint && (
+                  <span className="text-gray-300"> ({conv.ingredientHint})</span>
+                )}
+                {' '}= {conv.toGrams} g
+              </div>
             ))}
           </div>
         )}

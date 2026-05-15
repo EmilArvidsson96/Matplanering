@@ -40,6 +40,7 @@ interface WeekStore {
   updateShoppingItem: (id: string, patch: Partial<ShoppingItem>) => void
   deleteShoppingItem: (id: string) => void
   rebuildShoppingFromIngredients: (items: ShoppingItem[]) => void
+  dismissMergeSuggestion: (key: string) => void
 }
 
 export const useWeekStore = create<WeekStore>((set, get) => {
@@ -185,6 +186,12 @@ export const useWeekStore = create<WeekStore>((set, get) => {
         const manual = p.shoppingList.filter((it) => !it.isAutoAdded)
         return { ...p, shoppingList: [...manual, ...items] }
       }),
+
+    dismissMergeSuggestion: (key) =>
+      mutateActive((p) => ({
+        ...p,
+        dismissedMergePairs: [...(p.dismissedMergePairs ?? []), key],
+      })),
   }
 })
 

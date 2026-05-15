@@ -4,6 +4,8 @@ import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import type { ShoppingItem, ShoppingCategory } from '../../types'
+import { mergeExactDuplicates, computeMergeSuggestions } from '../../utils/ingredientMerge'
+import type { MergeSuggestion } from '../../utils/ingredientMerge'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -25,10 +27,10 @@ export default function ShoppingPage() {
   const [showPurchased, setShowPurchased] = useState(false)
 
   const items = week.shoppingList
+  const dismissed = week.dismissedMergePairs ?? []
 
-  // Rebuild auto-items from library ingredients when user asks
   function rebuildAutoItems() {
-    const autoItems: ShoppingItem[] = []
+    const raw: ShoppingItem[] = []
     const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
 
     for (const meal of week.meals) {
@@ -39,7 +41,7 @@ export default function ShoppingPage() {
       for (const ing of dish.ingredients) {
         if (pantry.has(ing.name.toLowerCase())) continue
         const scale = meal.portions / ing.portionsBase
-        autoItems.push({
+        raw.push({
           id: uuid(),
           name: ing.name,
           amount: (ing.amount * scale).toFixed(1).replace(/\.0$/, ''),
@@ -52,7 +54,10 @@ export default function ShoppingPage() {
         })
       }
     }
-    store.rebuildShoppingFromIngredients(autoItems)
+
+    store.rebuildShoppingFromIngredients(
+      mergeExactDuplicates(raw, settings.unitConversions)
+    )
   }
 
   function addManual() {
@@ -70,6 +75,45 @@ export default function ShoppingPage() {
     )
   }
 
+  function approveMerge(suggestion: MergeSuggestion) {
+    // Compute merged amount
+    let mergedAmount = suggestion.suggestedAmount
+    let mergedUnit   = suggestion.suggestedUnit
+
+    if (!mergedAmount) {
+      // Couldn't convert to grams; fall back to summing same-unit items, rest dropped
+      const byUnit = new Map<string, number>()
+      for (const item of suggestion.items) {
+        const n = parseFloat(item.amount)
+        if (isNaN(n)) continue
+        const key = item.unit.toLowerCase()
+        byUnit.set(key, (byUnit.get(key) ?? 0) + n)
+      }
+      if (byUnit.size === 1) {
+        const [[unit, total]] = byUnit.entries()
+        mergedUnit = unit
+        mergedAmount = total.toFixed(1).replace(/\.0$/, '')
+      }
+    }
+
+    // Remove all items in the suggestion
+    for (const item of suggestion.items) {
+      store.deleteShoppingItem(item.id)
+    }
+
+    // Add the merged item (keep category from first item)
+    store.addShoppingItem({
+      name: suggestion.suggestedName,
+      amount: mergedAmount,
+      unit: mergedUnit,
+      category: suggestion.items[0].category,
+      isAutoAdded: suggestion.items[0].isAutoAdded,
+      dishId: null,
+      isPurchased: false,
+      isExcluded: false,
+    })
+  }
+
   const grouped = useMemo(() => {
     const visible = items.filter(i => !i.isExcluded && (showPurchased || !i.isPurchased))
     const map = new Map<ShoppingCategory, ShoppingItem[]>()
@@ -80,6 +124,11 @@ export default function ShoppingPage() {
     }
     return [...map.entries()].filter(([, list]) => list.length > 0)
   }, [items, showPurchased])
+
+  const suggestions = useMemo(
+    () => computeMergeSuggestions(items, dismissed, settings.unitConversions),
+    [items, dismissed, settings.unitConversions]
+  )
 
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
@@ -111,6 +160,15 @@ export default function ShoppingPage() {
           Visa handlade
         </label>
       </div>
+
+      {/* Merge suggestions */}
+      {suggestions.length > 0 && (
+        <MergeSuggestionsPanel
+          suggestions={suggestions}
+          onApprove={approveMerge}
+          onDismiss={(key) => store.dismissMergeSuggestion(key)}
+        />
+      )}
 
       {/* Add item */}
       <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap gap-2">
@@ -164,6 +222,72 @@ export default function ShoppingPage() {
                     onUpdate={(p) => store.updateShoppingItem(item.id, p)}
                   />
                 ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MergeSuggestionsPanel({
+  suggestions, onApprove, onDismiss,
+}: {
+  suggestions: MergeSuggestion[]
+  onApprove: (s: MergeSuggestion) => void
+  onDismiss: (key: string) => void
+}) {
+  const [open, setOpen] = useState(true)
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-sm font-semibold text-amber-800">
+          Förslag på sammanslagning ({suggestions.length})
+        </span>
+        <span className="text-amber-500 text-xs">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-amber-100 border-t border-amber-200">
+          {suggestions.map(s => (
+            <div key={s.key} className="px-4 py-3 space-y-2">
+              <div className="flex flex-wrap gap-1 items-center text-sm text-gray-700">
+                {s.items.map((item, i) => (
+                  <span key={item.id}>
+                    {i > 0 && <span className="text-gray-400 mx-1">+</span>}
+                    <span className="font-medium">{item.name}</span>
+                    {(item.amount || item.unit) && (
+                      <span className="text-gray-400 ml-1">({item.amount} {item.unit})</span>
+                    )}
+                  </span>
+                ))}
+                {s.suggestedAmount && (
+                  <>
+                    <span className="text-gray-400 mx-1">→</span>
+                    <span className="font-medium text-amber-800">
+                      {s.suggestedName} ({s.suggestedAmount} {s.suggestedUnit})
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onApprove(s)}
+                  className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-lg font-medium"
+                >
+                  Slå ihop
+                </button>
+                <button
+                  onClick={() => onDismiss(s.key)}
+                  className="text-xs border border-amber-300 text-amber-700 hover:bg-amber-100 px-3 py-1 rounded-lg"
+                >
+                  Behåll separat
+                </button>
               </div>
             </div>
           ))}
