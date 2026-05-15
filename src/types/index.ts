@@ -102,6 +102,13 @@ export interface ShoppingItem {
   isExcluded: boolean
 }
 
+export interface UnitConversion {
+  id: string
+  fromUnit: string
+  ingredientHint?: string  // if set, only applies when ingredient name contains this
+  toGrams: number
+}
+
 export interface StepsCompleted {
   portioner?: boolean
   brainstorm?: boolean
@@ -120,12 +127,14 @@ export interface WeekPlan {
   shoppingList: ShoppingItem[]
   stepsCompleted?: StepsCompleted
   actualCost?: number | null
+  dismissedMergePairs?: string[]  // normalized keys for dismissed similar-ingredient suggestions
 }
 
 export interface AppSettings {
   defaultHouseholdSize: number
   costPerPortion: number
   pantryItems: string[]
+  unitConversions: UnitConversion[]
 }
 
 export interface LibraryData {
