@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface Props {
   title: string
@@ -8,6 +8,8 @@ interface Props {
 }
 
 export default function Modal({ title, onClose, children, wide }: Props) {
+  const mouseDownOnBackdropRef = useRef(false)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -17,7 +19,11 @@ export default function Modal({ title, onClose, children, wide }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onMouseDown={(e) => { mouseDownOnBackdropRef.current = e.target === e.currentTarget }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && mouseDownOnBackdropRef.current) onClose()
+        mouseDownOnBackdropRef.current = false
+      }}
     >
       <div
         className={`bg-white rounded-2xl shadow-xl w-full max-h-[90vh] flex flex-col
