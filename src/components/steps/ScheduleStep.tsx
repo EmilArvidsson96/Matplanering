@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
-import { computeBalances, slotKey, formatDayShort } from '../../utils/weekUtils'
+import { computeBalances, slotKey, formatDayShort, mealTotalPortions } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
 import type { ScheduleSlot, PlannedMeal, MealType, WeekPlan } from '../../types'
 
@@ -189,7 +189,7 @@ function SlotRow({
                   ${meal.isRemainder ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
               >
                 {meal.name}
-                {assignment.portions < meal.portions && (
+                {assignment.portions < mealTotalPortions(meal) && (
                   <span className="text-gray-400 ml-0.5">({assignment.portions}p)</span>
                 )}
                 <button onClick={() => onUnassign(meal.id)} className="text-gray-400 hover:text-red-500 ml-0.5 leading-none">✕</button>
@@ -241,7 +241,7 @@ function MealAssignPicker({
   }
 
   function remaining(meal: PlannedMeal): number {
-    return meal.portions - portionsElsewhere(meal.id)
+    return mealTotalPortions(meal) - portionsElsewhere(meal.id)
   }
 
   const [counts, setCounts] = useState<Record<string, number>>(() =>
@@ -296,7 +296,7 @@ function MealAssignPicker({
                   onClick={() => setCount(meal.id, max, +1)}
                   className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 text-xs font-bold leading-none flex items-center justify-center"
                 >+</button>
-                <span className="text-xs text-gray-500 ml-0.5">/ {meal.portions}</span>
+                <span className="text-xs text-gray-500 ml-0.5">/ {mealTotalPortions(meal)}</span>
               </div>
 
               <button
@@ -314,7 +314,7 @@ function MealAssignPicker({
         })}
 
         {assigned.map(meal => {
-          const a = (slot.assignments ?? []).find(x => x.mealId === meal.id) ?? { mealId: meal.id, portions: meal.portions }
+          const a = (slot.assignments ?? []).find(x => x.mealId === meal.id) ?? { mealId: meal.id, portions: mealTotalPortions(meal) }
           return (
             <div key={meal.id} className="flex items-center gap-3 px-3 py-3 rounded-xl opacity-40">
               {meal.isRemainder && (

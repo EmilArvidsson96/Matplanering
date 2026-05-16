@@ -1,6 +1,6 @@
 import { addDays, format, parseISO, getISOWeek, getYear } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import type { ScheduleSlot, WeekPlan, PlannedMeal } from '../types'
+import type { ScheduleSlot, WeekPlan, PlannedMeal, MealComponent } from '../types'
 
 /** Returns the most recent Saturday on or before `date`. */
 export function getSaturdayOf(date: Date): Date {
@@ -174,7 +174,7 @@ export function removLastDayFromSchedule(week: WeekPlan): WeekPlan {
 export function computeBalances(week: WeekPlan): Map<string, number> {
   let balance = week.meals
     .filter(m => m.isRemainder)
-    .reduce((s, m) => s + m.portions, 0)
+    .reduce((s, m) => s + mealTotalPortions(m), 0)
 
   const result = new Map<string, number>()
 
@@ -197,8 +197,39 @@ export function slotKey(slot: ScheduleSlot): string {
   return `${slot.date}-${slot.type}`
 }
 
+export function mealTotalPortions(meal: PlannedMeal): number {
+  const own = meal.components.filter(c => c.portionsMode === 'own')
+  return Math.max(1, own.reduce((s, c) => s + c.portions, 0))
+}
+
+export function mealPrimaryDishId(meal: PlannedMeal): string | null {
+  return meal.components[0]?.dishId ?? null
+}
+
+export function resolveComponentPortions(component: MealComponent, total: number): number {
+  return component.portionsMode === 'total' ? total : component.portions
+}
+
+/** Scale all 'own' components proportionally to reach newTotal, giving rounding remainder to the last 'own'. */
+export function scaleMealComponents(meal: PlannedMeal, newTotal: number): MealComponent[] {
+  const clamped = Math.max(1, newTotal)
+  const ownComps = meal.components.filter(c => c.portionsMode === 'own')
+  const currentTotal = ownComps.reduce((s, c) => s + c.portions, 0)
+  if (ownComps.length === 0 || currentTotal === 0) return meal.components
+
+  const lastOwnId = [...meal.components].reverse().find(c => c.portionsMode === 'own')?.id
+  let assigned = 0
+  return meal.components.map((c) => {
+    if (c.portionsMode !== 'own') return c
+    if (c.id === lastOwnId) return { ...c, portions: Math.max(1, clamped - assigned) }
+    const share = Math.max(1, Math.round((c.portions / currentTotal) * clamped))
+    assigned += share
+    return { ...c, portions: share }
+  })
+}
+
 export function totalPlannedPortions(meals: PlannedMeal[]): number {
-  return meals.filter(m => !m.isRemainder).reduce((s, m) => s + m.portions, 0)
+  return meals.filter(m => !m.isRemainder).reduce((s, m) => s + mealTotalPortions(m), 0)
 }
 
 export function totalNeededPortions(schedule: ScheduleSlot[]): number {
@@ -206,17 +237,19 @@ export function totalNeededPortions(schedule: ScheduleSlot[]): number {
 }
 
 export function remainderPortions(meals: PlannedMeal[]): number {
-  return meals.filter(m => m.isRemainder).reduce((s, m) => s + m.portions, 0)
+  return meals.filter(m => m.isRemainder).reduce((s, m) => s + mealTotalPortions(m), 0)
 }
 
 export function dishPopularity(dishId: string, weeks: WeekPlan[]): number {
   return weeks.reduce((count, week) =>
-    count + week.meals.filter(m => m.dishId === dishId && !m.isRemainder).length, 0)
+    count + week.meals.filter(m =>
+      !m.isRemainder && m.components.some(c => c.dishId === dishId)
+    ).length, 0)
 }
 
 export function dishLastCooked(dishId: string, weeks: WeekPlan[]): string | null {
   const ids = weeks
-    .filter(w => w.meals.some(m => m.dishId === dishId))
+    .filter(w => w.meals.some(m => m.components.some(c => c.dishId === dishId)))
     .map(w => w.id)
     .sort()
   return ids.length ? ids[ids.length - 1] : null
@@ -226,7 +259,7 @@ export function dishLastCooked(dishId: string, weeks: WeekPlan[]): string | null
 export function dishMostCommonMonth(dishId: string, weeks: WeekPlan[]): number | null {
   const counts = new Array(13).fill(0)
   for (const week of weeks) {
-    if (week.meals.some(m => m.dishId === dishId && !m.isRemainder)) {
+    if (week.meals.some(m => m.components.some(c => c.dishId === dishId) && !m.isRemainder)) {
       const month = parseISO(week.id).getMonth() + 1
       counts[month]++
     }
@@ -257,14 +290,36 @@ export function migrateWeek(plan: WeekPlan): WeekPlan {
     if (s.assignedMealIds && !s.assignments?.length) {
       const assignments = s.assignedMealIds.map(mealId => ({
         mealId,
-        portions: plan.meals.find(m => m.id === mealId)?.portions ?? 1,
+        portions: (plan.meals.find(m => m.id === mealId) as any)?.portions ?? 1,
       }))
       const { assignedMealIds: _dropped, ...rest } = s as typeof s & Record<string, unknown>
       return { ...rest, assignments } as ScheduleSlot
     }
     return { ...slot, assignments: slot.assignments ?? [] }
   })
-  const migrated = { ...plan, schedule: migratedSchedule }
+
+  // 2. Convert old PlannedMeal { dishId, portions } → { components }
+  type OldMeal = { id: string; name: string; dishId?: string | null; portions?: number; isRemainder?: boolean; notes?: string; usesIngredientsFromHome?: string; temporaryIngredients?: PlannedMeal['temporaryIngredients']; components?: MealComponent[] }
+  const migratedMeals = (plan.meals as OldMeal[]).map((m): PlannedMeal => {
+    if (m.components && m.components.length > 0) return m as PlannedMeal
+    return {
+      id: m.id,
+      name: m.name,
+      isRemainder: m.isRemainder ?? false,
+      notes: m.notes ?? '',
+      usesIngredientsFromHome: m.usesIngredientsFromHome ?? '',
+      temporaryIngredients: m.temporaryIngredients ?? [],
+      components: [{
+        id: `${m.id}-c0`,
+        dishId: m.dishId ?? null,
+        name: m.name,
+        portionsMode: 'own',
+        portions: m.portions ?? 1,
+      }],
+    }
+  })
+
+  const migrated = { ...plan, schedule: migratedSchedule, meals: migratedMeals }
 
   // 2. Fill missing meal-type fields
   const startMeal: 'lunch' | 'middag' = (migrated.startMealType as 'lunch' | 'middag' | undefined) ?? 'middag'

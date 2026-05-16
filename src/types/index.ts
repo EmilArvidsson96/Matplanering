@@ -66,11 +66,18 @@ export interface Dish {
 
 export type MealType = 'lunch' | 'middag'
 
-export interface PlannedMeal {
+export interface MealComponent {
   id: string
   dishId: string | null
   name: string
-  portions: number
+  portionsMode: 'own' | 'total'
+  portions: number   // only used when portionsMode === 'own'
+}
+
+export interface PlannedMeal {
+  id: string
+  name: string
+  components: MealComponent[]
   isRemainder: boolean
   notes: string
   usesIngredientsFromHome: string

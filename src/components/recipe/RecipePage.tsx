@@ -3,6 +3,7 @@ import { Search, CalendarDays, X } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { useIsDesktop } from '../../hooks/useDevice'
+import { mealTotalPortions } from '../../utils/weekUtils'
 import type { Dish } from '../../types'
 import RecipeDetail from './RecipeDetail'
 
@@ -16,13 +17,15 @@ export default function RecipePage() {
   const [weekFilter, setWeekFilter] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  // Dish IDs scheduled in the active week
+  // Dish IDs scheduled in the active week (across all components)
   const weekDishIds = useMemo(() => {
     const plan = weeks[activeWeekId]
     if (!plan) return new Set<string>()
     const ids = new Set<string>()
     for (const meal of plan.meals) {
-      if (meal.dishId) ids.add(meal.dishId)
+      for (const comp of meal.components) {
+        if (comp.dishId) ids.add(comp.dishId)
+      }
     }
     return ids
   }, [weeks, activeWeekId])
@@ -45,7 +48,11 @@ export default function RecipePage() {
     const plan = weeks[activeWeekId]
     if (!plan) return null
     for (const meal of plan.meals) {
-      if (meal.dishId === selectedId) return meal.portions
+      const comp = meal.components.find(c => c.dishId === selectedId)
+      if (comp) {
+        const total = mealTotalPortions(meal)
+        return comp.portionsMode === 'total' ? total : comp.portions
+      }
     }
     return null
   }, [selectedId, weeks, activeWeekId])

@@ -34,24 +34,31 @@ export default function ShoppingPage() {
     const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
 
     for (const meal of week.meals) {
-      if (meal.isRemainder || !meal.dishId) continue
-      const dish = dishes.find(d => d.id === meal.dishId)
-      if (!dish || dish.ingredients.length === 0) continue
+      if (meal.isRemainder) continue
+      const total = meal.components.filter(c => c.portionsMode === 'own').reduce((s, c) => s + c.portions, 0)
 
-      for (const ing of dish.ingredients) {
-        if (pantry.has(ing.name.toLowerCase())) continue
-        const scale = meal.portions / ing.portionsBase
-        raw.push({
-          id: uuid(),
-          name: ing.name,
-          amount: (ing.amount * scale).toFixed(1).replace(/\.0$/, ''),
-          unit: ing.unit,
-          category: ing.category,
-          isAutoAdded: true,
-          dishId: meal.dishId,
-          isPurchased: false,
-          isExcluded: false,
-        })
+      for (const comp of meal.components) {
+        if (!comp.dishId) continue
+        const dish = dishes.find(d => d.id === comp.dishId)
+        if (!dish || dish.ingredients.length === 0) continue
+
+        const effectivePortions = comp.portionsMode === 'total' ? Math.max(1, total) : comp.portions
+
+        for (const ing of dish.ingredients) {
+          if (pantry.has(ing.name.toLowerCase())) continue
+          const scale = effectivePortions / ing.portionsBase
+          raw.push({
+            id: uuid(),
+            name: ing.name,
+            amount: (ing.amount * scale).toFixed(1).replace(/\.0$/, ''),
+            unit: ing.unit,
+            category: ing.category,
+            isAutoAdded: true,
+            dishId: comp.dishId,
+            isPurchased: false,
+            isExcluded: false,
+          })
+        }
       }
     }
 
