@@ -13,6 +13,8 @@ export const ALLOWED_HOSTS: string[] = [
   'mykitchenstories.se',
   'vivavinomat.se',
   'www.vivavinomat.se',
+  'www.kronfagel.se',
+  'kronfagel.se',
   // Sites with schema.org/Recipe JSON-LD
   'www.ica.se',
   'ica.se',
@@ -37,6 +39,9 @@ export const ALLOWED_HOSTS: string[] = [
   'www.food.com',
   'food.com',
 ]
+
+// URL paths that strongly suggest a recipe page — used to allow unknown hosts.
+const RECIPE_PATH_RE = /\/(recipe|recipes|recept|recepten)\//i
 
 const CORS_PROXY = 'https://corsproxy.io/?url='
 
@@ -278,6 +283,60 @@ function parseMyKitchenStories(html: string): ParseResult {
   }
 }
 
+// kronfagel.se — tries JSON-LD first, then DOM search near "INGREDIENSER" heading
+function parseKronfagel(html: string): ParseResult {
+  const doc = parseDoc(html)
+
+  // JSON-LD first (may be present even if not visible in scraped text)
+  const ldItems = extractJsonLdItems(html)
+  const recipe = findRecipeNode(ldItems)
+  if (recipe && Array.isArray(recipe.recipeIngredient) && (recipe.recipeIngredient as unknown[]).length > 0) {
+    return {
+      ingredientStrings: recipe.recipeIngredient as string[],
+      portionsBase: parseServings(recipe.recipeYield),
+      title: typeof recipe.name === 'string' ? recipe.name : docTitle(doc),
+    }
+  }
+
+  // DOM: find heading whose text is exactly "INGREDIENSER" / "Ingredienser"
+  const heading = [...doc.querySelectorAll('h1,h2,h3,h4,h5,p,span,div')]
+    .find(el => /^ingredienser$/i.test(el.textContent?.trim() ?? ''))
+
+  if (heading) {
+    // Look for a <ul>/<ol> as a sibling after the heading
+    let sibling: Element | null = heading.nextElementSibling
+    while (sibling && !['UL', 'OL'].includes(sibling.tagName)) sibling = sibling.nextElementSibling
+    if (sibling) {
+      const lines = [...sibling.querySelectorAll('li')].map(li => li.textContent?.trim() ?? '').filter(Boolean)
+      if (lines.length > 0) {
+        return { ingredientStrings: lines, portionsBase: portionsFromText(doc.body.textContent ?? ''), title: docTitle(doc) }
+      }
+    }
+
+    // Or inside the heading's parent container
+    const parent = heading.parentElement
+    if (parent) {
+      const list = parent.querySelector('ul, ol')
+      if (list) {
+        const lines = [...list.querySelectorAll('li')].map(li => li.textContent?.trim() ?? '').filter(Boolean)
+        if (lines.length > 0) {
+          return { ingredientStrings: lines, portionsBase: portionsFromText(parent.textContent ?? ''), title: docTitle(doc) }
+        }
+      }
+    }
+  }
+
+  // Last resort: any list where ≥ 3 items look like ingredients (contain a digit, short text)
+  for (const list of doc.querySelectorAll('ul, ol')) {
+    const lines = [...list.querySelectorAll('li')].map(li => li.textContent?.trim() ?? '').filter(Boolean)
+    if (lines.filter(s => /\d/.test(s) && s.length < 100).length >= 3) {
+      return { ingredientStrings: lines, portionsBase: portionsFromText(doc.body.textContent ?? ''), title: docTitle(doc) }
+    }
+  }
+
+  throw new Error('Kunde inte hitta ingredienser på sidan.')
+}
+
 // vivavinomat.se — h2.text--rust "Ingredienser", parent element holds all lines
 function parseVivaVinomat(html: string): ParseResult {
   const doc = parseDoc(html)
@@ -298,6 +357,7 @@ function getSiteParser(hostname: string): ((html: string) => ParseResult) | null
   if (hostname.includes('zeinaskitchen.se'))  return parseZeinasKitchen
   if (hostname.includes('mykitchenstories.se')) return parseMyKitchenStories
   if (hostname.includes('vivavinomat.se'))    return parseVivaVinomat
+  if (hostname.includes('kronfagel.se'))      return parseKronfagel
   return null
 }
 
@@ -377,10 +437,13 @@ export async function fetchRecipeFromUrl(url: string): Promise<RecipeFetchResult
     throw new Error('Ogiltig URL.')
   }
 
-  if (!ALLOWED_HOSTS.includes(hostname)) {
+  const isKnownHost = ALLOWED_HOSTS.includes(hostname)
+  const isRecipePath = RECIPE_PATH_RE.test(new URL(url).pathname)
+
+  if (!isKnownHost && !isRecipePath) {
     const supported = [...new Set(ALLOWED_HOSTS.map(h => h.replace(/^www\./, '')))]
     throw new Error(
-      `Den här sidan stöds inte.\n\nSidor som stöds: ${supported.join(', ')}`
+      `Den här sidan stöds inte.\n\nSidor som stöds: ${supported.join(', ')}.\n\nSidor med "/recipe/" eller "/recept/" i adressen provas automatiskt.`
     )
   }
 
