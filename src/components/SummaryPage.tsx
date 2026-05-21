@@ -11,6 +11,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import {
   formatDayLabel, formatDayShort,
   totalPlannedPortions, totalNeededPortions, remainderPortions,
+  mealPrimaryDishId,
 } from '../utils/weekUtils'
 import type { WeekPlan, PlannedMeal, Dish, ScheduleSlot } from '../types'
 
@@ -231,7 +232,7 @@ function TodayCard({ week, dishMap, today }: { week: WeekPlan; dishMap: Map<stri
                   <MealRow
                     key={meal.id}
                     meal={meal}
-                    dish={meal.dishId ? dishMap.get(meal.dishId) : undefined}
+                    dish={mealPrimaryDishId(meal) ? dishMap.get(mealPrimaryDishId(meal)!) : undefined}
                     portions={assignment.portions}
                   />
                 ))}
@@ -300,7 +301,7 @@ function DayRow({ date, week, dishMap, today }: { date: string; week: WeekPlan; 
                   <MealRow
                     key={meal.id}
                     meal={meal}
-                    dish={meal.dishId ? dishMap.get(meal.dishId) : undefined}
+                    dish={mealPrimaryDishId(meal) ? dishMap.get(mealPrimaryDishId(meal)!) : undefined}
                     portions={assignment.portions}
                     compact
                   />

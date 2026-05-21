@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { WeekPlan, PlannedMeal, ScheduleSlot, ShoppingItem, MealType, MealAssignment, StepsCompleted } from '../types'
-import { currentWeekId, createEmptyWeek, applyWeekWindow } from '../utils/weekUtils'
+import type { WeekPlan, PlannedMeal, MealComponent, ScheduleSlot, ShoppingItem, MealType, MealAssignment, StepsCompleted } from '../types'
+import { currentWeekId, createEmptyWeek, applyWeekWindow, scaleMealComponents } from '../utils/weekUtils'
 
 interface WeekStore {
   weeks: Record<string, WeekPlan>       // weekId -> WeekPlan
@@ -25,6 +25,10 @@ interface WeekStore {
   addMeal: (meal: Omit<PlannedMeal, 'id'>) => string
   updateMeal: (id: string, patch: Partial<PlannedMeal>) => void
   deleteMeal: (id: string) => void
+  scaleMealToTotal: (id: string, newTotal: number) => void
+  addMealComponent: (id: string, component: Omit<MealComponent, 'id'>) => void
+  updateMealComponent: (id: string, componentId: string, patch: Partial<MealComponent>) => void
+  removeMealComponent: (id: string, componentId: string) => void
 
   // Schedule assignment
   assignMeal: (date: string, type: MealType, mealId: string, portions: number) => void
@@ -128,6 +132,40 @@ export const useWeekStore = create<WeekStore>((set, get) => {
           ...sl,
           assignments: (sl.assignments ?? []).filter((a: MealAssignment) => a.mealId !== id),
         })),
+      })),
+
+    scaleMealToTotal: (id, newTotal) =>
+      mutateActive((p) => ({
+        ...p,
+        meals: p.meals.map((m) =>
+          m.id === id ? { ...m, components: scaleMealComponents(m, newTotal) } : m
+        ),
+      })),
+
+    addMealComponent: (id, component) =>
+      mutateActive((p) => ({
+        ...p,
+        meals: p.meals.map((m) =>
+          m.id === id ? { ...m, components: [...m.components, { ...component, id: uuid() }] } : m
+        ),
+      })),
+
+    updateMealComponent: (id, componentId, patch) =>
+      mutateActive((p) => ({
+        ...p,
+        meals: p.meals.map((m) =>
+          m.id === id
+            ? { ...m, components: m.components.map(c => c.id === componentId ? { ...c, ...patch } : c) }
+            : m
+        ),
+      })),
+
+    removeMealComponent: (id, componentId) =>
+      mutateActive((p) => ({
+        ...p,
+        meals: p.meals.map((m) =>
+          m.id === id ? { ...m, components: m.components.filter(c => c.id !== componentId) } : m
+        ),
       })),
 
     assignMeal: (date, type, mealId, portions) =>
