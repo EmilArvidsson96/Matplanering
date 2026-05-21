@@ -142,6 +142,6 @@ export async function loadInitialData() {
   const id = weekStore.activeWeekId
   const weekFile = await getFile(`weeks/${id}.json`)
   if (weekFile) {
-    weekStore.loadWeek(JSON.parse(weekFile.content) as WeekPlan, weekFile.sha)
+    weekStore.loadWeek(migrateWeek(JSON.parse(weekFile.content) as WeekPlan), weekFile.sha)
   }
 }
