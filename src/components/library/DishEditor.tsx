@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Minus, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
@@ -83,10 +84,19 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   // ── Ingredients ──────────────────────────────────────────────────────────────
 
   function addIngredient() {
+    const portionsBase = form.ingredients[0]?.portionsBase ?? 4
     const ing: Ingredient = {
-      id: uuid(), name: '', amount: 1, unit: 'g', category: 'övrigt', portionsBase: 4,
+      id: uuid(), name: '', amount: 1, unit: 'g', category: 'övrigt', portionsBase,
     }
     setForm(f => ({ ...f, ingredients: [...f.ingredients, ing] }))
+  }
+
+  function setAllPortionsBase(n: number) {
+    const clamped = Math.max(1, n)
+    setForm(f => ({
+      ...f,
+      ingredients: f.ingredients.map(i => ({ ...i, portionsBase: clamped })),
+    }))
   }
 
   function updateIngredient(id: string, patch: Partial<Ingredient>) {
@@ -272,12 +282,36 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-medium text-gray-500">Ingredienser</label>
-            <button
-              onClick={addIngredient}
-              className="text-xs text-brand-600 hover:text-brand-800 font-medium"
-            >
-              + Lägg till
-            </button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400">för</span>
+              <button
+                type="button"
+                onClick={() => setAllPortionsBase((form.ingredients[0]?.portionsBase ?? 4) - 1)}
+                disabled={form.ingredients.length === 0}
+                className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-30"
+              >
+                <Minus className="w-2.5 h-2.5" />
+              </button>
+              <span className="text-xs font-semibold text-gray-700 w-4 text-center">
+                {form.ingredients[0]?.portionsBase ?? 4}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAllPortionsBase((form.ingredients[0]?.portionsBase ?? 4) + 1)}
+                disabled={form.ingredients.length === 0}
+                className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-30"
+              >
+                <Plus className="w-2.5 h-2.5" />
+              </button>
+              <span className="text-xs text-gray-400">port.</span>
+              <button
+                type="button"
+                onClick={addIngredient}
+                className="ml-2 text-xs text-brand-600 hover:text-brand-800 font-medium"
+              >
+                + Lägg till
+              </button>
+            </div>
           </div>
           {form.ingredients.length === 0 && (
             <p className="text-xs text-gray-300 italic">Inga ingredienser än.</p>
@@ -313,16 +347,6 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
                 >
                   {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
                 </select>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <span>för</span>
-                  <input
-                    type="number"
-                    value={ing.portionsBase}
-                    onChange={e => updateIngredient(ing.id, { portionsBase: Number(e.target.value) })}
-                    className="w-12 border border-gray-200 rounded-lg px-2 py-1 text-xs"
-                  />
-                  <span>port.</span>
-                </div>
                 <button
                   onClick={() => removeIngredient(ing.id)}
                   className="text-gray-300 hover:text-red-400 text-sm"
