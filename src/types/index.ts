@@ -12,6 +12,7 @@ export type DishType =
   | 'soppa' | 'sallad' | 'paj' | 'gryta' | 'grillat'
   | 'bowl' | 'burgare' | 'taco' | 'wrap' | 'pizza'
   | 'pasta' | 'stir-fry' | 'curry' | 'risotto' | 'omelett' | 'smörgås'
+  | 'wok' | 'quiche' | 'frittata' | 'pulled' | 'dumplings' | 'sushi' | 'nachos'
 
 export type Tag = 'snabb' | 'festlig' | 'barnvänlig' | 'lowfodmap' | 'lchf' | 'stark' | 'lågfett'
 

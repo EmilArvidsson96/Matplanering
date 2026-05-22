@@ -34,6 +34,10 @@ const FILTERS: { key: string; label: string; values: { id: string; label: string
     { id: 'pasta', label: 'Pasta' }, { id: 'stir-fry', label: 'Stir-fry' },
     { id: 'curry', label: 'Curry' }, { id: 'risotto', label: 'Risotto' },
     { id: 'omelett', label: 'Omelett' }, { id: 'smörgås', label: 'Smörgås' },
+    { id: 'wok', label: 'Wok' }, { id: 'quiche', label: 'Quiche' },
+    { id: 'frittata', label: 'Frittata' }, { id: 'pulled', label: 'Pulled' },
+    { id: 'dumplings', label: 'Dumplings' }, { id: 'sushi', label: 'Sushi' },
+    { id: 'nachos', label: 'Nachos' },
   ]},
   { key: 'tags', label: 'Taggar', values: [
     { id: 'snabb', label: 'Snabb' }, { id: 'festlig', label: 'Festlig' },
@@ -56,6 +60,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
   const [sort, setSort]               = useState<SortOrder>('alfabetisk')
   const [active, setActive]           = useState<Record<string, Set<string>>>({})
   const [openGroup, setOpenGroup]     = useState<string | null>(null)
+  const [expandedFilters, setExpandedFilters] = useState<Record<string, boolean>>({})
   const today = new Date().toISOString().slice(0, 10)
 
   function toggleFilter(group: string, id: string) {
@@ -140,23 +145,46 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
                   <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
                 </span>
               </button>
-              {isOpen && (
-                <div className="px-3 py-2 flex flex-wrap gap-1.5 bg-white">
-                  {values.map(v => (
-                    <button
-                      key={v.id}
-                      onClick={() => toggleFilter(key, v.id)}
-                      className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
-                        ${sel.has(v.id)
-                          ? 'bg-brand-600 text-white border-brand-600'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {isOpen && (() => {
+                const COLLAPSE_AFTER = 8
+                const isExpandedFilter = !!expandedFilters[key]
+                const showAll = isExpandedFilter || values.length <= COLLAPSE_AFTER
+                const visible = showAll ? values : values.filter((v, i) => i < COLLAPSE_AFTER || sel.has(v.id))
+                const hiddenCount = showAll ? 0 : values.filter((v, i) => i >= COLLAPSE_AFTER && !sel.has(v.id)).length
+                return (
+                  <div className="px-3 py-2 flex flex-wrap gap-1.5 bg-white">
+                    {visible.map(v => (
+                      <button
+                        key={v.id}
+                        onClick={() => toggleFilter(key, v.id)}
+                        className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
+                          ${sel.has(v.id)
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          }`}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                    {!showAll && hiddenCount > 0 && (
+                      <button
+                        onClick={() => setExpandedFilters(p => ({ ...p, [key]: true }))}
+                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+                      >
+                        +{hiddenCount} fler
+                      </button>
+                    )}
+                    {showAll && values.length > COLLAPSE_AFTER && (
+                      <button
+                        onClick={() => setExpandedFilters(p => ({ ...p, [key]: false }))}
+                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+                      >
+                        Visa färre
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           )
         })}

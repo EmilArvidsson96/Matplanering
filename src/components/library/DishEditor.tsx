@@ -12,7 +12,7 @@ import type {
 const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','lamm','vilt','vegetarisk','vegan']
 const ALL_CARBS:    Carb[]    = ['ris','pasta','potatis','nudlar','bröd','ingen']
 const ALL_CUISINES: Cuisine[] = ['svensk','italiensk','asiatisk','japansk','koreansk','indisk','mellanöstern','mexikansk','fransk','nordafrikansk','övrigt']
-const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza','pasta','stir-fry','curry','risotto','omelett','smörgås']
+const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza','pasta','stir-fry','curry','risotto','omelett','smörgås','wok','quiche','frittata','pulled','dumplings','sushi','nachos']
 const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark','lågfett']
 const ALL_CATS:     ShoppingCategory[] = ['mejeri','kött','fisk','grönsaker','frukt','torrvaror','konserver','frys','bröd','kryddor','övrigt']
 const ALL_MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
@@ -26,7 +26,8 @@ const LABEL: Record<string, string> = {
   fransk:'Fransk', nordafrikansk:'Nordafrikansk', övrigt:'Övrigt',
   soppa:'Soppa', sallad:'Sallad', paj:'Paj', gryta:'Gryta', grillat:'Grillat',
   bowl:'Bowl', burgare:'Burgare', taco:'Taco', wrap:'Wrap', pizza:'Pizza',
-  pasta:'Pasta', 'stir-fry':'Stir-fry', curry:'Curry', risotto:'Risotto', omelett:'Omelett', smörgås:'Smörgås',
+  'stir-fry':'Stir-fry', curry:'Curry', risotto:'Risotto', omelett:'Omelett', smörgås:'Smörgås',
+  wok:'Wok', quiche:'Quiche', frittata:'Frittata', pulled:'Pulled', dumplings:'Dumplings', sushi:'Sushi', nachos:'Nachos',
   snabb:'Snabb', festlig:'Festlig', barnvänlig:'Barnvänlig',
   lowfodmap:'Low FODMAP', lchf:'LCHF', stark:'Stark', lågfett:'Låg fetthalt',
   mejeri:'Mejeri', kött:'Kött',
@@ -217,6 +218,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           options={ALL_TYPES}
           selected={form.type}
           onToggle={v => setForm(f => ({ ...f, type: toggle(f.type, v as DishType) }))}
+          collapseAfter={8}
         />
 
         {/* Tags */}
@@ -467,13 +469,20 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 }
 
 function ChipGroup<T extends string>({
-  label, options, selected, onToggle,
-}: { label: string; options: T[]; selected: T[]; onToggle: (v: string) => void }) {
+  label, options, selected, onToggle, collapseAfter,
+}: { label: string; options: T[]; selected: T[]; onToggle: (v: string) => void; collapseAfter?: number }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const visible = collapseAfter && !expanded
+    ? options.filter((opt, i) => i < collapseAfter || selected.includes(opt))
+    : options
+  const hiddenCount = collapseAfter ? options.filter((opt, i) => i >= collapseAfter && !selected.includes(opt)).length : 0
+
   return (
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <div className="flex flex-wrap gap-1.5">
-        {options.map(opt => (
+        {visible.map(opt => (
           <button
             key={opt}
             type="button"
@@ -487,6 +496,24 @@ function ChipGroup<T extends string>({
             {LABEL[opt] ?? opt}
           </button>
         ))}
+        {collapseAfter && !expanded && hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+          >
+            +{hiddenCount} fler
+          </button>
+        )}
+        {collapseAfter && expanded && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+          >
+            Visa färre
+          </button>
+        )}
       </div>
     </div>
   )
