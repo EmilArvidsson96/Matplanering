@@ -31,6 +31,9 @@ const FILTERS: { key: string; label: string; values: { id: string; label: string
     { id: 'grillat', label: 'Grillat' }, { id: 'bowl', label: 'Bowl' },
     { id: 'burgare', label: 'Burgare' }, { id: 'taco', label: 'Taco' },
     { id: 'wrap', label: 'Wrap' }, { id: 'pizza', label: 'Pizza' },
+    { id: 'pasta', label: 'Pasta' }, { id: 'stir-fry', label: 'Stir-fry' },
+    { id: 'curry', label: 'Curry' }, { id: 'risotto', label: 'Risotto' },
+    { id: 'omelett', label: 'Omelett' }, { id: 'smörgås', label: 'Smörgås' },
   ]},
   { key: 'tags', label: 'Taggar', values: [
     { id: 'snabb', label: 'Snabb' }, { id: 'festlig', label: 'Festlig' },

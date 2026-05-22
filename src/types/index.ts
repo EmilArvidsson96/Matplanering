@@ -11,6 +11,7 @@ export type Cuisine =
 export type DishType =
   | 'soppa' | 'sallad' | 'paj' | 'gryta' | 'grillat'
   | 'bowl' | 'burgare' | 'taco' | 'wrap' | 'pizza'
+  | 'pasta' | 'stir-fry' | 'curry' | 'risotto' | 'omelett' | 'smörgås'
 
 export type Tag = 'snabb' | 'festlig' | 'barnvänlig' | 'lowfodmap' | 'lchf' | 'stark' | 'lågfett'
 
