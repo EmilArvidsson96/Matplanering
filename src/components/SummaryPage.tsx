@@ -13,6 +13,7 @@ import {
   totalPlannedPortions, totalNeededPortions, remainderPortions,
   mealPrimaryDishId,
 } from '../utils/weekUtils'
+import { weekPlanImpact, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../utils/ingredientImpact'
 import type { WeekPlan, PlannedMeal, Dish, ScheduleSlot } from '../types'
 
 // ─── Step-status logic ────────────────────────────────────────────────────────
@@ -106,6 +107,60 @@ export default function SummaryPage() {
       {week.schedule.length > 0 && (
         <CostCard week={week} needed={needed} />
       )}
+
+      {/* 5. Climate impact card */}
+      {week.schedule.length > 0 && (
+        <ClimateCard week={week} />
+      )}
+    </div>
+  )
+}
+
+function ClimateCard({ week }: { week: WeekPlan }) {
+  const dishes = useLibraryStore(s => s.dishes)
+  const conversions = useSettingsStore(s => s.settings.unitConversions)
+  const impact = weekPlanImpact(week, dishes, conversions)
+  const totalPortions = week.schedule.reduce(
+    (s, sl) => s + (sl.assignments ?? []).reduce((a, x) => a + (x.portions || 0), 0), 0,
+  )
+  if (!impact.matched || totalPortions === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Klimat & uppskattad kostnad</h2>
+        <p className="text-sm text-gray-500 italic">Lägg till ingredienser med kvantitet och enhet på rätterna så räknas klimat och kostnad automatiskt.</p>
+      </div>
+    )
+  }
+  const co2Pp = impact.co2eKg / totalPortions
+  const grade = climateGrade(co2Pp)
+  const costPp = impact.costSEK / totalPortions
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Klimat & uppskattad kostnad</h2>
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold shadow" style={{ background: CLIMATE_COLORS[grade] }}>
+          {grade}
+        </div>
+        <div className="flex-1 grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-gray-500">Klimat / portion</p>
+            <p className="text-lg font-bold">{formatCO2e(co2Pp)} CO₂e</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Kostnad / portion</p>
+            <p className="text-lg font-bold">{formatSEK(costPp)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Vecka totalt</p>
+            <p className="text-sm font-semibold">{formatCO2e(impact.co2eKg)} · {formatSEK(impact.costSEK)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Portioner</p>
+            <p className="text-sm font-semibold">{totalPortions}</p>
+          </div>
+        </div>
+      </div>
+      <p className="text-[11px] text-gray-500">Uppskattat från ingredienslexikonet. Se /spel för detaljer och hur det påverkar dina poäng.</p>
     </div>
   )
 }

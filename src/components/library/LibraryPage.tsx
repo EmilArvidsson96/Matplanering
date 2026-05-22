@@ -1,7 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
+import { useGameStore } from '../../store/gameStore'
 import { dishPopularity, dishLastCooked } from '../../utils/weekUtils'
+import { computeCompleteness } from '../../utils/recipeCompleteness'
 import DishEditor from './DishEditor'
 import type { Dish, Protein, Carb, Cuisine, DishType, Tag, SortOrder } from '../../types'
 
@@ -40,6 +43,20 @@ export default function LibraryPage() {
   const [sort, setSort]       = useState<SortOrder>('alfabetisk')
   const [editing, setEditing] = useState<Dish | 'new' | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const gameMode = useGameStore(s => s.data.gameMode)
+
+  // Open editor from /bibliotek?edit=<dishId>
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (!editId) return
+    const dish = dishes.find(d => d.id === editId)
+    if (dish) {
+      setEditing(dish)
+      searchParams.delete('edit')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, dishes, setSearchParams])
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -152,6 +169,7 @@ export default function LibraryPage() {
             dish={dish}
             popularity={dishPopularity(dish.id, weeks)}
             lastCooked={dishLastCooked(dish.id, weeks)}
+            showCompleteness={gameMode}
             onClick={() => setEditing(dish)}
           />
         ))}
@@ -172,13 +190,14 @@ export default function LibraryPage() {
   )
 }
 
-function DishCard({ dish, popularity, lastCooked, onClick }: {
-  dish: Dish; popularity: number; lastCooked: string | null; onClick: () => void
+function DishCard({ dish, popularity, lastCooked, onClick, showCompleteness }: {
+  dish: Dish; popularity: number; lastCooked: string | null; onClick: () => void; showCompleteness: boolean
 }) {
+  const c = showCompleteness ? computeCompleteness(dish) : null
   return (
     <button
       onClick={onClick}
-      className="text-left bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-brand-200 hover:shadow-md transition-all"
+      className="text-left bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-brand-200 hover:shadow-md transition-all relative"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-sm text-gray-800 leading-snug">{dish.name}</h3>
@@ -186,6 +205,25 @@ function DishCard({ dish, popularity, lastCooked, onClick }: {
           <span className="text-xs text-gray-300 shrink-0 mt-0.5">×{popularity}</span>
         )}
       </div>
+      {c && (
+        <div className="mt-1.5">
+          <div className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="flex">
+              {Array.from({length:5}).map((_, i) => (
+                <span key={i} style={{ color: i < c.stars ? '#facc15' : '#e5e7eb' }}>★</span>
+              ))}
+            </span>
+            {c.pct < 100 ? (
+              <span className="text-pink-600 font-semibold">+{c.totalWorth} p att vinna</span>
+            ) : (
+              <span className="text-green-600 font-semibold">✓ Komplett</span>
+            )}
+          </div>
+          <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden mt-1">
+            <div className="h-full bg-gradient-to-r from-pink-400 to-purple-500 transition-all" style={{ width: `${c.pct}%` }} />
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap gap-1 mt-2">
         {dish.protein.map(p => (
           <span key={p} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">

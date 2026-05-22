@@ -3,8 +3,10 @@ import { getFile, saveFile } from '../api/github'
 import { useWeekStore } from '../store/weekStore'
 import { useLibraryStore } from '../store/libraryStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { useGameStore } from '../store/gameStore'
 import { migrateWeek } from '../utils/weekUtils'
 import type { AppSettings, LibraryData, WeekPlan } from '../types'
+import type { GameData } from '../types/game'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 export type SaveError = string | null
@@ -20,6 +22,7 @@ export function useAutoSave() {
   const weekStore     = useWeekStore()
   const libraryStore  = useLibraryStore()
   const settingsStore = useSettingsStore()
+  const gameStore     = useGameStore()
 
   const save = useCallback(async () => {
     setStatus('saving')
@@ -46,6 +49,17 @@ export function useAutoSave() {
         libraryStore.markClean(newSha)
       }
 
+      // Save game data if dirty
+      if (gameStore.isDirty) {
+        const newSha = await saveFile(
+          'game.json',
+          JSON.stringify(gameStore.data, null, 2),
+          gameStore.sha,
+          'Uppdaterad spelstatus',
+        )
+        gameStore.markClean(newSha)
+      }
+
       // Save settings if dirty
       if (settingsStore.isDirty) {
         const newSha = await saveFile(
@@ -67,7 +81,7 @@ export function useAutoSave() {
   }, [weekStore, libraryStore, settingsStore])
 
   const isDirty =
-    weekStore.dirtyWeeks.size > 0 || libraryStore.isDirty || settingsStore.isDirty
+    weekStore.dirtyWeeks.size > 0 || libraryStore.isDirty || settingsStore.isDirty || gameStore.isDirty
 
   useEffect(() => {
     if (!isDirty) return
@@ -116,6 +130,15 @@ export async function loadInitialData() {
   const weekStore     = useWeekStore.getState()
   const libraryStore  = useLibraryStore.getState()
   const settingsStore = useSettingsStore.getState()
+  const gameStore     = useGameStore.getState()
+
+  // Load game data
+  try {
+    const gameFile = await getFile('game.json')
+    if (gameFile) {
+      gameStore.load(JSON.parse(gameFile.content) as GameData, gameFile.sha)
+    }
+  } catch { /* optional */ }
 
   // Load settings
   const settingsFile = await getFile('settings.json')

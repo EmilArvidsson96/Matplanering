@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed } from 'lucide-react'
+import { Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2 } from 'lucide-react'
+import PlayerBar from '../game/PlayerBar'
 import type { LucideIcon } from 'lucide-react'
 import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/bibliotek', label: 'Bibliotek',     Icon: BookOpen },
   { to: '/inkop',     label: 'Inköp',         Icon: ShoppingCart },
   { to: '/inst',      label: 'Inställningar', Icon: Settings },
+  { to: '/spel',      label: 'Spel',          Icon: Gamepad2 },
 ]
 
 function NavItem({ to, label, Icon }: { to: string; label: string; Icon: LucideIcon }) {
@@ -87,6 +89,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
         <div className="flex-1 flex flex-col overflow-hidden">
           <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
             <WeekNavigator />
+            <div className="ml-auto"><PlayerBar /></div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">
             <Outlet />
@@ -101,9 +104,12 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
   // Mobile layout
   return (
     <div className="flex flex-col h-dvh bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <WeekNavigator />
-        <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+      <header className="bg-white border-b border-gray-200 px-4 py-2 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <WeekNavigator />
+          <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+        </div>
+        <PlayerBar />
       </header>
 
       <main className="flex-1 overflow-y-auto">

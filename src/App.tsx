@@ -12,6 +12,10 @@ import LibraryPage from './components/library/LibraryPage'
 import ShoppingPage from './components/shopping/ShoppingPage'
 import SettingsPage from './components/settings/SettingsPage'
 import RecipePage from './components/recipe/RecipePage'
+import GamePanel from './components/game/GamePanel'
+import GameOverlay from './components/game/GameOverlay'
+import { useGameTracker } from './hooks/useGameTracker'
+import { useGameStore } from './store/gameStore'
 
 export default function App() {
   const { authed, login, logout } = usePinAuth()
@@ -19,6 +23,13 @@ export default function App() {
   const { status: saveStatus, saveError, saveNow } = useAutoSave()
   const loadWeek = useWeekLoader()
   const activeWeekId = useWeekStore(s => s.activeWeekId)
+  const gameMode = useGameStore(s => s.data.gameMode)
+  useGameTracker()
+
+  useEffect(() => {
+    document.body.classList.toggle('game-mode', gameMode)
+    return () => { document.body.classList.remove('game-mode') }
+  }, [gameMode])
 
   // Load data once after login
   useEffect(() => {
@@ -37,17 +48,21 @@ export default function App() {
   }
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route element={<AppShell logout={logout} saveStatus={saveStatus} saveError={saveError} onRetrySave={saveNow} />}>
-          <Route path="recept"    element={<RecipePage />} />
-          <Route index element={<SummaryPage />} />
-          <Route path="planera" element={<WeekPlanPage />} />
-          <Route path="bibliotek" element={<LibraryPage />} />
-          <Route path="inkop"     element={<ShoppingPage />} />
-          <Route path="inst"      element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+    <>
+      <HashRouter>
+        <Routes>
+          <Route element={<AppShell logout={logout} saveStatus={saveStatus} saveError={saveError} onRetrySave={saveNow} />}>
+            <Route path="recept"    element={<RecipePage />} />
+            <Route index element={<SummaryPage />} />
+            <Route path="planera" element={<WeekPlanPage />} />
+            <Route path="bibliotek" element={<LibraryPage />} />
+            <Route path="inkop"     element={<ShoppingPage />} />
+            <Route path="inst"      element={<SettingsPage />} />
+            <Route path="spel"      element={<GamePanel />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+      <GameOverlay />
+    </>
   )
 }

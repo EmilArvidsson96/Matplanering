@@ -46,3 +46,7 @@ export const useLibraryStore = create<LibraryStore>((set) => ({
 
   markClean: (sha) => set({ isDirty: false, sha }),
 }))
+
+if (typeof window !== 'undefined') {
+  ;(window as any).__libraryStore = useLibraryStore
+}

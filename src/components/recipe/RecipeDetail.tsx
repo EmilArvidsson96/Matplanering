@@ -5,8 +5,10 @@ import {
   Download, Upload, ExternalLink, ChevronDown, ChevronUp, Trash2,
 } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { useIsDesktop } from '../../hooks/useDevice'
 import type { Dish, RecipeStep, Ingredient } from '../../types'
+import { ingredientImpact, dishImpactPerPortion, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../../utils/ingredientImpact'
 
 // ---------------------------------------------------------------------------
 // Wake Lock
@@ -264,6 +266,7 @@ function IngredientsPanel({
   portions: number
   scrollRef: React.RefObject<HTMLDivElement>
 }) {
+  const conversions = useSettingsStore(s => s.settings.unitConversions)
   if (dish.ingredients.length === 0) {
     return (
       <div ref={scrollRef} className="h-full overflow-y-auto p-4">
@@ -272,15 +275,47 @@ function IngredientsPanel({
     )
   }
 
+  const perPortion = dishImpactPerPortion(dish, conversions)
+  const totalCost = perPortion.costSEK * portions
+  const totalCO2e = perPortion.co2eKg * portions
+  const grade = climateGrade(perPortion.co2eKg)
+
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto p-4">
+      <div className="mb-3 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm flex items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-lg"
+          style={{ background: CLIMATE_COLORS[grade] }}
+          title="Klimatbetyg per portion"
+        >
+          {grade}
+        </div>
+        <div className="flex-1 leading-tight">
+          <div className="text-xs text-gray-500 uppercase tracking-wide">Uppskattning</div>
+          <div className="font-semibold text-gray-800">
+            {formatSEK(totalCost)} · {formatCO2e(totalCO2e)} CO₂e
+          </div>
+          <div className="text-[11px] text-gray-500">
+            per portion: {formatSEK(perPortion.costSEK)} · {formatCO2e(perPortion.co2eKg)}
+          </div>
+        </div>
+      </div>
       <ul className="space-y-2">
-        {dish.ingredients.map(ing => (
-          <li key={ing.id} className="flex items-baseline justify-between gap-4 text-sm py-1 border-b border-gray-100 last:border-0">
-            <span className="text-gray-800">{ing.name}</span>
-            <span className="shrink-0 text-gray-500 font-medium tabular-nums">{scaleAmount(ing, portions)}</span>
-          </li>
-        ))}
+        {dish.ingredients.map(ing => {
+          const scaled = (ing.amount * portions) / (ing.portionsBase || 1)
+          const imp = ingredientImpact({ name: ing.name, amount: scaled, unit: ing.unit }, conversions)
+          return (
+            <li key={ing.id} className="flex items-baseline justify-between gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
+              <span className="text-gray-800 flex-1">{ing.name}</span>
+              {imp.matched && (
+                <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
+                  ~{formatSEK(imp.costSEK)} · {formatCO2e(imp.co2eKg)}
+                </span>
+              )}
+              <span className="shrink-0 text-gray-500 font-medium tabular-nums">{scaleAmount(ing, portions)}</span>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
