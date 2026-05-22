@@ -12,7 +12,7 @@ import type {
 const ALL_PROTEINS: Protein[] = ['kyckling','nöt','fläsk','fisk','skaldjur','lamm','vilt','vegetarisk','vegan']
 const ALL_CARBS:    Carb[]    = ['ris','pasta','potatis','nudlar','bröd','ingen']
 const ALL_CUISINES: Cuisine[] = ['svensk','italiensk','asiatisk','japansk','koreansk','indisk','mellanöstern','mexikansk','fransk','nordafrikansk','övrigt']
-const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza','pasta','stir-fry','curry','risotto','omelett','smörgås','wok','quiche','frittata','pulled','dumplings','sushi','nachos']
+const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza','pasta','curry','risotto','omelett','smörgås','wok','sushi','köttbit']
 const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark','lågfett']
 const ALL_CATS:     ShoppingCategory[] = ['mejeri','kött','fisk','grönsaker','frukt','torrvaror','konserver','frys','bröd','kryddor','övrigt']
 const ALL_MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
@@ -26,8 +26,8 @@ const LABEL: Record<string, string> = {
   fransk:'Fransk', nordafrikansk:'Nordafrikansk', övrigt:'Övrigt',
   soppa:'Soppa', sallad:'Sallad', paj:'Paj', gryta:'Gryta', grillat:'Grillat',
   bowl:'Bowl', burgare:'Burgare', taco:'Taco', wrap:'Wrap', pizza:'Pizza',
-  'stir-fry':'Stir-fry', curry:'Curry', risotto:'Risotto', omelett:'Omelett', smörgås:'Smörgås',
-  wok:'Wok', quiche:'Quiche', frittata:'Frittata', pulled:'Pulled', dumplings:'Dumplings', sushi:'Sushi', nachos:'Nachos',
+  curry:'Curry', risotto:'Risotto', omelett:'Omelett', smörgås:'Smörgås',
+  wok:'Wok', sushi:'Sushi', köttbit:'Köttbit',
   snabb:'Snabb', festlig:'Festlig', barnvänlig:'Barnvänlig',
   lowfodmap:'Low FODMAP', lchf:'LCHF', stark:'Stark', lågfett:'Låg fetthalt',
   mejeri:'Mejeri', kött:'Kött',

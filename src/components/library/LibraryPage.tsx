@@ -24,9 +24,8 @@ const CUISINE_LABELS: Record<Cuisine, string> = {
 const TYPE_LABELS: Record<DishType, string> = {
   soppa: 'Soppa', sallad: 'Sallad', paj: 'Paj', gryta: 'Gryta', grillat: 'Grillat',
   bowl: 'Bowl', burgare: 'Burgare', taco: 'Taco', wrap: 'Wrap', pizza: 'Pizza',
-  pasta: 'Pasta', 'stir-fry': 'Stir-fry', curry: 'Curry', risotto: 'Risotto',
-  omelett: 'Omelett', smörgås: 'Smörgås', wok: 'Wok', quiche: 'Quiche',
-  frittata: 'Frittata', pulled: 'Pulled', dumplings: 'Dumplings', sushi: 'Sushi', nachos: 'Nachos',
+  pasta: 'Pasta', curry: 'Curry', risotto: 'Risotto',
+  omelett: 'Omelett', smörgås: 'Smörgås', wok: 'Wok', sushi: 'Sushi', köttbit: 'Köttbit',
 }
 const TAG_LABELS: Record<Tag, string> = {
   snabb: 'Snabb', festlig: 'Festlig', barnvänlig: 'Barnvänlig',
