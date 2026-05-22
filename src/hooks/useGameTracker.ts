@@ -14,20 +14,24 @@ const HEALTHY_TAGS = new Set(['lågfett', 'lowfodmap', 'lchf'])
 const CO2_GREEN = 0.5     // grade A
 const CO2_OK = 1.5        // grade B/C border
 
-// Snapshot of a dish's filled fields for diffing
+// Snapshot of a dish's filled fields for diffing.
+// Defensive against legacy/partial library data — any array property may be missing.
+function arr<T>(a: T[] | undefined | null): T[] {
+  return Array.isArray(a) ? a : []
+}
 function dishSnapshot(dish: Dish) {
   return {
     name:         !!dish.name?.trim(),
-    protein:      dish.protein.length > 0,
-    carb:         dish.carb.length > 0,
+    protein:      arr(dish.protein).length > 0,
+    carb:         arr(dish.carb).length > 0,
     cuisine:      !!dish.cuisine && dish.cuisine !== 'övrigt',
-    type:         dish.type.length > 0,
-    tags:         dish.tags.length > 0,
+    type:         arr(dish.type).length > 0,
+    tags:         arr(dish.tags).length > 0,
     notes:        !!dish.notes?.trim(),
     recipeUrl:    !!dish.recipeUrl?.trim(),
-    preferredMonths: (dish.preferredMonths ?? []).length > 0,
-    ingredientCount:  dish.ingredients.length,
-    instructionCount: dish.instructions.length,
+    preferredMonths: arr(dish.preferredMonths).length > 0,
+    ingredientCount:  arr(dish.ingredients).length,
+    instructionCount: arr(dish.instructions).length,
   }
 }
 
@@ -214,7 +218,7 @@ export function useGameTracker() {
       }
       // Protein variety
       const proteinSet = new Set<string>()
-      for (const d of polished) d.protein.forEach(p => proteinSet.add(p))
+      for (const d of polished) arr(d.protein).forEach(p => proteinSet.add(p))
       for (const milestone of [3, 5, 8]) {
         if (proteinSet.size >= milestone) {
           const key = `protein-variety-${milestone}`
@@ -328,8 +332,8 @@ export function useGameTracker() {
               for (const comp of meal.components ?? []) {
                 const dish = library.find(d => d.id === comp.dishId)
                 if (!dish) continue
-                const isEco = dish.protein.some(p => ECO_PROTEINS.has(p))
-                const isHealthy = dish.tags.some(t => HEALTHY_TAGS.has(t)) || isEco
+                const isEco = arr(dish.protein).some(p => ECO_PROTEINS.has(p))
+                const isHealthy = arr(dish.tags).some(t => HEALTHY_TAGS.has(t)) || isEco
                 if (isEco) ecoCount += 1
                 if (isHealthy) healthyCount += 1
                 const perP = dishImpactPerPortion(dish, conversions)

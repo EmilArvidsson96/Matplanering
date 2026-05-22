@@ -18,18 +18,20 @@ export function computeCompleteness(dish: Dish): {
   missingCount: number
   totalWorth: number
 } {
+  // Defensive: any of these arrays may be missing on legacy library data.
+  const len = (a: unknown): number => Array.isArray(a) ? a.length : 0
   const fields: CompletenessField[] = [
-    { id: 'name',         label: 'Namn',                emoji: '📛', done: !!dish.name?.trim(),        weight: 5,  worth: 0   },
-    { id: 'protein',      label: 'Protein',             emoji: '🥩', done: dish.protein.length > 0,    weight: 5,  worth: 4   },
-    { id: 'carb',         label: 'Kolhydrat',           emoji: '🍚', done: dish.carb.length > 0,       weight: 5,  worth: 3   },
-    { id: 'cuisine',      label: 'Köksstil',            emoji: '🌍', done: CUISINE_FILLED(dish.cuisine), weight: 5,  worth: 3   },
-    { id: 'type',         label: 'Maträttstyp',         emoji: '🍽️', done: dish.type.length > 0,       weight: 5,  worth: 3   },
-    { id: 'tags',         label: 'Taggar',              emoji: '🏷️', done: dish.tags.length > 0,       weight: 5,  worth: 3   },
-    { id: 'ingredients',  label: 'Ingredienser',        emoji: '🥕', done: dish.ingredients.length > 0,weight: 25, worth: 8   },
-    { id: 'instructions', label: 'Instruktioner',       emoji: '📋', done: dish.instructions.length > 0,weight: 25, worth: 8   },
-    { id: 'recipeUrl',    label: 'Källänk',             emoji: '🔗', done: !!dish.recipeUrl?.trim(),   weight: 5,  worth: 3   },
-    { id: 'notes',        label: 'Egna noter',          emoji: '📝', done: !!dish.notes?.trim(),       weight: 5,  worth: 2   },
-    { id: 'preferredMonths', label: 'Säsong (månader)', emoji: '🌱', done: (dish.preferredMonths ?? []).length > 0, weight: 5, worth: 4 },
+    { id: 'name',         label: 'Namn',                emoji: '📛', done: !!dish.name?.trim(),              weight: 5,  worth: 0   },
+    { id: 'protein',      label: 'Protein',             emoji: '🥩', done: len(dish.protein) > 0,            weight: 5,  worth: 4   },
+    { id: 'carb',         label: 'Kolhydrat',           emoji: '🍚', done: len(dish.carb) > 0,               weight: 5,  worth: 3   },
+    { id: 'cuisine',      label: 'Köksstil',            emoji: '🌍', done: CUISINE_FILLED(dish.cuisine),     weight: 5,  worth: 3   },
+    { id: 'type',         label: 'Maträttstyp',         emoji: '🍽️', done: len(dish.type) > 0,              weight: 5,  worth: 3   },
+    { id: 'tags',         label: 'Taggar',              emoji: '🏷️', done: len(dish.tags) > 0,              weight: 5,  worth: 3   },
+    { id: 'ingredients',  label: 'Ingredienser',        emoji: '🥕', done: len(dish.ingredients) > 0,        weight: 25, worth: 8   },
+    { id: 'instructions', label: 'Instruktioner',       emoji: '📋', done: len(dish.instructions) > 0,       weight: 25, worth: 8   },
+    { id: 'recipeUrl',    label: 'Källänk',             emoji: '🔗', done: !!dish.recipeUrl?.trim(),         weight: 5,  worth: 3   },
+    { id: 'notes',        label: 'Egna noter',          emoji: '📝', done: !!dish.notes?.trim(),             weight: 5,  worth: 2   },
+    { id: 'preferredMonths', label: 'Säsong (månader)', emoji: '🌱', done: len(dish.preferredMonths) > 0,    weight: 5,  worth: 4   },
   ]
 
   const totalWeight = fields.reduce((s, f) => s + f.weight, 0)
