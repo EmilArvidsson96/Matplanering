@@ -532,7 +532,7 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
 
   // Mobile: tab view
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {header}
       {portionControl}
 
@@ -554,7 +554,7 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
       </div>
 
       {/* Panel — always rendered for scroll-position memory, hidden via display */}
-      <div className={`flex-1 overflow-hidden ${activeTab === 'instruktioner' ? 'block' : 'hidden'}`}>
+      <div className={`flex-1 min-h-0 overflow-hidden ${activeTab === 'instruktioner' ? 'block' : 'hidden'}`}>
         <InstructionsPanel
           dish={dish}
           portions={portions}

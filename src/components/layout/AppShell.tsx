@@ -116,7 +116,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
         <Outlet />
       </main>
 
-      <nav className="bg-white border-t border-gray-200 px-2 py-1 flex justify-around safe-area-inset-bottom">
+      <nav className="bg-white border-t border-gray-200 px-2 py-1 flex justify-around pb-[env(safe-area-inset-bottom)]">
         {NAV_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} />
         ))}
