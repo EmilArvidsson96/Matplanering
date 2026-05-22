@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RotateCcw, ChevronRight } from 'lucide-react'
+import { RotateCcw, ChevronRight, ChevronDown, X } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -348,42 +348,62 @@ function MealRow({
       ${meal.isRemainder ? 'border-amber-200' : 'border-gray-200'}`}
     >
       {/* Main row */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 p-3">
-        {/* Name row: icon + name + warning */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <button
-            onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
-            title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
-            className={`shrink-0 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+      <div className="flex items-start gap-2 p-3">
+        {/* Remainder toggle */}
+        <button
+          onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
+          title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
+          className={`shrink-0 mt-0.5 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
+        >
+          <RotateCcw className="w-4 h-4" />
+        </button>
 
-          <button
-            onClick={() => onOpenDish()}
-            className="flex-1 font-medium text-sm text-gray-800 text-left hover:text-brand-600 transition-colors break-words min-w-0"
-          >
-            {meal.name}
-            {isMulti && (
-              <span className="ml-1.5 text-xs font-normal text-gray-400">
-                ({meal.components.length} delar)
-              </span>
-            )}
-          </button>
-
-          {missingIngredients && (
+        {/* Name + secondary component chips */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => onOpenDish()}
-              className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 hover:bg-amber-100 transition-colors"
-              title="Inga ingredienser konfigurerade – klicka för att konfigurera"
+              className="font-medium text-sm text-gray-800 text-left hover:text-brand-600 transition-colors"
             >
-              inga ingredienser
+              {meal.name}
             </button>
+
+            {missingIngredients && (
+              <button
+                onClick={() => onOpenDish()}
+                className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full hover:bg-amber-100 transition-colors"
+                title="Inga ingredienser konfigurerade – klicka för att konfigurera"
+              >
+                inga ingredienser
+              </button>
+            )}
+          </div>
+
+          {/* Secondary component chips — always visible */}
+          {isMulti && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {meal.components.slice(1).map(comp => {
+                const effectivePortions = resolveComponentPortions(comp, totalPortions)
+                return (
+                  <button
+                    key={comp.id}
+                    onClick={() => onOpenDish(comp.id)}
+                    className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-full px-2.5 py-1 transition-colors"
+                    title={comp.dishId ? 'Öppna recept' : 'Koppla till recept'}
+                  >
+                    <span className="font-medium">{comp.name}</span>
+                    <span className={`${comp.portionsMode === 'total' ? 'text-blue-400' : 'text-gray-400'}`}>
+                      · {effectivePortions}p
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           )}
         </div>
 
-        {/* Controls row: portion counter + edit/delete */}
-        <div className="flex items-center gap-1 shrink-0 ml-6 sm:ml-0">
+        {/* Right controls: portions + expand + delete */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onScaleTotal(totalPortions - 1)}
             className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
@@ -395,10 +415,23 @@ function MealRow({
           >+</button>
           <span className="text-xs text-gray-500 ml-0.5">port.</span>
 
-          <button onClick={onEdit} className="text-gray-500 hover:text-gray-700 text-sm px-1 ml-1">
-            {isEditing ? '▲' : '▼'}
+          {/* Expand toggle — large tap target */}
+          <button
+            onClick={onEdit}
+            className="p-2 -mr-1 text-gray-400 hover:text-gray-600 transition-colors ml-0.5"
+            title={isEditing ? 'Dölj detaljer' : 'Visa detaljer'}
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isEditing ? 'rotate-180' : ''}`} />
           </button>
-          <button onClick={onDelete} className="text-gray-400 hover:text-red-500 text-sm px-1">✕</button>
+
+          {/* Delete */}
+          <button
+            onClick={onDelete}
+            className="p-2 -mr-1 text-gray-300 hover:text-red-400 transition-colors"
+            title="Ta bort"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
