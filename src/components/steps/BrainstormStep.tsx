@@ -28,7 +28,7 @@ export default function BrainstormStep() {
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [newName, setNewName]         = useState('')
   const [addMode, setAddMode]         = useState<'free' | 'library' | null>(null)
-  const [dishTarget, setDishTarget]   = useState<{ dish: Dish | null; mealId: string; componentId: string | null; mealName: string } | null>(null)
+  const [dishTarget, setDishTarget]   = useState<{ dish: Dish | null; mealId: string; componentId: string | null; componentName: string } | null>(null)
   const [componentPickerMealId, setComponentPickerMealId] = useState<string | null>(null)
 
   function openDishEditor(meal: PlannedMeal, componentId?: string) {
@@ -36,7 +36,7 @@ export default function BrainstormStep() {
       ? meal.components.find(c => c.id === componentId)
       : meal.components[0]
     const dish = comp?.dishId ? dishes.find(d => d.id === comp.dishId) ?? null : null
-    setDishTarget({ dish, mealId: meal.id, componentId: comp?.id ?? null, mealName: meal.name })
+    setDishTarget({ dish, mealId: meal.id, componentId: comp?.id ?? null, componentName: comp?.name ?? meal.name })
   }
 
   function handleDishSaved(savedId: string) {
@@ -230,7 +230,7 @@ export default function BrainstormStep() {
       {dishTarget && (
         <DishEditor
           dish={dishTarget.dish}
-          initialName={dishTarget.dish ? undefined : dishTarget.mealName}
+          initialName={dishTarget.dish ? undefined : dishTarget.componentName}
           onClose={() => setDishTarget(null)}
           onSaved={handleDishSaved}
         />
