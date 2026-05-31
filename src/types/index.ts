@@ -148,6 +148,8 @@ export interface AppSettings {
   unitConversions: UnitConversion[]
   anthropicApiKey?: string
   aiModel?: AiModel
+  calibrationModel?: AiModel
+  costOverrides?: Record<string, number>  // lexicon canonical name → calibrated SEK/kg
 }
 
 export interface LibraryData {

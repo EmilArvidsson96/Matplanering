@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSettingsStore } from '../../store/settingsStore'
 import { DEFAULT_CONVERSIONS } from '../../utils/unitConversions'
 import type { AiModel } from '../../types'
+import ReceiptCalibration from './ReceiptCalibration'
 
 export default function SettingsPage() {
   const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion } = useSettingsStore()
@@ -237,6 +238,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* Receipt-based price calibration */}
+      <ReceiptCalibration />
 
       {/* Info */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">

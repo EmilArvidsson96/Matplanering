@@ -119,7 +119,8 @@ export default function SummaryPage() {
 function ClimateCard({ week }: { week: WeekPlan }) {
   const dishes = useLibraryStore(s => s.dishes)
   const conversions = useSettingsStore(s => s.settings.unitConversions)
-  const impact = weekPlanImpact(week, dishes, conversions)
+  const overrides = useSettingsStore(s => s.settings.costOverrides)
+  const impact = weekPlanImpact(week, dishes, conversions, overrides ?? {})
   const totalPortions = week.schedule.reduce(
     (s, sl) => s + (sl.assignments ?? []).reduce((a, x) => a + (x.portions || 0), 0), 0,
   )

@@ -267,6 +267,7 @@ function IngredientsPanel({
   scrollRef: React.RefObject<HTMLDivElement>
 }) {
   const conversions = useSettingsStore(s => s.settings.unitConversions)
+  const overrides = useSettingsStore(s => s.settings.costOverrides) ?? {}
   if (dish.ingredients.length === 0) {
     return (
       <div ref={scrollRef} className="h-full overflow-y-auto p-4">
@@ -275,7 +276,7 @@ function IngredientsPanel({
     )
   }
 
-  const perPortion = dishImpactPerPortion(dish, conversions)
+  const perPortion = dishImpactPerPortion(dish, conversions, overrides)
   const totalCost = perPortion.costSEK * portions
   const totalCO2e = perPortion.co2eKg * portions
   const grade = climateGrade(perPortion.co2eKg)
@@ -303,7 +304,7 @@ function IngredientsPanel({
       <ul className="space-y-2">
         {dish.ingredients.map(ing => {
           const scaled = (ing.amount * portions) / (ing.portionsBase || 1)
-          const imp = ingredientImpact({ name: ing.name, amount: scaled, unit: ing.unit }, conversions)
+          const imp = ingredientImpact({ name: ing.name, amount: scaled, unit: ing.unit }, conversions, overrides)
           return (
             <li key={ing.id} className="flex items-baseline justify-between gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
               <span className="text-gray-800 flex-1">{ing.name}</span>

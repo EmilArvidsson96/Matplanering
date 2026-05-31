@@ -8,10 +8,14 @@ export interface ImpactValue {
   matched: boolean
 }
 
+/** Calibrated SEK/kg for a lexicon entry — user override wins over the default. */
+type CostOverrides = Record<string, number>
+
 /** Estimate cost and CO₂e for a single ingredient (already scaled to portions). */
 export function ingredientImpact(
   ingredient: { name: string; amount: number; unit: string },
   conversions: UnitConversion[],
+  overrides: CostOverrides = {},
 ): ImpactValue {
   const lex = lookupIngredient(ingredient.name)
   const grams = toGrams(ingredient.amount, ingredient.unit, ingredient.name, conversions)
@@ -20,20 +24,25 @@ export function ingredientImpact(
     return { costSEK: 0, co2eKg: 0, matched: false }
   }
   const kg = grams / 1000
+  const costPerKg = overrides[lex.name] ?? lex.costPerKg
   return {
-    costSEK: kg * lex.costPerKg,
+    costSEK: kg * costPerKg,
     co2eKg: kg * lex.co2ePerKg,
     matched,
   }
 }
 
 /** Sum a dish's per-portion impact (scaled from portionsBase). */
-export function dishImpactPerPortion(dish: Dish, conversions: UnitConversion[]): ImpactValue {
+export function dishImpactPerPortion(
+  dish: Dish,
+  conversions: UnitConversion[],
+  overrides: CostOverrides = {},
+): ImpactValue {
   let costSEK = 0, co2eKg = 0, matched = false
   for (const ing of dish.ingredients) {
     const base = ing.portionsBase || 1
     const scaled: Ingredient = { ...ing, amount: ing.amount / base }
-    const r = ingredientImpact(scaled, conversions)
+    const r = ingredientImpact(scaled, conversions, overrides)
     costSEK += r.costSEK
     co2eKg += r.co2eKg
     if (r.matched) matched = true
@@ -46,6 +55,7 @@ export function weekPlanImpact(
   plan: WeekPlan,
   dishes: Dish[],
   conversions: UnitConversion[],
+  overrides: CostOverrides = {},
 ): ImpactValue {
   let costSEK = 0, co2eKg = 0, matched = false
   for (const slot of plan.schedule) {
@@ -57,7 +67,7 @@ export function weekPlanImpact(
         if (!comp.dishId) continue
         const dish = dishes.find(d => d.id === comp.dishId)
         if (!dish) continue
-        const perPortion = dishImpactPerPortion(dish, conversions)
+        const perPortion = dishImpactPerPortion(dish, conversions, overrides)
         const portionsForComponent = comp.portionsMode === 'own' ? (comp.portions || 0) : totalPortions
         costSEK += perPortion.costSEK * portionsForComponent
         co2eKg += perPortion.co2eKg * portionsForComponent

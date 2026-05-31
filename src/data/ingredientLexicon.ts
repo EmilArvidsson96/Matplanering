@@ -524,6 +524,13 @@ export const LEX_FALLBACK: LexEntry = {
   co2ePerKg: 1.5,
 }
 
+/** Unique lexicon entries keyed by canonical name (first occurrence wins). */
+export const LEX_BY_NAME: Map<string, LexEntry> = (() => {
+  const m = new Map<string, LexEntry>()
+  for (const e of INGREDIENT_LEXICON) if (!m.has(e.name)) m.set(e.name, e)
+  return m
+})()
+
 /** Find best lexicon entry by ingredient name. */
 export function lookupIngredient(name: string): LexEntry {
   const lower = name.toLowerCase()

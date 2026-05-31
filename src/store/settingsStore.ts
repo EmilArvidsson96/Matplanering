@@ -12,6 +12,9 @@ interface SettingsStore {
   removePantryItem: (item: string) => void
   addUnitConversion: (conv: Omit<UnitConversion, 'id'>) => void
   removeUnitConversion: (id: string) => void
+  applyCostOverrides: (patch: Record<string, number>) => void
+  removeCostOverride: (name: string) => void
+  clearCostOverrides: () => void
   markClean: (sha: string | undefined) => void
 }
 
@@ -22,6 +25,8 @@ const DEFAULT: AppSettings = {
   unitConversions: [],
   anthropicApiKey: '',
   aiModel: 'haiku',
+  calibrationModel: 'sonnet',
+  costOverrides: {},
 }
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
@@ -71,6 +76,28 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         ...s.settings,
         unitConversions: s.settings.unitConversions.filter((c) => c.id !== id),
       },
+      isDirty: true,
+    })),
+
+  applyCostOverrides: (patch) =>
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        costOverrides: { ...(s.settings.costOverrides ?? {}), ...patch },
+      },
+      isDirty: true,
+    })),
+
+  removeCostOverride: (name) =>
+    set((s) => {
+      const next = { ...(s.settings.costOverrides ?? {}) }
+      delete next[name]
+      return { settings: { ...s.settings, costOverrides: next }, isDirty: true }
+    }),
+
+  clearCostOverrides: () =>
+    set((s) => ({
+      settings: { ...s.settings, costOverrides: {} },
       isDirty: true,
     })),
 
