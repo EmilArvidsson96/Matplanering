@@ -55,9 +55,14 @@ function formatAmount(n: number): string {
   return n.toFixed(1).replace(/\.0$/, '')
 }
 
+function collectDishIds(items: ShoppingItem[]): string[] {
+  return [...new Set(items.flatMap(i => i.dishIds ?? []))]
+}
+
 function mergeGroup(items: ShoppingItem[], customConversions: UnitConversion[]): ShoppingItem[] {
   if (items.length === 1) return items
 
+  const dishIds = collectDishIds(items)
   const units = new Set(items.map(i => i.unit.toLowerCase()))
 
   if (units.size === 1) {
@@ -65,7 +70,7 @@ function mergeGroup(items: ShoppingItem[], customConversions: UnitConversion[]):
       const n = parseFloat(item.amount)
       return sum + (isNaN(n) ? 0 : n)
     }, 0)
-    return [{ ...items[0], id: uuid(), amount: formatAmount(total) }]
+    return [{ ...items[0], id: uuid(), amount: formatAmount(total), dishIds }]
   }
 
   // Try converting everything to grams
@@ -81,7 +86,7 @@ function mergeGroup(items: ShoppingItem[], customConversions: UnitConversion[]):
 
   if (allConverted) {
     const { amount, unit } = formatGrams(totalGrams)
-    return [{ ...items[0], id: uuid(), amount, unit }]
+    return [{ ...items[0], id: uuid(), amount, unit, dishIds }]
   }
 
   // Fall back: group by unit and merge within each unit group
@@ -96,6 +101,15 @@ function mergeGroup(items: ShoppingItem[], customConversions: UnitConversion[]):
     result.push(...mergeGroup(group, customConversions))
   }
   return result
+}
+
+/** Compute the combined amount/unit for an arbitrary set of items (used by AI merges). */
+export function computeMergedAmount(
+  items: ShoppingItem[],
+  customConversions: UnitConversion[],
+): { amount: string; unit: string } {
+  const merged = mergeGroup(items, customConversions)
+  return { amount: merged[0].amount, unit: merged[0].unit }
 }
 
 /** Merge shopping items that have identical names (case-insensitive). */

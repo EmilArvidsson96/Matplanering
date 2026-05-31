@@ -4,8 +4,10 @@ import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import type { ShoppingItem, ShoppingCategory } from '../../types'
-import { mergeExactDuplicates, computeMergeSuggestions } from '../../utils/ingredientMerge'
+import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
+import { cleanupShoppingList } from '../../api/anthropic'
+import type { AiCleanupResult } from '../../api/anthropic'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -25,6 +27,9 @@ export default function ShoppingPage() {
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
   const [showPurchased, setShowPurchased] = useState(false)
+  const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError]     = useState<string | null>(null)
 
   const items = week.shoppingList
   const dismissed = week.dismissedMergePairs ?? []
@@ -54,7 +59,7 @@ export default function ShoppingPage() {
             unit: ing.unit,
             category: ing.category,
             isAutoAdded: true,
-            dishId: comp.dishId,
+            dishIds: [comp.dishId],
             isPurchased: false,
             isExcluded: false,
           })
@@ -71,7 +76,7 @@ export default function ShoppingPage() {
     if (!newItem.trim()) return
     store.addShoppingItem({
       name: newItem.trim(), amount: '', unit: '', category: newCat,
-      isAutoAdded: false, dishId: null, isPurchased: false, isExcluded: false,
+      isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
     setNewItem('')
   }
@@ -115,10 +120,64 @@ export default function ShoppingPage() {
       unit: mergedUnit,
       category: suggestion.items[0].category,
       isAutoAdded: suggestion.items[0].isAutoAdded,
-      dishId: null,
+      dishIds: [...new Set(suggestion.items.flatMap(i => i.dishIds ?? []))],
       isPurchased: false,
       isExcluded: false,
     })
+  }
+
+  async function runAiCleanup() {
+    setAiLoading(true)
+    setAiError(null)
+    setAiResult(null)
+    try {
+      const active = items.filter(i => !i.isExcluded)
+      const result = await cleanupShoppingList(active, settings)
+      setAiResult(result)
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  function applyAiMerge(merge: AiCleanupResult['merges'][number]) {
+    const mergeItems = merge.itemIds
+      .map(id => items.find(i => i.id === id))
+      .filter((i): i is ShoppingItem => !!i)
+    if (mergeItems.length < 2) return
+
+    const { amount, unit } = computeMergedAmount(mergeItems, settings.unitConversions)
+    for (const item of mergeItems) store.deleteShoppingItem(item.id)
+    store.addShoppingItem({
+      name: merge.name,
+      amount,
+      unit,
+      category: merge.category,
+      isAutoAdded: mergeItems[0].isAutoAdded,
+      dishIds: [...new Set(mergeItems.flatMap(i => i.dishIds ?? []))],
+      isPurchased: false,
+      isExcluded: false,
+    })
+    setAiResult(r => r && { ...r, merges: r.merges.filter(m => m !== merge) })
+  }
+
+  function applyAiRecat(recat: AiCleanupResult['recategorizations'][number]) {
+    store.updateShoppingItem(recat.itemId, { category: recat.category })
+    setAiResult(r => r && { ...r, recategorizations: r.recategorizations.filter(x => x !== recat) })
+  }
+
+  function applyAiTranslation(tr: AiCleanupResult['translations'][number]) {
+    store.updateShoppingItem(tr.itemId, { name: tr.name })
+    setAiResult(r => r && { ...r, translations: r.translations.filter(x => x !== tr) })
+  }
+
+  function applyAllAi() {
+    if (!aiResult) return
+    for (const m of aiResult.merges) applyAiMerge(m)
+    for (const r of aiResult.recategorizations) applyAiRecat(r)
+    for (const t of aiResult.translations) applyAiTranslation(t)
+    setAiResult(null)
   }
 
   const grouped = useMemo(() => {
@@ -137,6 +196,11 @@ export default function ShoppingPage() {
     [items, dismissed, settings.unitConversions]
   )
 
+  const dishNameById = useMemo(
+    () => new Map(dishes.map(d => [d.id, d.name])),
+    [dishes]
+  )
+
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
   return (
@@ -148,6 +212,13 @@ export default function ShoppingPage() {
           className="border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
         >
           ↺ Uppdatera från recept
+        </button>
+        <button
+          onClick={runAiCleanup}
+          disabled={aiLoading}
+          className="border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-xl text-sm font-medium"
+        >
+          {aiLoading ? '✨ Städar…' : '✨ Städa med AI'}
         </button>
         {unpurchasedCount > 0 && (
           <button
@@ -167,6 +238,24 @@ export default function ShoppingPage() {
           Visa handlade
         </label>
       </div>
+
+      {/* AI cleanup */}
+      {aiError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">
+          {aiError}
+        </div>
+      )}
+      {aiResult && (
+        <AiCleanupPanel
+          result={aiResult}
+          items={items}
+          onApplyMerge={applyAiMerge}
+          onApplyRecat={applyAiRecat}
+          onApplyTranslation={applyAiTranslation}
+          onApplyAll={applyAllAi}
+          onDismiss={() => setAiResult(null)}
+        />
+      )}
 
       {/* Merge suggestions */}
       {suggestions.length > 0 && (
@@ -223,6 +312,7 @@ export default function ShoppingPage() {
                   <ShoppingItemRow
                     key={item.id}
                     item={item}
+                    recipeNames={(item.dishIds ?? []).map(id => dishNameById.get(id)).filter((n): n is string => !!n)}
                     onToggle={() => store.updateShoppingItem(item.id, { isPurchased: !item.isPurchased })}
                     onExclude={() => store.updateShoppingItem(item.id, { isExcluded: !item.isExcluded })}
                     onDelete={() => store.deleteShoppingItem(item.id)}
@@ -304,10 +394,108 @@ function MergeSuggestionsPanel({
   )
 }
 
+function AiCleanupPanel({
+  result, items, onApplyMerge, onApplyRecat, onApplyTranslation, onApplyAll, onDismiss,
+}: {
+  result: AiCleanupResult
+  items: ShoppingItem[]
+  onApplyMerge: (m: AiCleanupResult['merges'][number]) => void
+  onApplyRecat: (r: AiCleanupResult['recategorizations'][number]) => void
+  onApplyTranslation: (t: AiCleanupResult['translations'][number]) => void
+  onApplyAll: () => void
+  onDismiss: () => void
+}) {
+  const nameOf = (id: string) => items.find(i => i.id === id)?.name ?? '?'
+  const total = result.merges.length + result.recategorizations.length + result.translations.length
+
+  if (total === 0) {
+    return (
+      <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+        <span className="text-sm text-violet-800">AI hittade inget att städa. 🎉</span>
+        <button onClick={onDismiss} className="text-violet-400 hover:text-violet-600 text-sm">✕</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-violet-50 border border-violet-200 rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3">
+        <span className="text-sm font-semibold text-violet-800">AI-förslag ({total})</span>
+        <div className="flex gap-2">
+          <button
+            onClick={onApplyAll}
+            className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg font-medium"
+          >
+            Tillämpa alla
+          </button>
+          <button
+            onClick={onDismiss}
+            className="text-xs border border-violet-300 text-violet-700 hover:bg-violet-100 px-3 py-1 rounded-lg"
+          >
+            Stäng
+          </button>
+        </div>
+      </div>
+
+      <div className="divide-y divide-violet-100 border-t border-violet-200">
+        {result.merges.map((m, idx) => (
+          <div key={`m${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
+            <span className="text-sm text-gray-700">
+              <span className="text-violet-500 text-xs uppercase mr-2">Slå ihop</span>
+              {m.itemIds.map(nameOf).join(' + ')}
+              <span className="text-gray-400 mx-1">→</span>
+              <span className="font-medium text-violet-800">{m.name}</span>
+            </span>
+            <button
+              onClick={() => onApplyMerge(m)}
+              className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg font-medium shrink-0"
+            >
+              Tillämpa
+            </button>
+          </div>
+        ))}
+        {result.recategorizations.map((r, idx) => (
+          <div key={`r${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
+            <span className="text-sm text-gray-700">
+              <span className="text-violet-500 text-xs uppercase mr-2">Kategori</span>
+              <span className="font-medium">{nameOf(r.itemId)}</span>
+              <span className="text-gray-400 mx-1">→</span>
+              <span className="font-medium text-violet-800">{CATEGORY_LABELS[r.category]}</span>
+            </span>
+            <button
+              onClick={() => onApplyRecat(r)}
+              className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg font-medium shrink-0"
+            >
+              Tillämpa
+            </button>
+          </div>
+        ))}
+        {result.translations.map((t, idx) => (
+          <div key={`t${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
+            <span className="text-sm text-gray-700">
+              <span className="text-violet-500 text-xs uppercase mr-2">Översätt</span>
+              <span className="font-medium">{nameOf(t.itemId)}</span>
+              <span className="text-gray-400 mx-1">→</span>
+              <span className="font-medium text-violet-800">{t.name}</span>
+            </span>
+            <button
+              onClick={() => onApplyTranslation(t)}
+              className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg font-medium shrink-0"
+            >
+              Tillämpa
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ShoppingItemRow({
-  item, onToggle, onExclude, onDelete, onUpdate,
+  item, recipeNames, onToggle, onExclude, onDelete, onUpdate,
 }: {
   item: ShoppingItem
+  recipeNames: string[]
   onToggle: () => void
   onExclude: () => void
   onDelete: () => void
@@ -351,16 +539,27 @@ function ShoppingItemRow({
         </div>
       ) : (
         <button onClick={() => setEditing(true)} className="flex-1 text-left">
-          <span className={`text-sm ${item.isPurchased ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-            {item.name}
-          </span>
-          {(item.amount || item.unit) && (
-            <span className="text-xs text-gray-400 ml-2">
-              {item.amount} {item.unit}
+          <span className="block">
+            <span className={`text-sm ${item.isPurchased ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+              {item.name}
             </span>
-          )}
-          {item.isAutoAdded && (
-            <span className="text-xs text-gray-300 ml-1">(recept)</span>
+            {(item.amount || item.unit) && (
+              <span className="text-xs text-gray-400 ml-2">
+                {item.amount} {item.unit}
+              </span>
+            )}
+          </span>
+          {recipeNames.length > 0 && (
+            <span className="flex flex-wrap gap-1 mt-1">
+              {recipeNames.map(name => (
+                <span
+                  key={name}
+                  className="text-[10px] leading-tight bg-brand-50 text-brand-600 rounded-full px-1.5 py-0.5"
+                >
+                  {name}
+                </span>
+              ))}
+            </span>
           )}
         </button>
       )}

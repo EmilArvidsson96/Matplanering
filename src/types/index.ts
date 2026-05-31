@@ -106,7 +106,7 @@ export interface ShoppingItem {
   unit: string
   category: ShoppingCategory
   isAutoAdded: boolean
-  dishId: string | null
+  dishIds: string[]   // dishes this item came from (multiple if merged)
   isPurchased: boolean
   isExcluded: boolean
 }
@@ -139,11 +139,15 @@ export interface WeekPlan {
   dismissedMergePairs?: string[]  // normalized keys for dismissed similar-ingredient suggestions
 }
 
+export type AiModel = 'haiku' | 'sonnet' | 'opus'
+
 export interface AppSettings {
   defaultHouseholdSize: number
   costPerPortion: number
   pantryItems: string[]
   unitConversions: UnitConversion[]
+  anthropicApiKey?: string
+  aiModel?: AiModel
 }
 
 export interface LibraryData {
