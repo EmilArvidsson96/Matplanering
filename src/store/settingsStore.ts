@@ -20,6 +20,8 @@ const DEFAULT: AppSettings = {
   costPerPortion: 35,
   pantryItems: [],
   unitConversions: [],
+  anthropicApiKey: '',
+  aiModel: 'haiku',
 }
 
 export const useSettingsStore = create<SettingsStore>((set) => ({

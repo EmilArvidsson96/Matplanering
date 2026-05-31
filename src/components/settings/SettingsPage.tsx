@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSettingsStore } from '../../store/settingsStore'
 import { DEFAULT_CONVERSIONS } from '../../utils/unitConversions'
+import type { AiModel } from '../../types'
 
 export default function SettingsPage() {
   const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion } = useSettingsStore()
@@ -203,6 +204,38 @@ export default function SettingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* AI assistant */}
+      <section className="bg-white rounded-2xl p-5 shadow-sm">
+        <h2 className="font-semibold text-gray-700 mb-1">AI-assistent</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Används för att städa inköpslistan: slå ihop varor, kategorisera "Övrigt" och översätta engelska namn.
+        </p>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500">Anthropic API-nyckel</label>
+            <input
+              type="password"
+              placeholder="sk-ant-…"
+              value={settings.anthropicApiKey ?? ''}
+              onChange={e => update({ anthropicApiKey: e.target.value })}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600 flex-1">Modell</label>
+            <select
+              value={settings.aiModel ?? 'haiku'}
+              onChange={e => update({ aiModel: e.target.value as AiModel })}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+            >
+              <option value="haiku">Haiku (snabb, billig)</option>
+              <option value="sonnet">Sonnet (balanserad)</option>
+              <option value="opus">Opus (mest kapabel)</option>
+            </select>
+          </div>
+        </div>
       </section>
 
       {/* Info */}
