@@ -3,7 +3,7 @@ import { Search, CalendarDays, X } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { useIsDesktop } from '../../hooks/useDevice'
-import { mealTotalPortions } from '../../utils/weekUtils'
+import { mealTotalPortions, resolveComponentPortions } from '../../utils/weekUtils'
 import type { Dish } from '../../types'
 import RecipeDetail from './RecipeDetail'
 
@@ -40,6 +40,47 @@ export default function RecipePage() {
     return [...list].sort((a, b) => a.name.localeCompare(b.name, 'sv'))
   }, [dishes, search, weekFilter, weekDishIds])
 
+  // Week meals grouped for the cooking view: combined meals keep their
+  // components together under the meal name instead of scattering them
+  // across the alphabetical list.
+  const weekGroups = useMemo(() => {
+    const plan = weeks[activeWeekId]
+    if (!plan) return []
+    const q = search.trim().toLowerCase()
+    const groups: {
+      mealId: string
+      mealName: string
+      isCombo: boolean
+      total: number
+      items: { key: string; dish: Dish | null; name: string; portions: number }[]
+    }[] = []
+    for (const meal of plan.meals) {
+      const total = mealTotalPortions(meal)
+      const items = meal.components.map(comp => ({
+        key: comp.id,
+        dish: comp.dishId ? dishes.find(d => d.id === comp.dishId) ?? null : null,
+        name: comp.name,
+        portions: resolveComponentPortions(comp, total),
+      }))
+      // Nothing cookable (e.g. a free-text "Rester" meal) → skip
+      if (!items.some(it => it.dish)) continue
+      if (q) {
+        const matches =
+          meal.name.toLowerCase().includes(q) ||
+          items.some(it => it.name.toLowerCase().includes(q))
+        if (!matches) continue
+      }
+      groups.push({
+        mealId: meal.id,
+        mealName: meal.name,
+        isCombo: meal.components.length > 1,
+        total,
+        items,
+      })
+    }
+    return groups
+  }, [weeks, activeWeekId, dishes, search])
+
   const selectedDish = dishes.find(d => d.id === selectedId) ?? null
 
   // Portions planned for the selected dish this week
@@ -69,6 +110,34 @@ export default function RecipePage() {
         plannedPortions={plannedPortions}
         onBack={() => setSelectedId(null)}
       />
+    )
+  }
+
+  function renderItem(it: { key: string; dish: Dish | null; name: string; portions: number }) {
+    if (!it.dish) {
+      // Free-text component (e.g. a sauce) — shown for context, no recipe to open
+      return (
+        <li key={it.key} className="px-4 py-2 flex items-center justify-between gap-2 text-gray-400">
+          <span className="text-sm truncate">
+            {it.name} <span className="text-xs">(fritext)</span>
+          </span>
+          <span className="text-xs shrink-0">{it.portions}p</span>
+        </li>
+      )
+    }
+    const dish = it.dish
+    return (
+      <li key={it.key}>
+        <button
+          onClick={() => handleSelect(dish)}
+          className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2 ${
+            selectedId === dish.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''
+          }`}
+        >
+          <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
+          <span className="shrink-0 text-xs text-gray-400">{it.portions}p</span>
+        </button>
+      </li>
     )
   }
 
@@ -105,32 +174,61 @@ export default function RecipePage() {
       </div>
 
       {/* Dish list */}
-      <ul className="flex-1 overflow-y-auto divide-y divide-gray-100">
-        {filtered.length === 0 && (
-          <li className="p-6 text-center text-sm text-gray-400">
-            {weekFilter && weekDishIds.size === 0
-              ? 'Inga rätter planerade den här veckan'
-              : 'Inga recept hittades'}
-          </li>
-        )}
-        {filtered.map(dish => (
-          <li key={dish.id}>
-            <button
-              onClick={() => handleSelect(dish)}
-              className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2 ${
-                selectedId === dish.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''
-              }`}
-            >
-              <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
-              {weekDishIds.has(dish.id) && (
-                <span className="shrink-0 text-xs bg-brand-100 text-brand-700 rounded-full px-1.5 py-0.5">
-                  denna vecka
-                </span>
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {weekFilter ? (
+        // Cooking view: group each combined meal's components together
+        <div className="flex-1 overflow-y-auto">
+          {weekGroups.length === 0 ? (
+            <p className="p-6 text-center text-sm text-gray-400">
+              Inga rätter planerade den här veckan
+            </p>
+          ) : (
+            weekGroups.map(group =>
+              group.isCombo ? (
+                <div key={group.mealId} className="border-b border-gray-100 py-1">
+                  <div className="px-4 pt-1.5 pb-1 flex items-baseline gap-1.5">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
+                      {group.mealName}
+                    </span>
+                    <span className="text-[10px] text-gray-400 shrink-0">· {group.total}p</span>
+                  </div>
+                  <ul className="ml-3 border-l-2 border-brand-100">
+                    {group.items.map(it => renderItem(it))}
+                  </ul>
+                </div>
+              ) : (
+                <ul key={group.mealId} className="border-b border-gray-100">
+                  {group.items.filter(it => it.dish).map(it => renderItem(it))}
+                </ul>
+              )
+            )
+          )}
+        </div>
+      ) : (
+        <ul className="flex-1 overflow-y-auto divide-y divide-gray-100">
+          {filtered.length === 0 && (
+            <li className="p-6 text-center text-sm text-gray-400">
+              Inga recept hittades
+            </li>
+          )}
+          {filtered.map(dish => (
+            <li key={dish.id}>
+              <button
+                onClick={() => handleSelect(dish)}
+                className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2 ${
+                  selectedId === dish.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''
+                }`}
+              >
+                <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
+                {weekDishIds.has(dish.id) && (
+                  <span className="shrink-0 text-xs bg-brand-100 text-brand-700 rounded-full px-1.5 py-0.5">
+                    denna vecka
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 
