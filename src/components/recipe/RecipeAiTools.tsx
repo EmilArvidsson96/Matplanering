@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Wand, Lightbulb, Loader2, X, Check } from 'lucide-react'
+import { Wand, Lightbulb, Loader2, X, Check, RefreshCw } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { splitInstructions, suggestRecipeImprovements } from '../../api/anthropic'
@@ -40,10 +40,10 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [steps, setSteps] = useState<string[] | null>(null)
 
-  async function run() {
+  async function run(force = false) {
     setLoading(true); setError(null); setSteps(null)
     try {
-      setSteps(await splitInstructions(dish, settings))
+      setSteps(await splitInstructions(dish, settings, { force }))
     } catch (e: any) {
       setError(e.message ?? String(e))
     } finally {
@@ -51,7 +51,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     }
   }
 
-  // Kick off on first render
+  // Kick off on first render (uses cached result if available)
   useEffect(() => { run() }, [])
 
   function apply() {
@@ -95,8 +95,17 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       </div>
       <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
         {error && (
-          <button onClick={run} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
             Försök igen
+          </button>
+        )}
+        {steps && !loading && (
+          <button
+            onClick={() => run(true)}
+            title="Gör en ny förfrågan (sparat resultat används annars)"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" /> Gör om
           </button>
         )}
         <button
@@ -122,10 +131,10 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   const [items, setItems] = useState<RecipeImprovement[] | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
-  async function run() {
+  async function run(force = false) {
     setLoading(true); setError(null); setItems(null); setSelected(new Set())
     try {
-      setItems(await suggestRecipeImprovements(dish, settings))
+      setItems(await suggestRecipeImprovements(dish, settings, { force }))
     } catch (e: any) {
       setError(e.message ?? String(e))
     } finally {
@@ -133,6 +142,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     }
   }
 
+  // Kick off on first render (uses cached result if available)
   useEffect(() => { run() }, [])
 
   function toggle(i: number) {
@@ -200,8 +210,17 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       </div>
       <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
         {error && (
-          <button onClick={run} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
             Försök igen
+          </button>
+        )}
+        {items && !loading && (
+          <button
+            onClick={() => run(true)}
+            title="Hämta nya förslag (sparat resultat används annars)"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" /> Nya förslag
           </button>
         )}
         <button

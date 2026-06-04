@@ -26,6 +26,43 @@ async function throwApiError(res: Response): Promise<never> {
   throw new Error(`Anthropic-anrop misslyckades: ${detail}`)
 }
 
+// ── Result cache ──────────────────────────────────────────────────────────
+// Persists the last result per recipe per tool in localStorage so reopening
+// a tool reuses the previous answer instead of making another paid API call.
+// The cache key includes a hash of the exact inputs sent to the model, so an
+// edited recipe automatically misses and re-fetches.
+
+/** FNV-1a hash → short base36 string. Stable across reloads. */
+function hashInputs(s: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(36)
+}
+
+interface CacheEnvelope<T> { hash: string; data: T }
+
+function readCache<T>(key: string, hash: string): T | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const env = JSON.parse(raw) as CacheEnvelope<T>
+    return env.hash === hash ? env.data : null
+  } catch {
+    return null
+  }
+}
+
+function writeCache<T>(key: string, hash: string, data: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify({ hash, data } satisfies CacheEnvelope<T>))
+  } catch {
+    /* quota / disabled storage — caching is best-effort */
+  }
+}
+
 const CATEGORIES: ShoppingCategory[] = [
   'mejeri', 'kött', 'fisk', 'grönsaker', 'frukt',
   'torrvaror', 'konserver', 'frys', 'bröd', 'kryddor', 'övrigt',
@@ -374,6 +411,7 @@ Returnera den fullständiga listan med steg.`
 export async function splitInstructions(
   dish: Dish,
   settings: AppSettings,
+  opts: { force?: boolean } = {},
 ): Promise<string[]> {
   const apiKey = settings.anthropicApiKey?.trim()
   if (!apiKey) {
@@ -389,6 +427,13 @@ export async function splitInstructions(
     name: dish.name,
     ingredients: ingredientNames,
     instructions: steps,
+  }
+
+  const cacheKey = `mp_ai_split_v1_${dish.id}`
+  const hash = hashInputs(JSON.stringify(payload))
+  if (!opts.force) {
+    const cached = readCache<string[]>(cacheKey, hash)
+    if (cached) return cached
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -423,10 +468,12 @@ export async function splitInstructions(
   if (!Array.isArray(raw)) {
     throw new Error('AI returnerade inget giltigt svar.')
   }
-  return raw
+  const result = raw
     .filter((s): s is string => typeof s === 'string')
     .map(s => s.trim())
     .filter(s => s !== '')
+  writeCache(cacheKey, hash, result)
+  return result
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -478,6 +525,7 @@ Variera gärna mellan smak, teknik, hälsosammare alternativ, tidsbesparing och 
 export async function suggestRecipeImprovements(
   dish: Dish,
   settings: AppSettings,
+  opts: { force?: boolean } = {},
 ): Promise<RecipeImprovement[]> {
   const apiKey = settings.anthropicApiKey?.trim()
   if (!apiKey) {
@@ -492,6 +540,13 @@ export async function suggestRecipeImprovements(
     ingredients: dish.ingredients.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
     instructions: (dish.instructions ?? []).map(s => s.text),
     notes: dish.notes ?? '',
+  }
+
+  const cacheKey = `mp_ai_improve_v1_${dish.id}`
+  const hash = hashInputs(JSON.stringify(payload))
+  if (!opts.force) {
+    const cached = readCache<RecipeImprovement[]>(cacheKey, hash)
+    if (cached) return cached
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -535,5 +590,6 @@ export async function suggestRecipeImprovements(
       category: typeof category === 'string' && category.trim() !== '' ? category.trim() : 'förslag',
     })
   }
+  writeCache(cacheKey, hash, improvements)
   return improvements
 }
