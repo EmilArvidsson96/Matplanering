@@ -1,12 +1,29 @@
 /** Anthropic API — calls the Messages API directly from the browser. */
 
-import type { AiModel, AppSettings, ShoppingCategory, ShoppingItem } from '../types'
+import type { AiModel, AppSettings, Dish, ShoppingCategory, ShoppingItem } from '../types'
 import { LEX_BY_NAME } from '../data/ingredientLexicon'
 
 const MODEL_IDS: Record<AiModel, string> = {
   haiku: 'claude-haiku-4-5',
   sonnet: 'claude-sonnet-4-6',
   opus: 'claude-opus-4-7',
+}
+
+const ANTHROPIC_HEADERS = (apiKey: string) => ({
+  'x-api-key': apiKey,
+  'anthropic-version': '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true',
+  'content-type': 'application/json',
+})
+
+/** Shared error extraction for non-2xx responses. */
+async function throwApiError(res: Response): Promise<never> {
+  let detail = res.status.toString()
+  try {
+    const err = await res.json() as { error?: { message?: string } }
+    if (err.error?.message) detail += ' — ' + err.error.message
+  } catch { /* ignore */ }
+  throw new Error(`Anthropic-anrop misslyckades: ${detail}`)
 }
 
 const CATEGORIES: ShoppingCategory[] = [
@@ -320,4 +337,203 @@ export async function calibrateFromReceipts(
     })
   }
   return proposals
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Split instructions into clearer step-by-step (Haiku)
+// ════════════════════════════════════════════════════════════════════════
+
+const SPLIT_TOOL = {
+  name: 'submit_steps',
+  description: 'Lämna in de omarbetade instruktionsstegen, ett steg per element, i rätt ordning.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      steps: {
+        type: 'array',
+        description: 'De nya stegen i ordning. Varje element är texten för ETT steg.',
+        items: { type: 'string' },
+      },
+    },
+    required: ['steps'],
+  },
+} as const
+
+const SPLIT_SYSTEM_PROMPT = `Du är en assistent som gör matrecept lättare att följa. Du får ett recepts nuvarande instruktioner och ska dela upp dem i tydliga steg-för-steg-instruktioner.
+
+Regler:
+1. Varje steg ska beskriva EN handling (eller några få nära sammanhängande). Dela upp steg som klämmer in flera moment i ett.
+2. Ändra INTE innehållet: lägg inte till nya moment, ingredienser eller tider, och ta inte bort information. Du omformulerar och delar bara upp.
+3. Behåll samma språk som originalet.
+4. Behåll ingrediensnamn EXAKT som de står (samma stavning), så att mängder kan kopplas automatiskt.
+5. Håll varje steg kort och konkret. Slå ihop bara om ett steg blivit meningslöst kort på egen hand.
+6. Behåll den logiska ordningen.
+
+Returnera den fullständiga listan med steg.`
+
+export async function splitInstructions(
+  dish: Dish,
+  settings: AppSettings,
+): Promise<string[]> {
+  const apiKey = settings.anthropicApiKey?.trim()
+  if (!apiKey) {
+    throw new Error('Ingen API-nyckel angiven. Lägg till den under Inställningar.')
+  }
+  const steps = (dish.instructions ?? []).map(s => s.text).filter(t => t.trim())
+  if (steps.length === 0) {
+    throw new Error('Receptet har inga instruktioner att dela upp.')
+  }
+
+  const ingredientNames = dish.ingredients.map(i => i.name)
+  const payload = {
+    name: dish.name,
+    ingredients: ingredientNames,
+    instructions: steps,
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: ANTHROPIC_HEADERS(apiKey),
+    body: JSON.stringify({
+      model: MODEL_IDS.haiku,
+      max_tokens: 4096,
+      system: SPLIT_SYSTEM_PROMPT,
+      tools: [SPLIT_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_steps' },
+      messages: [
+        {
+          role: 'user',
+          content: `Här är receptet:\n${JSON.stringify(payload, null, 2)}`,
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) await throwApiError(res)
+
+  const data = await res.json() as {
+    content: Array<{ type: string; name?: string; input?: unknown }>
+  }
+  const toolUse = data.content.find(c => c.type === 'tool_use' && c.name === 'submit_steps')
+  if (!toolUse?.input) {
+    throw new Error('AI returnerade inget giltigt svar.')
+  }
+
+  const raw = (toolUse.input as { steps?: unknown }).steps
+  if (!Array.isArray(raw)) {
+    throw new Error('AI returnerade inget giltigt svar.')
+  }
+  return raw
+    .filter((s): s is string => typeof s === 'string')
+    .map(s => s.trim())
+    .filter(s => s !== '')
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Recipe improvement suggestions (Sonnet)
+// ════════════════════════════════════════════════════════════════════════
+
+export interface RecipeImprovement {
+  title: string         // short label
+  detail: string        // the actual suggestion, ready to add as a note
+  category: string      // e.g. "smak", "teknik", "hälsa", "tid", "tillbehör"
+}
+
+const IMPROVE_TOOL = {
+  name: 'submit_improvements',
+  description: 'Lämna in konkreta förbättringsförslag för receptet.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      improvements: {
+        type: 'array',
+        description: 'Lista med fristående förbättringsförslag. Varje förslag ska gå att lägga till var för sig.',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Kort rubrik (några ord).' },
+            detail: { type: 'string', description: 'Själva förslaget, en eller två meningar, formulerat så att det kan läggas till som en anteckning i receptet.' },
+            category: {
+              type: 'string',
+              description: 'Typ av förbättring, t.ex. "smak", "teknik", "hälsa", "tid" eller "tillbehör".',
+            },
+          },
+          required: ['title', 'detail', 'category'],
+        },
+      },
+    },
+    required: ['improvements'],
+  },
+} as const
+
+const IMPROVE_SYSTEM_PROMPT = `Du är en erfaren kock som ger konkreta, valbara förbättringsförslag för ett matrecept. Du får receptets namn, ingredienser (med mängder), instruktioner, ev. anteckningar samt kategorisering (kök, typ, taggar).
+
+Ge 3–6 fristående förslag som höjer rätten. Varje förslag ska:
+- vara konkret och direkt användbart (inte vagt som "krydda mer").
+- gälla EN sak, så att användaren kan välja att lägga till ett eller flera oberoende av varandra.
+- formuleras på samma språk som receptet, så att det kan klistras in som en anteckning.
+
+Variera gärna mellan smak, teknik, hälsosammare alternativ, tidsbesparing och passande tillbehör/garnering. Respektera receptets karaktär och eventuella taggar (t.ex. lågfett, barnvänlig). Hitta inte på att receptet innehåller saker det inte gör.`
+
+export async function suggestRecipeImprovements(
+  dish: Dish,
+  settings: AppSettings,
+): Promise<RecipeImprovement[]> {
+  const apiKey = settings.anthropicApiKey?.trim()
+  if (!apiKey) {
+    throw new Error('Ingen API-nyckel angiven. Lägg till den under Inställningar.')
+  }
+
+  const payload = {
+    name: dish.name,
+    cuisine: dish.cuisine,
+    type: dish.type,
+    tags: dish.tags,
+    ingredients: dish.ingredients.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
+    instructions: (dish.instructions ?? []).map(s => s.text),
+    notes: dish.notes ?? '',
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: ANTHROPIC_HEADERS(apiKey),
+    body: JSON.stringify({
+      model: MODEL_IDS.sonnet,
+      max_tokens: 4096,
+      system: IMPROVE_SYSTEM_PROMPT,
+      tools: [IMPROVE_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_improvements' },
+      messages: [
+        {
+          role: 'user',
+          content: `Här är receptet:\n${JSON.stringify(payload, null, 2)}`,
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) await throwApiError(res)
+
+  const data = await res.json() as {
+    content: Array<{ type: string; name?: string; input?: unknown }>
+  }
+  const toolUse = data.content.find(c => c.type === 'tool_use' && c.name === 'submit_improvements')
+  if (!toolUse?.input) {
+    throw new Error('AI returnerade inget giltigt svar.')
+  }
+
+  const raw = (toolUse.input as { improvements?: unknown[] }).improvements ?? []
+  const improvements: RecipeImprovement[] = []
+  for (const c of raw) {
+    if (typeof c !== 'object' || c === null) continue
+    const { title, detail, category } = c as Record<string, unknown>
+    if (typeof title !== 'string' || typeof detail !== 'string') continue
+    if (title.trim() === '' || detail.trim() === '') continue
+    improvements.push({
+      title: title.trim(),
+      detail: detail.trim(),
+      category: typeof category === 'string' && category.trim() !== '' ? category.trim() : 'förslag',
+    })
+  }
+  return improvements
 }

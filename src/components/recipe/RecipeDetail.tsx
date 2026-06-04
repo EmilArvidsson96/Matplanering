@@ -7,6 +7,7 @@ import {
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useIsDesktop } from '../../hooks/useDevice'
+import RecipeAiTools from './RecipeAiTools'
 import type { Dish, RecipeStep, Ingredient } from '../../types'
 import { ingredientImpact, dishImpactPerPortion, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../../utils/ingredientImpact'
 
@@ -440,6 +441,9 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
           <Sunrise className="w-4 h-4" />
         </button>
       )}
+
+      {/* AI tools: split steps (Haiku) + improvement suggestions (Sonnet) */}
+      <RecipeAiTools dish={dish} />
 
       {/* Edit mode toggle */}
       <button
