@@ -431,9 +431,9 @@ export async function splitInstructions(
     instructions: steps,
   }
 
-  // v2: prompt now also translates to Swedish and fixes spelling — bump the
-  // version so results cached under the old prompt are regenerated.
-  const cacheKey = `mp_ai_split_v2_${dish.id}`
+  // v3: split now uses Sonnet (was Haiku) for more accurate Swedish — bump the
+  // version so results cached under the old model/prompt are regenerated.
+  const cacheKey = `mp_ai_split_v3_${dish.id}`
   const hash = hashInputs(JSON.stringify(payload))
   if (!opts.force) {
     const cached = readCache<string[]>(cacheKey, hash)
@@ -444,7 +444,7 @@ export async function splitInstructions(
     method: 'POST',
     headers: ANTHROPIC_HEADERS(apiKey),
     body: JSON.stringify({
-      model: MODEL_IDS.haiku,
+      model: MODEL_IDS.sonnet,
       max_tokens: 8192,
       system: SPLIT_SYSTEM_PROMPT,
       tools: [SPLIT_TOOL],

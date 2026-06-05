@@ -68,7 +68,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Analyserar med Haiku…
+            <Loader2 className="w-4 h-4 animate-spin" /> Analyserar med Sonnet…
           </div>
         )}
         {error && (
