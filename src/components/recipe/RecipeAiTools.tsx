@@ -77,8 +77,8 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
         {steps && !loading && (
           <div className="space-y-4">
             <p className="text-xs text-gray-500">
-              {current.length} steg → <span className="font-semibold text-gray-700">{steps.length} steg</span>.
-              Granska förslaget innan du använder det.
+              {current.length} steg → <span className="font-semibold text-gray-700">{steps.length} steg</span>,
+              översatt till svenska med rättad stavning. Granska förslaget innan du använder det.
             </p>
             <ol className="space-y-2">
               {steps.map((s, i) => (
@@ -245,7 +245,7 @@ export default function RecipeAiTools({ dish }: { dish: Dish }) {
     <>
       <button
         onClick={() => setTool('split')}
-        title="Dela upp instruktionerna i tydligare steg (AI)"
+        title="Dela upp i tydligare steg, översätt till svenska och rätta stavning (AI)"
         className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50"
       >
         <Wand className="w-4 h-4" />

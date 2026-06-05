@@ -396,15 +396,17 @@ const SPLIT_TOOL = {
   },
 } as const
 
-const SPLIT_SYSTEM_PROMPT = `Du är en assistent som gör matrecept lättare att följa. Du får ett recepts nuvarande instruktioner och ska dela upp dem i tydliga steg-för-steg-instruktioner.
+const SPLIT_SYSTEM_PROMPT = `Du är en assistent som gör matrecept lättare att följa. Du får ett recepts nuvarande instruktioner och ska dela upp dem i tydliga steg-för-steg-instruktioner på korrekt, naturlig svenska.
 
 Regler:
 1. Varje steg ska beskriva EN handling (eller några få nära sammanhängande). Dela upp steg som klämmer in flera moment i ett.
-2. Ändra INTE innehållet: lägg inte till nya moment, ingredienser eller tider, och ta inte bort information. Du omformulerar och delar bara upp.
-3. Behåll samma språk som originalet.
-4. Behåll ingrediensnamn EXAKT som de står (samma stavning), så att mängder kan kopplas automatiskt.
-5. Håll varje steg kort och konkret. Slå ihop bara om ett steg blivit meningslöst kort på egen hand.
-6. Behåll den logiska ordningen.
+2. Skriv all text på korrekt, idiomatisk svenska. Översätt allt som är på annat språk (t.ex. engelska eller maskinöversatt text) till naturlig svenska. Lämna inga engelska ord kvar (t.ex. "stir fry" → "woka"/"stek hastigt", "Tbsp" → "msk", "tsp" → "tsk").
+3. Rätta stavfel, särskrivningar och klumpiga maskinöversättningar (t.ex. "Blansera" → "Blanchera", "Dräner vattnet" → "Häll av vattnet"/"Låt rinna av", "sprida den väl" → "fördela den jämnt"). Använd svenska citattecken och korrekt typografi.
+3b. Stavning och grammatik MÅSTE vara helt korrekt svenska. Hitta inte på eller förvräng ord – t.ex. heter det "spenat"/"babyspenat" (INTE "sperinat"), "sötpotatisstärkelse" och "nötköttet" (INTE "nötköttets"). Använd rätt genus och bestämd form ("den gula löken", "den rostade sesamoljan"). Om du är osäker på hur en ingrediens stavas, använd exakt namnet från den medskickade ingredienslistan. Läs igenom varje ord och verifiera stavningen innan du svarar.
+4. Ändra INTE innehållet i sak: lägg inte till nya moment, ingredienser, mängder eller tider, och ta inte bort information. Du översätter, rättar språket, omformulerar och delar upp – inget annat.
+5. När ett steg nämner en ingrediens som finns i den medskickade ingredienslistan, använd EXAKT det namn och den stavning som står i listan, så att mängder kan kopplas automatiskt.
+6. Håll varje steg kort och konkret. Slå ihop bara om ett steg blivit meningslöst kort på egen hand.
+7. Behåll den logiska ordningen.
 
 Returnera den fullständiga listan med steg.`
 
@@ -429,7 +431,9 @@ export async function splitInstructions(
     instructions: steps,
   }
 
-  const cacheKey = `mp_ai_split_v1_${dish.id}`
+  // v2: prompt now also translates to Swedish and fixes spelling — bump the
+  // version so results cached under the old prompt are regenerated.
+  const cacheKey = `mp_ai_split_v2_${dish.id}`
   const hash = hashInputs(JSON.stringify(payload))
   if (!opts.force) {
     const cached = readCache<string[]>(cacheKey, hash)
@@ -441,7 +445,7 @@ export async function splitInstructions(
     headers: ANTHROPIC_HEADERS(apiKey),
     body: JSON.stringify({
       model: MODEL_IDS.haiku,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: SPLIT_SYSTEM_PROMPT,
       tools: [SPLIT_TOOL],
       tool_choice: { type: 'tool', name: 'submit_steps' },
