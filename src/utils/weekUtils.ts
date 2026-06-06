@@ -324,14 +324,19 @@ export function migrateWeek(plan: WeekPlan): WeekPlan {
   // 2. Fill missing meal-type fields
   const startMeal: 'lunch' | 'middag' = (migrated.startMealType as 'lunch' | 'middag' | undefined) ?? 'middag'
   const endMeal:   'lunch' | 'middag' = (migrated.endMealType   as 'lunch' | 'middag' | undefined) ?? 'lunch'
+
+  // New-format weeks already carry an explicit window (both meal-type fields set).
+  // Preserve it exactly as saved — even if it deviates from the standard 7-day
+  // Sat–Sat cadence — so the user can plan irregular/extended weeks without the
+  // window snapping back to the default Saturday on reload.
+  if (migrated.startMealType && migrated.endMealType) return migrated
+
+  // Legacy week (pre meal-type fields): normalize to the standard 7-day window.
   const expectedEnd = format(addDays(parseISO(migrated.startDate), 7), 'yyyy-MM-dd')
-
-  if (migrated.endDate === expectedEnd && migrated.startMealType && migrated.endMealType) return migrated
-
   return applyWeekWindow(
     { ...migrated, startMealType: startMeal, endMealType: endMeal },
     migrated.startDate, startMeal,
-    migrated.endDate === expectedEnd ? migrated.endDate : expectedEnd,
+    expectedEnd,
     endMeal,
   )
 }
