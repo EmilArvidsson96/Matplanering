@@ -1,11 +1,17 @@
 import { useState, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { v4 as uuid } from 'uuid'
+import {
+  RefreshCw, Sparkles, CheckCheck, Share2, Copy, Check,
+  ChevronDown, ChevronUp, Home, X, Undo2, ShoppingBasket,
+} from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import type { ShoppingItem, ShoppingCategory } from '../../types'
 import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
+import { ingredientImpact, formatSEK } from '../../utils/ingredientImpact'
 import { cleanupShoppingList } from '../../api/anthropic'
 import type { AiCleanupResult } from '../../api/anthropic'
 
@@ -26,7 +32,8 @@ export default function ShoppingPage() {
   const { settings }  = useSettingsStore()
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
-  const [showPurchased, setShowPurchased] = useState(false)
+  const [catTouched, setCatTouched] = useState(false)
+  const [copied, setCopied]   = useState(false)
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
@@ -67,9 +74,57 @@ export default function ShoppingPage() {
       }
     }
 
-    store.rebuildShoppingFromIngredients(
-      mergeExactDuplicates(raw, settings.unitConversions)
+    // Carry over purchased / har-hemma state from the previous auto items so a
+    // rebuild doesn't reset what's already been checked off
+    const prevAuto = new Map(
+      items.filter(i => i.isAutoAdded).map(i => [i.name.toLowerCase().trim(), i])
     )
+    const merged = mergeExactDuplicates(raw, settings.unitConversions).map(item => {
+      const prev = prevAuto.get(item.name.toLowerCase().trim())
+      return prev
+        ? { ...item, isPurchased: prev.isPurchased, isExcluded: prev.isExcluded }
+        : item
+    })
+    store.rebuildShoppingFromIngredients(merged)
+  }
+
+  // Known ingredient name → category, used to auto-pick category for manual adds
+  const categoryByName = useMemo(() => {
+    const map = new Map<string, ShoppingCategory>()
+    for (const dish of dishes) {
+      for (const ing of dish.ingredients) {
+        const key = ing.name.toLowerCase().trim()
+        if (key && !map.has(key)) map.set(key, ing.category)
+      }
+    }
+    for (const item of items) {
+      const key = item.name.toLowerCase().trim()
+      if (key && !map.has(key)) map.set(key, item.category)
+    }
+    return map
+  }, [dishes, items])
+
+  function guessCategory(name: string): ShoppingCategory | null {
+    const q = name.toLowerCase().trim()
+    if (q.length < 3) return null
+    const exact = categoryByName.get(q)
+    if (exact) return exact
+    for (const [key, cat] of categoryByName) {
+      if (key.length >= 3 && (q.includes(key) || key.includes(q))) return cat
+    }
+    return null
+  }
+
+  function onNewItemChange(value: string) {
+    setNewItem(value)
+    if (!catTouched) {
+      if (!value.trim()) {
+        setNewCat('övrigt')
+      } else {
+        const guess = guessCategory(value)
+        if (guess) setNewCat(guess)
+      }
+    }
   }
 
   function addManual() {
@@ -79,10 +134,12 @@ export default function ShoppingPage() {
       isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
     setNewItem('')
+    setNewCat('övrigt')
+    setCatTouched(false)
   }
 
   function markAllPurchased() {
-    items.filter(i => !i.isPurchased).forEach(i =>
+    items.filter(i => !i.isPurchased && !i.isExcluded).forEach(i =>
       store.updateShoppingItem(i.id, { isPurchased: true })
     )
   }
@@ -180,16 +237,31 @@ export default function ShoppingPage() {
     setAiResult(null)
   }
 
+  // Active (to buy) items, grouped by category and alphabetized
   const grouped = useMemo(() => {
-    const visible = items.filter(i => !i.isExcluded && (showPurchased || !i.isPurchased))
+    const visible = items.filter(i => !i.isExcluded && !i.isPurchased)
     const map = new Map<ShoppingCategory, ShoppingItem[]>()
     for (const cat of CATEGORY_ORDER) map.set(cat, [])
     for (const item of visible) {
       const list = map.get(item.category) ?? map.get('övrigt')!
       list.push(item)
     }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'sv'))
+    }
     return [...map.entries()].filter(([, list]) => list.length > 0)
-  }, [items, showPurchased])
+  }, [items])
+
+  const purchasedItems = useMemo(
+    () => items.filter(i => i.isPurchased && !i.isExcluded)
+      .sort((a, b) => a.name.localeCompare(b.name, 'sv')),
+    [items]
+  )
+  const excludedItems = useMemo(
+    () => items.filter(i => i.isExcluded)
+      .sort((a, b) => a.name.localeCompare(b.name, 'sv')),
+    [items]
+  )
 
   const suggestions = useMemo(
     () => computeMergeSuggestions(items, dismissed, settings.unitConversions),
@@ -201,42 +273,112 @@ export default function ShoppingPage() {
     [dishes]
   )
 
-  const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
+  const totalCount = items.filter(i => !i.isExcluded).length
+  const purchasedCount = purchasedItems.length
+  const unpurchasedCount = totalCount - purchasedCount
+
+  // Estimated cost of what's left to buy (only items the lexicon recognizes)
+  const estimatedRemaining = useMemo(() => {
+    let sum = 0
+    for (const item of items) {
+      if (item.isExcluded || item.isPurchased) continue
+      const n = parseFloat(item.amount)
+      if (isNaN(n)) continue
+      const r = ingredientImpact(
+        { name: item.name, amount: n, unit: item.unit },
+        settings.unitConversions,
+        settings.costOverrides ?? {},
+      )
+      if (r.matched) sum += r.costSEK
+    }
+    return sum
+  }, [items, settings.unitConversions, settings.costOverrides])
+
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  async function shareList() {
+    const lines: string[] = []
+    for (const [cat, catItems] of grouped) {
+      lines.push(`${CATEGORY_LABELS[cat]}:`)
+      for (const item of catItems) {
+        const qty = [item.amount, item.unit].filter(Boolean).join(' ')
+        lines.push(qty ? `• ${item.name} (${qty})` : `• ${item.name}`)
+      }
+      lines.push('')
+    }
+    const text = lines.join('\n').trim()
+    try {
+      if (canShare) {
+        await navigator.share({ title: 'Inköpslista', text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2000)
+      }
+    } catch {
+      // user dismissed the share sheet
+    }
+  }
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-2xl space-y-4 p-4 md:p-0">
+      {/* Progress */}
+      {totalCount > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              {purchasedCount} av {totalCount} handlat
+            </span>
+            {estimatedRemaining > 0 && (
+              <span className="text-xs text-gray-400">
+                ≈ {formatSEK(estimatedRemaining)} kvar att handla
+              </span>
+            )}
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-brand-500 rounded-full transition-all duration-300"
+              style={{ width: `${totalCount ? (purchasedCount / totalCount) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Top actions */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={rebuildAutoItems}
-          className="border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
+          className="flex items-center gap-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
         >
-          ↺ Uppdatera från recept
+          <RefreshCw className="w-3.5 h-3.5" /> Uppdatera från recept
         </button>
         <button
           onClick={runAiCleanup}
           disabled={aiLoading}
-          className="border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-xl text-sm font-medium"
+          className="flex items-center gap-1.5 border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-xl text-sm font-medium"
         >
-          {aiLoading ? '✨ Städar…' : '✨ Städa med AI'}
+          <Sparkles className="w-3.5 h-3.5" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
         {unpurchasedCount > 0 && (
-          <button
-            onClick={markAllPurchased}
-            className="border border-brand-200 text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-xl text-sm font-medium"
-          >
-            ✓ Markera allt som handlat ({unpurchasedCount})
-          </button>
+          <>
+            <button
+              onClick={shareList}
+              className="flex items-center gap-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
+            >
+              {canShare
+                ? <><Share2 className="w-3.5 h-3.5" /> Dela lista</>
+                : copied
+                  ? <><Check className="w-3.5 h-3.5 text-brand-600" /> Kopierad!</>
+                  : <><Copy className="w-3.5 h-3.5" /> Kopiera lista</>}
+            </button>
+            <button
+              onClick={markAllPurchased}
+              className="flex items-center gap-1.5 border border-brand-200 text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-xl text-sm font-medium"
+            >
+              <CheckCheck className="w-3.5 h-3.5" /> Markera allt ({unpurchasedCount})
+            </button>
+          </>
         )}
-        <label className="flex items-center gap-2 text-sm text-gray-500 ml-auto cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showPurchased}
-            onChange={e => setShowPurchased(e.target.checked)}
-            className="accent-brand-600 rounded"
-          />
-          Visa handlade
-        </label>
       </div>
 
       {/* AI cleanup */}
@@ -272,13 +414,13 @@ export default function ShoppingPage() {
           type="text"
           placeholder="Lägg till vara…"
           value={newItem}
-          onChange={e => setNewItem(e.target.value)}
+          onChange={e => onNewItemChange(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addManual()}
           className="flex-1 min-w-[180px] border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
         />
         <select
           value={newCat}
-          onChange={e => setNewCat(e.target.value as ShoppingCategory)}
+          onChange={e => { setNewCat(e.target.value as ShoppingCategory); setCatTouched(true) }}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
         >
           {CATEGORY_ORDER.map(c => (
@@ -295,17 +437,32 @@ export default function ShoppingPage() {
 
       {/* Grouped list */}
       {grouped.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">
-          Inköpslistan är tom. Tryck "Uppdatera från recept" eller lägg till varor manuellt.
-        </p>
+        totalCount > 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm py-10 px-6 text-center space-y-2">
+            <CheckCheck className="w-8 h-8 text-brand-400 mx-auto" />
+            <p className="text-sm font-medium text-gray-700">Allt är handlat! 🎉</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-sm py-10 px-6 text-center space-y-3">
+            <ShoppingBasket className="w-8 h-8 text-gray-200 mx-auto" />
+            <p className="text-sm text-gray-400">Inköpslistan är tom.</p>
+            <button
+              onClick={rebuildAutoItems}
+              className="inline-flex items-center gap-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Hämta varor från veckans recept
+            </button>
+          </div>
+        )
       ) : (
         <div className="space-y-3">
           {grouped.map(([cat, catItems]) => (
             <div key={cat} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 bg-gray-50/60 border-b border-gray-100">
+              <div className="px-4 py-2 bg-gray-50/60 border-b border-gray-100 flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   {CATEGORY_LABELS[cat]}
                 </span>
+                <span className="text-[11px] text-gray-400">{catItems.length}</span>
               </div>
               <div className="divide-y divide-gray-50">
                 {catItems.map(item => (
@@ -322,6 +479,95 @@ export default function ShoppingPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Purchased */}
+      {purchasedItems.length > 0 && (
+        <CollapsibleSection title="Handlat" count={purchasedItems.length}>
+          {purchasedItems.map(item => (
+            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+              <button
+                onClick={() => store.updateShoppingItem(item.id, { isPurchased: false })}
+                title="Ångra handlat"
+                className="w-5 h-5 rounded-full border-2 bg-brand-500 border-brand-500 text-white shrink-0 flex items-center justify-center"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <span className="flex-1 text-sm text-gray-400">
+                <span className="line-through">{item.name}</span>
+                {(item.amount || item.unit) && (
+                  <span className="text-xs ml-2">{item.amount} {item.unit}</span>
+                )}
+              </span>
+              <button
+                onClick={() => store.deleteShoppingItem(item.id)}
+                className="text-gray-300 hover:text-red-400 p-1 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </CollapsibleSection>
+      )}
+
+      {/* Har hemma (excluded) */}
+      {excludedItems.length > 0 && (
+        <CollapsibleSection title="Har hemma" count={excludedItems.length}>
+          {excludedItems.map(item => (
+            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+              <Home className="w-4 h-4 text-gray-300 shrink-0" />
+              <span className="flex-1 text-sm text-gray-500">
+                {item.name}
+                {(item.amount || item.unit) && (
+                  <span className="text-xs text-gray-400 ml-2">{item.amount} {item.unit}</span>
+                )}
+              </span>
+              <button
+                onClick={() => store.updateShoppingItem(item.id, { isExcluded: false })}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 border border-gray-200 hover:border-brand-200 px-2 py-1 rounded-lg shrink-0"
+              >
+                <Undo2 className="w-3 h-3" /> Lägg tillbaka
+              </button>
+              <button
+                onClick={() => store.deleteShoppingItem(item.id)}
+                className="text-gray-300 hover:text-red-400 p-1 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </CollapsibleSection>
+      )}
+    </div>
+  )
+}
+
+function CollapsibleSection({
+  title, count, children,
+}: {
+  title: string
+  count: number
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-sm font-medium text-gray-600">
+          {title} <span className="text-gray-400">({count})</span>
+        </span>
+        {open
+          ? <ChevronUp className="w-4 h-4 text-gray-400" />
+          : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+      {open && (
+        <div className="divide-y divide-gray-50 border-t border-gray-100">
+          {children}
         </div>
       )}
     </div>
@@ -346,7 +592,9 @@ function MergeSuggestionsPanel({
         <span className="text-sm font-semibold text-amber-800">
           Förslag på sammanslagning ({suggestions.length})
         </span>
-        <span className="text-amber-500 text-xs">{open ? '▲' : '▼'}</span>
+        {open
+          ? <ChevronUp className="w-4 h-4 text-amber-500" />
+          : <ChevronDown className="w-4 h-4 text-amber-500" />}
       </button>
 
       {open && (
@@ -508,10 +756,10 @@ function ShoppingItemRow({
       {/* Purchased checkbox */}
       <button
         onClick={onToggle}
-        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors
-          ${item.isPurchased ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300'}`}
+        className={`w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors
+          ${item.isPurchased ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300 hover:border-brand-400'}`}
       >
-        {item.isPurchased && <span className="text-xs leading-none">✓</span>}
+        {item.isPurchased && <Check className="w-3.5 h-3.5" />}
       </button>
 
       {/* Name & amount */}
@@ -521,6 +769,7 @@ function ShoppingItemRow({
             autoFocus
             value={item.name}
             onChange={e => onUpdate({ name: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && setEditing(false)}
             className="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-sm"
           />
           <input
@@ -565,18 +814,21 @@ function ShoppingItemRow({
       )}
 
       {/* Actions */}
-      <div className="flex gap-1 shrink-0">
+      <div className="flex gap-0.5 shrink-0">
         <button
           onClick={onExclude}
-          title="Har hemma"
-          className="text-xs text-gray-300 hover:text-brand-400 px-1"
+          title="Har hemma – flytta från listan"
+          className="text-gray-300 hover:text-brand-500 p-1.5"
         >
-          🏠
+          <Home className="w-4 h-4" />
         </button>
         <button
           onClick={onDelete}
-          className="text-gray-300 hover:text-red-400 text-sm px-1"
-        >✕</button>
+          title="Ta bort"
+          className="text-gray-300 hover:text-red-400 p-1.5"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
     </div>
   )
