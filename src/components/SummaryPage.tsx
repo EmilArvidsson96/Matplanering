@@ -392,9 +392,18 @@ function MealRow({ meal, dish, portions, compact = false }: {
         {meal.isRemainder && (
           <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium shrink-0">Rester</span>
         )}
-        <span className={`font-medium ${compact ? 'text-sm' : 'text-base'} ${meal.isRemainder ? 'text-amber-800' : 'text-gray-800'}`}>
-          {meal.name}
-        </span>
+        {dish ? (
+          <Link
+            to={`/recept?dish=${encodeURIComponent(dish.id)}`}
+            className={`font-medium hover:underline hover:text-brand-700 ${compact ? 'text-sm' : 'text-base'} ${meal.isRemainder ? 'text-amber-800' : 'text-gray-800'}`}
+          >
+            {meal.name}
+          </Link>
+        ) : (
+          <span className={`font-medium ${compact ? 'text-sm' : 'text-base'} ${meal.isRemainder ? 'text-amber-800' : 'text-gray-800'}`}>
+            {meal.name}
+          </span>
+        )}
         {dish?.recipeUrl && (
           <a
             href={dish.recipeUrl} target="_blank" rel="noopener noreferrer"
