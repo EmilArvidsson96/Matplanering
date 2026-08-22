@@ -14,6 +14,7 @@ import SettingsPage from './components/settings/SettingsPage'
 import RecipePage from './components/recipe/RecipePage'
 import GamePanel from './components/game/GamePanel'
 import GameOverlay from './components/game/GameOverlay'
+import FeedbackWidget from './components/feedback/FeedbackWidget'
 import { useGameTracker } from './hooks/useGameTracker'
 import { useGameStore } from './store/gameStore'
 
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="spel"      element={<GamePanel />} />
           </Route>
         </Routes>
+        <FeedbackWidget />
       </HashRouter>
       <GameOverlay />
     </>
