@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, CalendarDays, X } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
@@ -15,7 +16,10 @@ export default function RecipePage() {
 
   const [search, setSearch] = useState('')
   const [weekFilter, setWeekFilter] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Selection lives in the URL (?dish=<id>) so links from elsewhere in the app
+  // (e.g. Veckoplanen) can deep-link straight into a recipe.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedId = searchParams.get('dish')
 
   // Dish IDs scheduled in the active week (across all components)
   const weekDishIds = useMemo(() => {
@@ -99,7 +103,7 @@ export default function RecipePage() {
   }, [selectedId, weeks, activeWeekId])
 
   function handleSelect(dish: Dish) {
-    setSelectedId(dish.id)
+    setSearchParams({ dish: dish.id }, { replace: true })
   }
 
   // On mobile, show detail if selected
@@ -108,7 +112,7 @@ export default function RecipePage() {
       <RecipeDetail
         dish={selectedDish}
         plannedPortions={plannedPortions}
-        onBack={() => setSelectedId(null)}
+        onBack={() => setSearchParams({}, { replace: true })}
       />
     )
   }
