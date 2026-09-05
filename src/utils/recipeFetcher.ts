@@ -43,12 +43,10 @@ export const ALLOWED_HOSTS: string[] = [
 // URL paths that strongly suggest a recipe page — used to allow unknown hosts.
 const RECIPE_PATH_RE = /\/(recipe|recipes|recept|recepten)\//i
 
-const CORS_PROXY = 'https://corsproxy.io/?url='
-const CORS_PROXY_KEY = import.meta.env.VITE_CORSPROXY_KEY as string | undefined
+const CORS_PROXY = 'https://matplanering-recipe-proxy.emil-arvidsson.workers.dev/?url='
 
 function proxiedUrl(url: string): string {
-  const proxied = CORS_PROXY + encodeURIComponent(url)
-  return CORS_PROXY_KEY ? `${proxied}&key=${CORS_PROXY_KEY}` : proxied
+  return CORS_PROXY + encodeURIComponent(url)
 }
 
 // ── Fraction / amount parsing ─────────────────────────────────────────────────
