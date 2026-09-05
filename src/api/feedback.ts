@@ -1,9 +1,12 @@
 /** Feedback API — files bug reports / feature ideas as GitHub issues on the app repo,
- *  so they show up right alongside the code they describe. */
+ *  so they show up right alongside the code they describe.
+ *
+ *  Reports are posted to a small Cloudflare Worker (see cloudflare/report-proxy/),
+ *  which holds the GitHub token and files the issue server-side. The app itself
+ *  has no backend, and a token baked into the client bundle (import.meta.env.*)
+ *  would be readable by anyone who opens dev tools on the deployed site. */
 
-const TOKEN      = import.meta.env.VITE_GITHUB_TOKEN as string
-const REPO_OWNER = 'EmilArvidsson96'
-const REPO_NAME  = 'Matplanering'
+const REPORT_ENDPOINT = 'https://matplanering-report.emil-arvidsson.workers.dev'
 
 export type FeedbackType = 'bug' | 'idea'
 
@@ -51,32 +54,23 @@ function buildBody({ description, context }: FeedbackInput): string {
   ].join('\n')
 }
 
-export async function submitFeedback(input: FeedbackInput): Promise<void> {
-  if (!TOKEN) {
-    throw new Error('Ingen GitHub-token konfigurerad (VITE_GITHUB_TOKEN).')
-  }
-
-  const prefix = input.type === 'bug' ? '[Bugg]' : '[Förslag]'
-  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`, {
+async function postReport(kind: 'bug' | 'idea' | 'recipe-parser', title: string, body: string): Promise<void> {
+  const res = await fetch(REPORT_ENDPOINT, {
     method: 'POST',
-    headers: {
-      Authorization: `token ${TOKEN}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      title: `${prefix} ${input.title.trim()}`,
-      body: buildBody(input),
-      labels: ['feedback', input.type === 'bug' ? 'bug' : 'enhancement'],
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, title, body }),
   })
 
   if (!res.ok) {
     let detail = res.status.toString()
-    try { detail += ' — ' + ((await res.json() as { message?: string }).message ?? '') } catch { /* ignore */ }
-    throw new Error(`Kunde inte skicka feedback: ${detail}`)
+    try { detail += ' — ' + ((await res.json() as { error?: string }).error ?? '') } catch { /* ignore */ }
+    throw new Error(`Kunde inte skicka rapport: ${detail}`)
   }
+}
+
+export async function submitFeedback(input: FeedbackInput): Promise<void> {
+  const prefix = input.type === 'bug' ? '[Bugg]' : '[Förslag]'
+  await postReport(input.type, `${prefix} ${input.title.trim()}`, buildBody(input))
 }
 
 // ── Unsupported recipe site reporting ────────────────────────────────────────
@@ -117,7 +111,7 @@ export interface UnsupportedRecipeSite {
 
 /** Best-effort: never throws, so a failed report can't block the AI fallback. */
 export async function reportUnsupportedRecipeSite(input: UnsupportedRecipeSite): Promise<void> {
-  if (!TOKEN || alreadyReportedHost(input.hostname)) return
+  if (alreadyReportedHost(input.hostname)) return
   markHostReported(input.hostname)
 
   const body = [
@@ -131,21 +125,7 @@ export async function reportUnsupportedRecipeSite(input: UnsupportedRecipeSite):
   ].join('\n')
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`, {
-      method: 'POST',
-      headers: {
-        Authorization: `token ${TOKEN}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      body: JSON.stringify({
-        title: `[Recept] Sida stöds inte: ${input.hostname}`,
-        body,
-        labels: ['feedback', 'recipe-parser'],
-      }),
-    })
-    if (!res.ok) console.warn(`Kunde inte rapportera receptsida (${input.hostname}): HTTP ${res.status}`)
+    await postReport('recipe-parser', `[Recept] Sida stöds inte: ${input.hostname}`, body)
   } catch (e) {
     console.warn(`Kunde inte rapportera receptsida (${input.hostname}):`, e)
   }
