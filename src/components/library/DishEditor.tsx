@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
@@ -79,6 +80,7 @@ function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
 
 export default function DishEditor({ dish, initialName, onClose, onSaved }: Props) {
   const { addDish, updateDish, deleteDish } = useLibraryStore()
+  const { settings } = useSettingsStore()
   const weeks = Object.values(useWeekStore().weeks)
   const [form, setForm] = useState<Omit<Dish, 'id' | 'cookingHistory'>>(
     dish
@@ -169,7 +171,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
   function getRecipeData(): Promise<RecipeFetchResult> {
     if (fetchCacheRef.current?.url === form.recipeUrl) return fetchCacheRef.current.promise
-    const promise = fetchRecipeFromUrl(form.recipeUrl.trim())
+    const promise = fetchRecipeFromUrl(form.recipeUrl.trim(), settings)
     fetchCacheRef.current = { url: form.recipeUrl, promise }
     return promise
   }

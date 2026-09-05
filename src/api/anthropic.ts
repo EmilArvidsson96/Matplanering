@@ -597,3 +597,122 @@ export async function suggestRecipeImprovements(
   writeCache(cacheKey, hash, improvements)
   return improvements
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// AI fallback: extract a recipe from a page's text when no site parser or
+// schema.org/Recipe data matches (recipeFetcher.ts reports the gap and calls
+// this so the user still gets a result while support is added).
+// ════════════════════════════════════════════════════════════════════════
+
+export interface AiRecipeIngredient {
+  amount: number
+  unit: string
+  name: string
+}
+
+export interface AiRecipeResult {
+  title?: string
+  portionsBase: number
+  ingredients: AiRecipeIngredient[]
+  instructions: string[]
+}
+
+const RECIPE_EXTRACT_TOOL = {
+  name: 'submit_recipe',
+  description: 'Lämna in receptet som extraherats från sidans text.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      found: { type: 'boolean', description: 'true om sidan innehöll ett recept med ingredienser, annars false.' },
+      title: { type: 'string', description: 'Receptets titel.' },
+      portionsBase: { type: 'number', description: 'Antal portioner receptet gäller för (gissa 4 om det inte anges).' },
+      ingredients: {
+        type: 'array',
+        description: 'Receptets ingredienser, en per rad i originalet.',
+        items: {
+          type: 'object',
+          properties: {
+            amount: { type: 'number', description: 'Mängd som decimaltal, t.ex. "1 1/2" → 1.5, "½" → 0.5. 0 om ingen mängd anges (t.ex. "efter smak").' },
+            unit: { type: 'string', description: 'Måttenhet på svenska (dl, msk, tsk, g, kg, st, förp, m.fl.). Tom sträng om ingen enhet nämns.' },
+            name: { type: 'string', description: 'Ingrediensens namn, översatt till svenska.' },
+          },
+          required: ['amount', 'unit', 'name'],
+        },
+      },
+      instructions: {
+        type: 'array',
+        description: 'Tillagningsinstruktionerna, ett steg per element, översatta till svenska.',
+        items: { type: 'string' },
+      },
+    },
+    required: ['found', 'portionsBase', 'ingredients', 'instructions'],
+  },
+} as const
+
+const RECIPE_EXTRACT_SYSTEM_PROMPT = `Du är en assistent som läser textinnehållet från en webbsida och extraherar ett matrecept: titel, antal portioner, ingredienser och tillagningssteg.
+
+Regler:
+1. Om sidan inte innehåller ett recept med ingredienser: sätt found=false och returnera tomma listor.
+2. Extrahera ENDAST det som faktiskt står på sidan. Hitta inte på ingredienser, mängder eller steg som inte finns.
+3. Översätt ingrediensnamn och instruktioner till naturlig, korrekt svenska oavsett källspråk.
+4. Ignorera navigering, reklam, kommentarer, andra recept och annat innehåll som inte hör till receptet.`
+
+export async function extractRecipeFromPageText(
+  pageText: string,
+  url: string,
+  settings: AppSettings,
+): Promise<AiRecipeResult> {
+  const apiKey = settings.anthropicApiKey?.trim()
+  if (!apiKey) {
+    throw new Error('Ingen API-nyckel angiven. Lägg till den under Inställningar.')
+  }
+
+  const model = MODEL_IDS[settings.aiModel ?? 'haiku']
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: ANTHROPIC_HEADERS(apiKey),
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      system: RECIPE_EXTRACT_SYSTEM_PROMPT,
+      tools: [RECIPE_EXTRACT_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_recipe' },
+      messages: [
+        {
+          role: 'user',
+          content: `Sidans URL: ${url}\n\nSidans textinnehåll:\n${pageText}`,
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) await throwApiError(res)
+
+  const data = await res.json() as {
+    content: Array<{ type: string; name?: string; input?: unknown }>
+  }
+  const toolUse = data.content.find(c => c.type === 'tool_use' && c.name === 'submit_recipe')
+  if (!toolUse?.input) {
+    throw new Error('AI returnerade inget giltigt svar.')
+  }
+
+  const raw = toolUse.input as Partial<AiRecipeResult> & { found?: boolean }
+  const ingredients = (raw.ingredients ?? []).filter(
+    (i): i is AiRecipeIngredient =>
+      !!i && typeof i.name === 'string' && i.name.trim() !== ''
+      && typeof i.amount === 'number' && typeof i.unit === 'string',
+  )
+
+  if (!raw.found || ingredients.length === 0) {
+    throw new Error('AI hittade inget recept med ingredienser på sidan.')
+  }
+
+  return {
+    title: typeof raw.title === 'string' && raw.title.trim() !== '' ? raw.title.trim() : undefined,
+    portionsBase: typeof raw.portionsBase === 'number' && raw.portionsBase > 0 ? raw.portionsBase : 4,
+    ingredients,
+    instructions: (raw.instructions ?? []).filter(
+      (s): s is string => typeof s === 'string' && s.trim() !== '',
+    ),
+  }
+}

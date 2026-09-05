@@ -1,5 +1,7 @@
 import { v4 as uuid } from 'uuid'
-import type { Ingredient, RecipeStep, ShoppingCategory } from '../types'
+import type { AppSettings, Ingredient, RecipeStep, ShoppingCategory } from '../types'
+import { extractRecipeFromPageText } from '../api/anthropic'
+import { reportUnsupportedRecipeSite } from '../api/feedback'
 
 // ── Whitelist ─────────────────────────────────────────────────────────────────
 // Only these hostnames are allowed. Add more as needed.
@@ -47,6 +49,26 @@ const CORS_PROXY = 'https://matplanering-recipe-proxy.emil-arvidsson.workers.dev
 
 function proxiedUrl(url: string): string {
   return CORS_PROXY + encodeURIComponent(url)
+}
+
+// Strips a page down to its visible text (for the AI fallback parser), keeping
+// line breaks at block boundaries and dropping script/style noise entirely.
+const AI_PAGE_TEXT_MAX_CHARS = 20000
+
+function htmlToPageText(html: string): string {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<\/(p|div|li|br|h[1-6]|tr)[^>]*>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .split('\n')
+    .map(s => s.replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n')
+  return text.length > AI_PAGE_TEXT_MAX_CHARS ? text.slice(0, AI_PAGE_TEXT_MAX_CHARS) : text
 }
 
 // ── Fraction / amount parsing ─────────────────────────────────────────────────
@@ -429,49 +451,93 @@ export interface RecipeFetchResult {
   instructions?: RecipeStep[]
 }
 
-export async function fetchRecipeFromUrl(url: string): Promise<RecipeFetchResult> {
-  let hostname: string
+// Tries the site-specific parser (if any) or the generic schema.org/Recipe
+// JSON-LD parser. Returns null instead of throwing so the caller can fall
+// back to the AI reader instead of failing outright.
+function tryDeterministicParse(html: string, hostname: string): { result: RecipeFetchResult; error: null } | { result: null; error: string } {
   try {
-    hostname = new URL(url).hostname
+    const siteParser = getSiteParser(hostname)
+    if (siteParser) {
+      const { ingredientStrings, portionsBase, title } = siteParser(html)
+      const ingredients = buildIngredients(ingredientStrings, portionsBase)
+      if (ingredients.length === 0) throw new Error('Hittade inga ingredienser på sidan.')
+      return { result: { ingredients, portionsBase, title }, error: null }
+    }
+
+    const items = extractJsonLdItems(html)
+    const recipe = findRecipeNode(items)
+    if (!recipe) throw new Error('Hittade inget receptformat (schema.org/Recipe) på sidan.')
+
+    const rawIngredients = (recipe.recipeIngredient as string[] | undefined) ?? []
+    const portionsBase = parseServings(recipe.recipeYield)
+    const title = typeof recipe.name === 'string' ? recipe.name : undefined
+    const ingredients = buildIngredients(rawIngredients, portionsBase)
+    const instructionsArr = extractInstructions(recipe.recipeInstructions)
+    const instructions = instructionsArr.length > 0 ? instructionsArr : undefined
+
+    if (ingredients.length === 0) throw new Error('Receptet hittades men innehåller inga ingredienser.')
+    return { result: { ingredients, portionsBase, title, instructions }, error: null }
+  } catch (e) {
+    return { result: null, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+export async function fetchRecipeFromUrl(url: string, settings: AppSettings): Promise<RecipeFetchResult> {
+  let hostname: string
+  let pathname: string
+  try {
+    const u = new URL(url)
+    hostname = u.hostname
+    pathname = u.pathname
   } catch {
     throw new Error('Ogiltig URL.')
   }
 
   const isKnownHost = ALLOWED_HOSTS.includes(hostname)
-  const isRecipePath = RECIPE_PATH_RE.test(new URL(url).pathname)
-
-  if (!isKnownHost && !isRecipePath) {
-    const supported = [...new Set(ALLOWED_HOSTS.map(h => h.replace(/^www\./, '')))]
-    throw new Error(
-      `Den här sidan stöds inte.\n\nSidor som stöds: ${supported.join(', ')}.\n\nSidor med "/recipe/" eller "/recept/" i adressen provas automatiskt.`
-    )
-  }
+  const isRecipePath = RECIPE_PATH_RE.test(pathname)
 
   const res = await fetch(proxiedUrl(url))
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const html = await res.text()
 
-  // Try site-specific parser first
-  const siteParser = getSiteParser(hostname)
-  if (siteParser) {
-    const { ingredientStrings, portionsBase, title } = siteParser(html)
-    const ingredients = buildIngredients(ingredientStrings, portionsBase)
-    if (ingredients.length === 0) throw new Error('Hittade inga ingredienser på sidan.')
-    return { ingredients, portionsBase, title }
+  if (isKnownHost || isRecipePath) {
+    const { result, error } = tryDeterministicParse(html, hostname)
+    if (result) return result
+    void reportUnsupportedRecipeSite({ url, hostname, reason: error })
+    return await aiFallback(html, url, settings, error)
   }
 
-  // Fall back to generic schema.org/Recipe JSON-LD
-  const items = extractJsonLdItems(html)
-  const recipe = findRecipeNode(items)
-  if (!recipe) throw new Error('Hittade inget receptformat (schema.org/Recipe) på sidan.')
+  void reportUnsupportedRecipeSite({
+    url,
+    hostname,
+    reason: 'Okänd domän, och adressen innehåller inte "/recipe/" eller "/recept/".',
+  })
+  return await aiFallback(html, url, settings, null)
+}
 
-  const rawIngredients = (recipe.recipeIngredient as string[] | undefined) ?? []
-  const portionsBase = parseServings(recipe.recipeYield)
-  const title = typeof recipe.name === 'string' ? recipe.name : undefined
-  const ingredients = buildIngredients(rawIngredients, portionsBase)
-  const instructionsArr = extractInstructions(recipe.recipeInstructions)
-  const instructions = instructionsArr.length > 0 ? instructionsArr : undefined
-
-  if (ingredients.length === 0) throw new Error('Receptet hittades men innehåller inga ingredienser.')
-  return { ingredients, portionsBase, title, instructions }
+async function aiFallback(
+  html: string,
+  url: string,
+  settings: AppSettings,
+  deterministicReason: string | null,
+): Promise<RecipeFetchResult> {
+  try {
+    const ai = await extractRecipeFromPageText(htmlToPageText(html), url, settings)
+    const ingredients: Ingredient[] = ai.ingredients.map(i => ({
+      id: uuid(),
+      name: i.name,
+      amount: i.amount,
+      unit: i.unit || 'st',
+      category: guessCategory(i.name),
+      portionsBase: ai.portionsBase,
+    }))
+    const instructions = ai.instructions.length > 0
+      ? ai.instructions.map(text => ({ id: uuid(), text }))
+      : undefined
+    return { ingredients, portionsBase: ai.portionsBase, title: ai.title, instructions }
+  } catch (aiError) {
+    const aiMsg = aiError instanceof Error ? aiError.message : String(aiError)
+    const base = deterministicReason ?? 'Den här sidan stöds inte ännu. Den har rapporterats så att stöd kan läggas till.'
+    throw new Error(`${base}\n\nAI-läsning misslyckades också: ${aiMsg}`)
+  }
 }
