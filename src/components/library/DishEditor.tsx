@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -41,6 +41,33 @@ interface Props {
   initialName?: string
   onClose: () => void
   onSaved?: (id: string) => void
+}
+
+function AmountInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [text, setText] = useState(String(value))
+  const focused = useRef(false)
+
+  useEffect(() => {
+    if (!focused.current) setText(String(value))
+  }, [value])
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      placeholder="Mängd"
+      value={text}
+      onFocus={() => { focused.current = true }}
+      onBlur={() => { focused.current = false; setText(String(value)) }}
+      onChange={e => {
+        const raw = e.target.value.replace(/,/g, '.')
+        if (!/^\d*\.?\d*$/.test(raw)) return
+        setText(e.target.value)
+        onChange(raw === '' || raw === '.' ? 0 : parseFloat(raw))
+      }}
+      className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+    />
+  )
 }
 
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
@@ -326,12 +353,9 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
                   onChange={e => updateIngredient(ing.id, { name: e.target.value })}
                   className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2 py-1 text-xs"
                 />
-                <input
-                  type="number"
-                  placeholder="Mängd"
+                <AmountInput
                   value={ing.amount}
-                  onChange={e => updateIngredient(ing.id, { amount: Number(e.target.value) })}
-                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                  onChange={n => updateIngredient(ing.id, { amount: n })}
                 />
                 <input
                   type="text"
