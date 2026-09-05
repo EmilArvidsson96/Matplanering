@@ -44,9 +44,11 @@ export const ALLOWED_HOSTS: string[] = [
 const RECIPE_PATH_RE = /\/(recipe|recipes|recept|recepten)\//i
 
 const CORS_PROXY = 'https://corsproxy.io/?url='
+const CORS_PROXY_KEY = import.meta.env.VITE_CORSPROXY_KEY as string | undefined
 
 function proxiedUrl(url: string): string {
-  return CORS_PROXY + encodeURIComponent(url)
+  const proxied = CORS_PROXY + encodeURIComponent(url)
+  return CORS_PROXY_KEY ? `${proxied}&key=${CORS_PROXY_KEY}` : proxied
 }
 
 // ── Fraction / amount parsing ─────────────────────────────────────────────────
