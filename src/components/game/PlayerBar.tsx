@@ -11,7 +11,7 @@ export default function PlayerBar() {
 
   return (
     <Link to="/spel" className="block group">
-      <div className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-white/70 backdrop-blur border border-white/40 shadow-sm hover:shadow-md transition">
+      <div className="flex items-center gap-3 px-3 py-2 rounded-3xl bg-white/70 backdrop-blur border border-white/40 shadow-sm hover:shadow-md transition">
         {sorted.map((p) => {
           const stats = statsFor(p.id, data)
           const pct = Math.min(100, (stats.xpInLevel / stats.xpToNext) * 100)
@@ -28,11 +28,11 @@ export default function PlayerBar() {
                 </span>
               </div>
               <div className="flex flex-col min-w-[80px]">
-                <span className="text-xs font-semibold text-gray-700 leading-tight">{p.name}</span>
-                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden mt-0.5">
+                <span className="text-xs font-semibold text-ink-soft leading-tight">{p.name}</span>
+                <div className="h-1.5 w-full bg-line rounded-full overflow-hidden mt-0.5">
                   <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: p.color }} />
                 </div>
-                <span className="text-[10px] text-gray-500 mt-0.5">{stats.totalPoints} p</span>
+                <span className="text-[10px] text-ink-muted mt-0.5">{stats.totalPoints} p</span>
               </div>
             </div>
           )

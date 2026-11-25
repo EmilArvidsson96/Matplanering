@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { v4 as uuid } from 'uuid'
 import {
-  ArrowLeft, Minus, Plus, Sunrise, Pencil, Check, X,
+  ArrowLeft, Minus, Plus, Sunrise, Pencil, Check,
   Download, Upload, ExternalLink, ChevronDown, ChevronUp, Trash2,
 } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
-import { useIsDesktop } from '../../hooks/useDevice'
+import { useMinWidth } from '../../hooks/useDevice'
 import RecipeAiTools from './RecipeAiTools'
+import SegmentedControl from '../common/SegmentedControl'
 import type { Dish, RecipeStep, Ingredient } from '../../types'
 import { ingredientImpact, dishImpactPerPortion, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../../utils/ingredientImpact'
 
@@ -70,7 +71,7 @@ function injectAmounts(text: string, ingredients: Ingredient[], portions: number
       return (
         <span key={idx}>
           {part}
-          <span className="text-brand-600 font-medium">
+          <span className="text-brand-700 font-semibold">
             {' '}({rounded} {match.unit})
           </span>
         </span>
@@ -109,36 +110,37 @@ function StepEditor({
 }) {
   const [text, setText] = useState(step.text)
   return (
-    <div className="flex gap-2 items-start">
-      <span className="shrink-0 w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-bold mt-1">
+    <div className="card p-4 flex gap-3.5 items-start ring-2 ring-brand-300">
+      <span className="shrink-0 w-7 h-7 rounded-full bg-ink text-white font-display text-sm font-bold flex items-center justify-center">
         {index + 1}
       </span>
-      <div className="flex-1 space-y-1.5">
+      <div className="flex-1 space-y-2.5">
         <textarea
           autoFocus
           value={text}
           onChange={e => setText(e.target.value)}
           rows={3}
-          className="w-full text-sm border border-brand-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
+          className="w-full text-base leading-relaxed bg-canvas rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
         />
         <div className="flex gap-2">
           <button
             onClick={() => onSave(text)}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 bg-brand-500 text-white rounded-lg hover:bg-brand-600"
+            className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold flex items-center gap-1.5"
           >
-            <Check className="w-3 h-3" /> Spara
+            <Check className="w-4 h-4" /> Spara
           </button>
           <button
             onClick={onCancel}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            className="h-10 px-4 rounded-full border border-line text-ink text-sm font-semibold hover:bg-canvas"
           >
-            <X className="w-3 h-3" /> Avbryt
+            Avbryt
           </button>
           <button
             onClick={onDelete}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 text-red-600 hover:bg-red-50 rounded-lg ml-auto"
+            aria-label="Ta bort steg"
+            className="w-10 h-10 rounded-full text-red-700 hover:bg-red-50 ml-auto flex items-center justify-center"
           >
-            <Trash2 className="w-3 h-3" /> Ta bort
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -192,9 +194,9 @@ function InstructionsPanel({
   const hasSteps = (dish.instructions ?? []).length > 0
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto p-4 space-y-4">
+    <div ref={scrollRef} className="h-full overflow-y-auto px-4 md:px-6 pb-6 space-y-2.5">
       {!hasSteps && !editMode && (
-        <p className="text-sm text-gray-400 italic">Inga instruktioner tillagda ännu.</p>
+        <p className="card p-5 text-sm text-ink-muted">Inga instruktioner tillagda ännu.</p>
       )}
 
       {(dish.instructions ?? []).map((step, idx) => (
@@ -208,23 +210,23 @@ function InstructionsPanel({
               onCancel={() => setEditingId(null)}
             />
           ) : (
-            <div className="flex gap-2 items-start group">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-bold mt-0.5">
+            <div className="card p-4 flex gap-3.5 items-start group">
+              <span className="shrink-0 w-7 h-7 rounded-full bg-ink text-white font-display text-sm font-bold flex items-center justify-center">
                 {idx + 1}
               </span>
-              <p className="flex-1 text-sm text-gray-800 leading-relaxed">
+              <p className="flex-1 text-base text-ink leading-relaxed pt-0.5">
                 {injectAmounts(step.text, dish.ingredients, portions)}
               </p>
               {editMode && (
-                <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => moveStep(idx, -1)} disabled={idx === 0} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                    <ChevronUp className="w-3.5 h-3.5" />
+                <div className="flex flex-col -my-1 -mr-1">
+                  <button onClick={() => moveStep(idx, -1)} disabled={idx === 0} aria-label="Flytta upp" className="w-9 h-9 rounded-full flex items-center justify-center text-ink-muted hover:bg-canvas disabled:opacity-30">
+                    <ChevronUp className="w-4 h-4" />
                   </button>
-                  <button onClick={() => moveStep(idx, 1)} disabled={idx === (dish.instructions ?? []).length - 1} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30">
-                    <ChevronDown className="w-3.5 h-3.5" />
+                  <button onClick={() => moveStep(idx, 1)} disabled={idx === (dish.instructions ?? []).length - 1} aria-label="Flytta ned" className="w-9 h-9 rounded-full flex items-center justify-center text-ink-muted hover:bg-canvas disabled:opacity-30">
+                    <ChevronDown className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setEditingId(step.id)} className="p-0.5 text-gray-400 hover:text-brand-600">
-                    <Pencil className="w-3.5 h-3.5" />
+                  <button onClick={() => setEditingId(step.id)} aria-label="Redigera steg" className="w-9 h-9 rounded-full flex items-center justify-center text-ink-muted hover:text-brand-700 hover:bg-canvas">
+                    <Pencil className="w-4 h-4" />
                   </button>
                 </div>
               )}
@@ -245,7 +247,7 @@ function InstructionsPanel({
         ) : (
           <button
             onClick={() => setAddingNew(true)}
-            className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 px-2 py-1 rounded-lg hover:bg-brand-50"
+            className="w-full h-12 rounded-3xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
           >
             <Plus className="w-4 h-4" /> Lägg till steg
           </button>
@@ -271,8 +273,8 @@ function IngredientsPanel({
   const overrides = useSettingsStore(s => s.settings.costOverrides) ?? {}
   if (dish.ingredients.length === 0) {
     return (
-      <div ref={scrollRef} className="h-full overflow-y-auto p-4">
-        <p className="text-sm text-gray-400 italic">Inga ingredienser tillagda.</p>
+      <div ref={scrollRef} className="h-full overflow-y-auto px-4 md:px-6">
+        <p className="card p-5 text-sm text-ink-muted">Inga ingredienser tillagda.</p>
       </div>
     )
   }
@@ -283,42 +285,44 @@ function IngredientsPanel({
   const grade = climateGrade(perPortion.co2eKg)
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto p-4">
-      <div className="mb-3 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm flex items-center gap-3">
+    <div ref={scrollRef} className="h-full overflow-y-auto px-4 md:px-6 pb-6 space-y-2.5">
+      <ul className="card overflow-hidden divide-y divide-line-soft">
+        {dish.ingredients.map(ing => {
+          const scaled = (ing.amount * portions) / (ing.portionsBase || 1)
+          const imp = ingredientImpact({ name: ing.name, amount: scaled, unit: ing.unit }, conversions, overrides)
+          return (
+            <li key={ing.id} className="flex items-center justify-between gap-3 px-4 min-h-[52px] py-2">
+              <span className="flex-1 min-w-0">
+                <span className="block text-[15px] text-ink">{ing.name}</span>
+                {imp.matched && (
+                  <span className="block text-[11px] text-ink-muted tabular-nums">
+                    ~{formatSEK(imp.costSEK)} · {formatCO2e(imp.co2eKg)}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-[15px] font-semibold text-ink tabular-nums">{scaleAmount(ing, portions)}</span>
+            </li>
+          )
+        })}
+      </ul>
+      <div className="card p-3.5 flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white text-lg"
+          className="w-11 h-11 rounded-xl flex items-center justify-center font-display font-extrabold text-white text-lg shrink-0"
           style={{ background: CLIMATE_COLORS[grade] }}
           title="Klimatbetyg per portion"
         >
           {grade}
         </div>
-        <div className="flex-1 leading-tight">
-          <div className="text-xs text-gray-500 uppercase tracking-wide">Uppskattning</div>
-          <div className="font-semibold text-gray-800">
+        <div className="flex-1 min-w-0 leading-snug">
+          <div className="text-xs text-ink-muted">Uppskattning för {portions} port.</div>
+          <div className="font-semibold text-ink text-[15px]">
             {formatSEK(totalCost)} · {formatCO2e(totalCO2e)} CO₂e
           </div>
-          <div className="text-[11px] text-gray-500">
+          <div className="text-xs text-ink-muted">
             per portion: {formatSEK(perPortion.costSEK)} · {formatCO2e(perPortion.co2eKg)}
           </div>
         </div>
       </div>
-      <ul className="space-y-2">
-        {dish.ingredients.map(ing => {
-          const scaled = (ing.amount * portions) / (ing.portionsBase || 1)
-          const imp = ingredientImpact({ name: ing.name, amount: scaled, unit: ing.unit }, conversions, overrides)
-          return (
-            <li key={ing.id} className="flex items-baseline justify-between gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
-              <span className="text-gray-800 flex-1">{ing.name}</span>
-              {imp.matched && (
-                <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                  ~{formatSEK(imp.costSEK)} · {formatCO2e(imp.co2eKg)}
-                </span>
-              )}
-              <span className="shrink-0 text-gray-500 font-medium tabular-nums">{scaleAmount(ing, portions)}</span>
-            </li>
-          )
-        })}
-      </ul>
     </div>
   )
 }
@@ -335,7 +339,8 @@ interface Props {
 type Tab = 'instruktioner' | 'ingredienser'
 
 export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
-  const isDesktop = useIsDesktop()
+  // Side-by-side instructions + ingredients only when there is room for both
+  const isDesktop = useMinWidth(1180)
   const updateDish = useLibraryStore(s => s.updateDish)
   const { active: wakeLockActive, toggle: toggleWakeLock, supported: wakeLockSupported } = useWakeLock()
 
@@ -412,89 +417,100 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
   }
 
   const header = (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white shrink-0">
-      {onBack && (
-        <button onClick={onBack} className="p-1 -ml-1 text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-      )}
-      <h2 className="flex-1 text-base font-semibold text-gray-900 truncate">{dish.name}</h2>
+    <div className="px-4 md:px-6 pt-3 md:pt-5 pb-3 shrink-0 space-y-2">
+      <div className="flex items-center gap-1">
+        {onBack && (
+          <button onClick={onBack} aria-label="Tillbaka" className="w-10 h-10 rounded-full flex items-center justify-center transition-colors -ml-1 bg-white border border-line text-ink hover:bg-canvas mr-1">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <div className="flex-1" />
 
-      {/* Source URL */}
-      {dish.recipeUrl && (
-        <a href={dish.recipeUrl} target="_blank" rel="noopener noreferrer"
-          className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50"
-          title="Öppna originalkälla">
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      )}
+        {/* Source URL */}
+        {dish.recipeUrl && (
+          <a href={dish.recipeUrl} target="_blank" rel="noopener noreferrer"
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-brand-700 hover:bg-white"
+            title="Öppna originalkälla" aria-label="Öppna originalkälla">
+            <ExternalLink className="w-[18px] h-[18px]" />
+          </a>
+        )}
 
-      {/* Wake lock */}
-      {wakeLockSupported && (
+        {/* Wake lock */}
+        {wakeLockSupported && (
+          <button
+            onClick={toggleWakeLock}
+            title={wakeLockActive ? 'Släck skärmsläckaren (skärmen hålls tänd)' : 'Håll skärmen tänd'}
+            aria-label="Håll skärmen tänd"
+            aria-pressed={wakeLockActive}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              wakeLockActive ? 'text-amber-800 bg-amber-100' : 'text-ink-muted hover:text-amber-700 hover:bg-white'
+            }`}
+          >
+            <Sunrise className="w-[18px] h-[18px]" />
+          </button>
+        )}
+
+        {/* AI tools: split steps (Haiku) + improvement suggestions (Sonnet) */}
+        <RecipeAiTools dish={dish} />
+
+        {/* Edit mode toggle */}
         <button
-          onClick={toggleWakeLock}
-          title={wakeLockActive ? 'Släck skärmsläckaren (skärmen hålls tänd)' : 'Håll skärmen tänd'}
-          className={`p-1.5 rounded-lg transition-colors ${
-            wakeLockActive ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
+          onClick={() => setEditMode(v => !v)}
+          title={editMode ? 'Avsluta redigering' : 'Redigera instruktioner'}
+          aria-label="Redigera instruktioner"
+          aria-pressed={editMode}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+            editMode ? 'text-white bg-ink' : 'text-ink-muted hover:text-ink hover:bg-white'
           }`}
         >
-          <Sunrise className="w-4 h-4" />
+          <Pencil className="w-[18px] h-[18px]" />
         </button>
-      )}
 
-      {/* AI tools: split steps (Haiku) + improvement suggestions (Sonnet) */}
-      <RecipeAiTools dish={dish} />
+        {/* Export */}
+        <button onClick={exportInstructions} title="Exportera instruktioner" aria-label="Exportera instruktioner" className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-ink hover:bg-white">
+          <Download className="w-[18px] h-[18px]" />
+        </button>
 
-      {/* Edit mode toggle */}
-      <button
-        onClick={() => setEditMode(v => !v)}
-        title={editMode ? 'Avsluta redigering' : 'Redigera instruktioner'}
-        className={`p-1.5 rounded-lg transition-colors ${
-          editMode ? 'text-brand-600 bg-brand-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-        }`}
-      >
-        <Pencil className="w-4 h-4" />
-      </button>
-
-      {/* Export */}
-      <button onClick={exportInstructions} title="Exportera instruktioner" className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-        <Download className="w-4 h-4" />
-      </button>
-
-      {/* Import */}
-      <button onClick={importInstructions} title="Importera instruktioner" className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-        <Upload className="w-4 h-4" />
-      </button>
+        {/* Import */}
+        <button onClick={importInstructions} title="Importera instruktioner" aria-label="Importera instruktioner" className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-ink hover:bg-white">
+          <Upload className="w-[18px] h-[18px]" />
+        </button>
+      </div>
+      <h2 className="font-display text-[26px] md:text-[30px] font-extrabold tracking-tight leading-[1.1] text-ink">{dish.name}</h2>
     </div>
   )
 
   const portionControl = (
-    <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shrink-0">
-      <span className="text-xs text-gray-500 mr-1">
-        {dish.yieldUnit?.trim() ? `${dish.yieldUnit.trim().charAt(0).toUpperCase()}${dish.yieldUnit.trim().slice(1)}:` : 'Portioner:'}
-      </span>
-      <button
-        onClick={() => setPortions(p => Math.max(1, p - 1))}
-        className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100"
-      >
-        <Minus className="w-3 h-3" />
-      </button>
-      <span className="text-sm font-semibold text-gray-800 w-4 text-center">{portions}</span>
-      <button
-        onClick={() => setPortions(p => p + 1)}
-        className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100"
-      >
-        <Plus className="w-3 h-3" />
-      </button>
-      {plannedPortions !== null && portions !== plannedPortions && (
+    <div className="px-4 md:px-6 pb-3 shrink-0">
+      <div className="card py-1.5 pl-4 pr-1.5 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-semibold">
+            {dish.yieldUnit?.trim() ? `${dish.yieldUnit.trim().charAt(0).toUpperCase()}${dish.yieldUnit.trim().slice(1)}` : 'Portioner'}
+          </p>
+          {plannedPortions !== null && portions !== plannedPortions ? (
+            <button onClick={() => setPortions(plannedPortions)} className="text-xs font-semibold text-brand-700 hover:underline">
+              Återställ till {plannedPortions}
+            </button>
+          ) : (
+            <p className="text-xs text-ink-muted">Påverkar inte veckoplanen</p>
+          )}
+        </div>
         <button
-          onClick={() => setPortions(plannedPortions)}
-          className="ml-2 text-xs text-brand-600 hover:underline"
+          onClick={() => setPortions(p => Math.max(1, p - 1))}
+          aria-label="Färre portioner"
+          className="w-11 h-11 rounded-full bg-canvas text-ink flex items-center justify-center hover:bg-line-soft"
         >
-          Återställ ({plannedPortions})
+          <Minus className="w-[18px] h-[18px]" />
         </button>
-      )}
-      <span className="ml-auto text-xs text-gray-400">Påverkar inte veckoplanen</span>
+        <span className="w-9 text-center font-display text-xl font-extrabold tabular-nums" aria-live="polite">{portions}</span>
+        <button
+          onClick={() => setPortions(p => p + 1)}
+          aria-label="Fler portioner"
+          className="w-11 h-11 rounded-full bg-ink text-white flex items-center justify-center hover:bg-ink-soft"
+        >
+          <Plus className="w-[18px] h-[18px]" />
+        </button>
+      </div>
     </div>
   )
 
@@ -503,11 +519,11 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
       <div className="flex flex-col h-full">
         {header}
         {portionControl}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden pb-4">
           {/* Instructions (left) */}
-          <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 shrink-0">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Instruktioner</span>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-7 pb-2 shrink-0">
+              <span className="eyebrow">Gör så här</span>
             </div>
             <div className="flex-1 overflow-hidden">
               <InstructionsPanel
@@ -520,9 +536,9 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
             </div>
           </div>
           {/* Ingredients (right) */}
-          <div className="w-64 flex flex-col overflow-hidden bg-white">
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 shrink-0">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ingredienser</span>
+          <div className="w-96 flex flex-col overflow-hidden">
+            <div className="px-7 pb-2 shrink-0">
+              <span className="eyebrow">Ingredienser</span>
             </div>
             <div className="flex-1 overflow-hidden">
               <IngredientsPanel
@@ -544,24 +560,20 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
       {portionControl}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 bg-white shrink-0">
-        {(['instruktioner', 'ingredienser'] as Tab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => switchTab(tab)}
-            className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 ${
-              activeTab === tab
-                ? 'border-brand-500 text-brand-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+      <div className="px-4 md:px-6 pb-3 shrink-0">
+        <SegmentedControl
+          ariaLabel="Receptvy"
+          value={activeTab}
+          onChange={switchTab}
+          options={[
+            { id: 'instruktioner', label: 'Gör så här' },
+            { id: 'ingredienser', label: 'Ingredienser' },
+          ]}
+        />
       </div>
 
       {/* Panel — always rendered for scroll-position memory, hidden via display */}
-      <div className={`flex-1 min-h-0 overflow-hidden ${activeTab === 'instruktioner' ? 'block' : 'hidden'}`}>
+      <div className={`flex-1 min-h-0 overflow-hidden ${activeTab === 'instruktioner' ? 'block motion-safe:animate-fade-up' : 'hidden'}`}>
         <InstructionsPanel
           dish={dish}
           portions={portions}
@@ -570,7 +582,7 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
           onStepsChange={handleStepsChange}
         />
       </div>
-      <div className={`flex-1 overflow-hidden ${activeTab === 'ingredienser' ? 'block' : 'hidden'}`}>
+      <div className={`flex-1 overflow-hidden ${activeTab === 'ingredienser' ? 'block motion-safe:animate-fade-up' : 'hidden'}`}>
         <IngredientsPanel
           dish={dish}
           portions={portions}

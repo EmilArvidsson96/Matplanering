@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RotateCcw, ChevronRight, ChevronDown, X, Snowflake } from 'lucide-react'
+import { RotateCcw, ChevronRight, ChevronDown, X, Snowflake, Plus, Pencil } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -110,21 +110,21 @@ export default function BrainstormStep() {
   return (
     <div className="space-y-5">
       {/* Portion counter */}
-      <div className={`rounded-2xl p-4 flex flex-wrap gap-4 items-center shadow-sm
+      <div className={`rounded-3xl p-4 flex flex-wrap gap-4 items-center shadow-sm
         ${leftover < 0 ? 'bg-red-50' : leftover > needed * 0.3 ? 'bg-amber-50' : 'bg-brand-50'}`}
       >
         <Stat label="Behövs" value={needed} />
         <Stat label="Planerat" value={planned} />
         {rester > 0 && <Stat label="Rester" value={rester} />}
-        <div className="border-l border-gray-200 pl-4">
+        <div className="border-l border-line pl-4">
           <Stat
             label={leftover < 0 ? 'Saknas' : 'Över'}
             value={Math.abs(leftover)}
-            color={leftover < 0 ? 'text-red-600' : leftover === 0 ? 'text-brand-600' : 'text-amber-600'}
+            color={leftover < 0 ? 'text-red-700' : leftover === 0 ? 'text-brand-600' : 'text-amber-600'}
           />
         </div>
         {leftover < 0 && (
-          <p className="w-full text-xs text-red-500 -mt-2">
+          <p className="w-full text-xs text-red-700 -mt-2">
             Du behöver planera {Math.abs(leftover)} portioner till.
           </p>
         )}
@@ -133,7 +133,7 @@ export default function BrainstormStep() {
       {/* Meal list */}
       <div className="space-y-2">
         {eatenMeals(week.meals).length === 0 && (
-          <p className="text-sm text-gray-500 py-4 text-center">
+          <p className="text-sm text-ink-muted py-4 text-center">
             Inga rätter planerade än. Lägg till nedan!
           </p>
         )}
@@ -166,27 +166,27 @@ export default function BrainstormStep() {
       </div>
 
       {/* Add controls */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => { setAddMode(null); setShowPicker(true) }}
-            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm"
-          >
-            + Välj från bibliotek
-          </button>
+      <div className="card p-5 space-y-3">
+        <button
+          onClick={() => { setAddMode(null); setShowPicker(true) }}
+          className="btn-primary w-full"
+        >
+          <Plus className="w-[18px] h-[18px]" /> Välj från biblioteket
+        </button>
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setAddMode(addMode === 'free' ? null : 'free')}
-            className="flex-1 border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-xl text-sm"
+            aria-pressed={addMode === 'free'}
+            className={addMode === 'free' ? 'btn-secondary bg-ink text-white border-ink hover:bg-ink-soft' : 'btn-secondary'}
           >
-            + Skriv fritt
+            <Pencil className="w-4 h-4" /> Skriv fritt
           </button>
           <button
             onClick={addRemainder}
-            className="flex items-center gap-1.5 border border-gray-200 hover:bg-amber-50 text-amber-600 font-medium px-4 py-2 rounded-xl text-sm"
+            className="btn-secondary text-amber-800"
             title="Lägg till rester från förra veckan"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Rester
+            <RotateCcw className="w-4 h-4" /> Rester
           </button>
         </div>
 
@@ -199,11 +199,11 @@ export default function BrainstormStep() {
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addFreeText()}
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="flex-1 field focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
             <button
               onClick={addFreeText}
-              className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
+              className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-full text-sm font-medium"
             >
               Lägg till
             </button>
@@ -243,9 +243,9 @@ export default function BrainstormStep() {
 
       {/* Next-step CTA */}
       {eatenMeals(week.meals).length > 0 && (
-        <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3 card p-4">
           {portionsOk ? (
-            <p className="text-sm text-green-700 font-medium">Portioner täcker veckan ✓</p>
+            <p className="text-sm text-brand-700 font-medium">Portioner täcker veckan ✓</p>
           ) : (
             <p className="text-sm text-amber-700">
               {needed > 0
@@ -255,10 +255,10 @@ export default function BrainstormStep() {
           )}
           <button
             onClick={markDoneAndNext}
-            className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shrink-0
+            className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-full transition-colors text-sm shrink-0
               ${portionsOk
                 ? 'bg-brand-600 hover:bg-brand-700 text-white'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                : 'bg-line-soft hover:bg-line-soft text-ink-soft'}`}
           >
             {portionsOk ? 'Klar – gå till schema' : 'Forcera & gå till schema'}
             <ChevronRight className="w-4 h-4" />
@@ -272,8 +272,8 @@ export default function BrainstormStep() {
 function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
     <div className="text-center">
-      <div className={`text-2xl font-bold ${color ?? 'text-gray-800'}`}>{value}</div>
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className={`text-2xl font-bold ${color ?? 'text-ink'}`}>{value}</div>
+      <div className="text-xs text-ink-muted">{label}</div>
     </div>
   )
 }
@@ -350,7 +350,7 @@ function MealRow({
 
   return (
     <div className={`bg-white rounded-xl border transition-all
-      ${meal.isRemainder ? 'border-amber-200' : 'border-gray-200'}`}
+      ${meal.isRemainder ? 'border-amber-200' : 'border-line'}`}
     >
       {/* Main row */}
       <div className="flex items-start gap-2 p-3">
@@ -358,7 +358,7 @@ function MealRow({
         <button
           onClick={() => onUpdate({ isRemainder: !meal.isRemainder })}
           title={meal.isRemainder ? 'Markerat som rester' : 'Markera som rester'}
-          className={`shrink-0 mt-0.5 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
+          className={`shrink-0 mt-0.5 transition-colors ${meal.isRemainder ? 'text-amber-500' : 'text-ink-faint hover:text-ink-faint'}`}
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -368,7 +368,7 @@ function MealRow({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => onOpenDish()}
-              className="font-medium text-sm text-gray-800 text-left hover:text-brand-600 transition-colors"
+              className="font-medium text-sm text-ink text-left hover:text-brand-600 transition-colors"
             >
               {meal.name}
             </button>
@@ -402,11 +402,11 @@ function MealRow({
                   <button
                     key={comp.id}
                     onClick={() => onOpenDish(comp.id)}
-                    className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-600 rounded-full px-2.5 py-1 transition-colors"
+                    className="flex items-center gap-1 text-xs bg-line-soft hover:bg-brand-50 hover:text-brand-700 text-ink-muted rounded-full px-2.5 py-1 transition-colors"
                     title={comp.dishId ? 'Öppna recept' : 'Koppla till recept'}
                   >
                     <span className="font-medium">{comp.name}</span>
-                    <span className={`${comp.portionsMode === 'total' ? 'text-blue-400' : 'text-gray-400'}`}>
+                    <span className={`${comp.portionsMode === 'total' ? 'text-blue-400' : 'text-ink-faint'}`}>
                       · {effectivePortions}p
                     </span>
                   </button>
@@ -420,19 +420,19 @@ function MealRow({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onScaleTotal(totalPortions - 1)}
-            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
+            className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-sm font-bold leading-none flex items-center justify-center"
           >−</button>
           <span className="w-6 text-center text-sm font-semibold">{totalPortions}</span>
           <button
             onClick={() => onScaleTotal(totalPortions + 1)}
-            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold leading-none flex items-center justify-center"
+            className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-sm font-bold leading-none flex items-center justify-center"
           >+</button>
-          <span className="text-xs text-gray-500 ml-0.5">port.</span>
+          <span className="text-xs text-ink-muted ml-0.5">port.</span>
 
           {/* Expand toggle — large tap target */}
           <button
             onClick={onEdit}
-            className="p-2 -mr-1 text-gray-400 hover:text-gray-600 transition-colors ml-0.5"
+            className="p-2 -mr-1 text-ink-faint hover:text-ink-muted transition-colors ml-0.5"
             title={isEditing ? 'Dölj detaljer' : 'Visa detaljer'}
           >
             <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isEditing ? 'rotate-180' : ''}`} />
@@ -441,7 +441,7 @@ function MealRow({
           {/* Delete */}
           <button
             onClick={onDelete}
-            className="p-2 -mr-1 text-gray-300 hover:text-red-400 transition-colors"
+            className="p-2 -mr-1 text-ink-faint hover:text-red-400 transition-colors"
             title="Ta bort"
           >
             <X className="w-3.5 h-3.5" />
@@ -451,7 +451,7 @@ function MealRow({
 
       {/* Expanded section */}
       {isEditing && (
-        <div className="px-3 pb-3 space-y-3 border-t border-gray-50 pt-2">
+        <div className="px-3 pb-3 space-y-3 border-t border-line-soft pt-2">
 
           {/* Multi-component name editor */}
           {isMulti && (
@@ -460,14 +460,14 @@ function MealRow({
               placeholder="Namn på kombinationen…"
               value={meal.name}
               onChange={e => onUpdate({ name: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="w-full border border-line rounded-full px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-300"
             />
           )}
 
           {/* Components */}
           <div className="space-y-1.5">
             {isMulti && (
-              <span className="text-xs font-medium text-gray-500">Kombinationer</span>
+              <span className="text-xs font-medium text-ink-muted">Kombinationer</span>
             )}
 
             {meal.components.map(comp => {
@@ -477,16 +477,16 @@ function MealRow({
               const canSwitchToTotal = ownCount > 1 || comp.portionsMode === 'total'
 
               return (
-                <div key={comp.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
+                <div key={comp.id} className="flex items-center gap-2 bg-canvas rounded-lg px-2 py-1.5">
                   {/* Component name / dish link */}
                   <button
                     onClick={() => onOpenDish(comp.id)}
-                    className="flex-1 text-left text-sm text-gray-800 hover:text-brand-600 truncate font-medium min-w-0"
+                    className="flex-1 text-left text-sm text-ink hover:text-brand-600 truncate font-medium min-w-0"
                     title={compDish ? 'Öppna recept' : 'Koppla till recept i biblioteket'}
                   >
                     {comp.name}
                     {!comp.dishId && (
-                      <span className="ml-1 text-xs font-normal text-gray-400">(fritext)</span>
+                      <span className="ml-1 text-xs font-normal text-ink-faint">(fritext)</span>
                     )}
                   </button>
 
@@ -499,7 +499,7 @@ function MealRow({
                       className={`text-xs px-2 py-0.5 rounded-full border shrink-0 transition-colors
                         ${comp.portionsMode === 'total'
                           ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'
+                          : 'bg-line-soft border-line text-ink-muted hover:bg-line-soft'
                         } disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
                       {comp.portionsMode === 'total' ? `= ${effectivePortions}` : 'egna'}
@@ -511,12 +511,12 @@ function MealRow({
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => onUpdateComponent(comp.id, { portions: Math.max(1, comp.portions - 1) })}
-                        className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-xs font-bold flex items-center justify-center"
+                        className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-xs font-bold flex items-center justify-center"
                       >−</button>
                       <span className="w-5 text-center text-sm font-semibold">{comp.portions}</span>
                       <button
                         onClick={() => onUpdateComponent(comp.id, { portions: comp.portions + 1 })}
-                        className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-xs font-bold flex items-center justify-center"
+                        className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-xs font-bold flex items-center justify-center"
                       >+</button>
                     </div>
                   )}
@@ -525,7 +525,7 @@ function MealRow({
                   {canRemove && (
                     <button
                       onClick={() => onRemoveComponent(comp.id)}
-                      className="text-gray-300 hover:text-red-400 text-sm shrink-0"
+                      className="text-ink-faint hover:text-red-400 text-sm shrink-0"
                     >✕</button>
                   )}
                 </div>
@@ -542,7 +542,7 @@ function MealRow({
               </button>
               <button
                 onClick={() => setShowFreeTextComp(v => !v)}
-                className="text-xs text-gray-600 hover:text-gray-800 font-medium border border-gray-200 hover:bg-gray-50 px-2.5 py-1 rounded-lg"
+                className="text-xs text-ink-muted hover:text-ink font-medium border border-line hover:bg-canvas px-2.5 py-1 rounded-lg"
               >
                 + Kombinera fritext
               </button>
@@ -557,11 +557,11 @@ function MealRow({
                   value={freeTextComp}
                   onChange={e => setFreeTextComp(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && submitFreeTextComp()}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  className="flex-1 border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
                 <button
                   onClick={submitFreeTextComp}
-                  className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-full text-sm font-medium"
                 >
                   Lägg till
                 </button>
@@ -582,12 +582,12 @@ function MealRow({
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => onUpdate({ freezePortions: Math.max(0, (meal.freezePortions ?? 0) - 1) })}
-                  className="w-6 h-6 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
+                  className="w-9 h-9 shrink-0 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
                 >−</button>
                 <span className="w-5 text-center text-sm font-semibold">{meal.freezePortions ?? 0}</span>
                 <button
                   onClick={() => onUpdate({ freezePortions: (meal.freezePortions ?? 0) + 1 })}
-                  className="w-6 h-6 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
+                  className="w-9 h-9 shrink-0 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
                 >+</button>
                 <span className="text-xs text-sky-700 ml-0.5">port.</span>
               </div>
@@ -600,52 +600,52 @@ function MealRow({
             placeholder="Notering…"
             value={meal.notes}
             onChange={e => onUpdate({ notes: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="w-full border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
           <input
             type="text"
             placeholder="Ingredienser jag använder hemifrån…"
             value={meal.usesIngredientsFromHome}
             onChange={e => onUpdate({ usesIngredientsFromHome: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="w-full border border-line rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
 
           {/* Temporary ingredients */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-gray-600">Tillfälliga ingredienser (för den här veckan)</span>
+              <span className="text-xs font-medium text-ink-muted">Tillfälliga ingredienser (för den här veckan)</span>
               <button onClick={addTempIngredient} className="text-xs text-brand-600 hover:text-brand-800 font-medium">
                 + Lägg till
               </button>
             </div>
             {(meal.temporaryIngredients ?? []).map(ing => (
-              <div key={ing.id} className="flex flex-wrap gap-1.5 mb-1 items-center bg-gray-50 rounded-lg p-1.5">
+              <div key={ing.id} className="flex flex-wrap gap-1.5 mb-1 items-center bg-canvas rounded-lg p-1.5">
                 <input
                   placeholder="Ingrediens"
                   value={ing.name}
                   onChange={e => updateTempIngredient(ing.id, { name: e.target.value })}
-                  className="flex-1 min-w-[100px] border border-gray-200 rounded px-2 py-1 text-xs"
+                  className="flex-1 min-w-[100px] border border-line rounded px-2 py-1 text-xs"
                 />
                 <input
                   placeholder="Mängd"
                   value={ing.amount}
                   onChange={e => updateTempIngredient(ing.id, { amount: e.target.value })}
-                  className="w-16 border border-gray-200 rounded px-2 py-1 text-xs"
+                  className="w-16 border border-line rounded px-2 py-1 text-xs"
                 />
                 <input
                   placeholder="Enhet"
                   value={ing.unit}
                   onChange={e => updateTempIngredient(ing.id, { unit: e.target.value })}
-                  className="w-14 border border-gray-200 rounded px-2 py-1 text-xs"
+                  className="w-14 border border-line rounded px-2 py-1 text-xs"
                 />
                 <select
                   value={ing.category}
                   onChange={e => updateTempIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
-                  className="border border-gray-200 rounded px-1 py-1 text-xs bg-white"
+                  className="border border-line rounded px-1 py-1 text-xs bg-white"
                 >
                   {SHOPPING_CATS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <button onClick={() => removeTempIngredient(ing.id)} className="text-gray-400 hover:text-red-500">✕</button>
+                <button onClick={() => removeTempIngredient(ing.id)} className="text-ink-faint hover:text-red-500">✕</button>
               </div>
             ))}
           </div>

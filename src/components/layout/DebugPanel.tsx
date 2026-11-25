@@ -20,7 +20,7 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
 
   const TAB_CLS = (t: typeof tab) =>
     `px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-      tab === t ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'
+      tab === t ? 'bg-gray-800 text-white' : 'text-ink-faint hover:text-gray-200'
     }`
 
   return (
@@ -28,14 +28,14 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
         <div className="flex items-center gap-2">
-          <span className="text-gray-400">🐛 Debug</span>
-          <span className="text-gray-600">Ctrl+Shift+D</span>
+          <span className="text-ink-faint">🐛 Debug</span>
+          <span className="text-ink-muted">Ctrl+Shift+D</span>
         </div>
         <div className="flex gap-1">
           <button onClick={() => setTab('save')} className={TAB_CLS('save')}>Spara</button>
           <button onClick={() => setTab('week')} className={TAB_CLS('week')}>Vecka</button>
           <button onClick={() => setTab('store')} className={TAB_CLS('store')}>Store</button>
-          <button onClick={onClose} className="ml-2 text-gray-500 hover:text-gray-300 text-sm">✕</button>
+          <button onClick={onClose} className="ml-2 text-ink-muted hover:text-ink-faint text-sm">✕</button>
         </div>
       </div>
 
@@ -43,7 +43,7 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
       <div className="p-4 max-h-64 overflow-y-auto space-y-2">
         {tab === 'save' && (
           <>
-            <Row label="Status" value={saveStatus} color={saveStatus === 'error' ? 'text-red-400' : saveStatus === 'saved' ? 'text-green-400' : 'text-gray-300'} />
+            <Row label="Status" value={saveStatus} color={saveStatus === 'error' ? 'text-red-700' : saveStatus === 'saved' ? 'text-green-400' : 'text-ink-faint'} />
             <Row label="Fel" value={saveError ?? '—'} color="text-red-300" />
             <Row label="Dirty veckor" value={[...weekStore.dirtyWeeks].join(', ') || '—'} />
             <Row label="Library dirty" value={String(libraryStore.isDirty)} />
@@ -61,7 +61,7 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
             <Row label="Måltider" value={String(week.meals.length)} />
             <div className="mt-2 space-y-0.5">
               {week.schedule.map(s => (
-                <div key={`${s.date}-${s.type}`} className="text-gray-400">
+                <div key={`${s.date}-${s.type}`} className="text-ink-faint">
                   {s.date} {s.type.padEnd(6)} port:{s.portionsNeeded} assigned:{(s.assignments ?? []).length}
                 </div>
               ))}
@@ -70,7 +70,7 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
         )}
 
         {tab === 'store' && (
-          <pre className="text-gray-400 text-xs whitespace-pre-wrap break-all">
+          <pre className="text-ink-faint text-xs whitespace-pre-wrap break-all">
             {JSON.stringify({
               activeWeekId: weekStore.activeWeekId,
               loadedWeeks: Object.keys(weekStore.weeks),
@@ -86,10 +86,10 @@ export default function DebugPanel({ onClose, saveStatus, saveError }: Props) {
   )
 }
 
-function Row({ label, value, color = 'text-gray-300' }: { label: string; value: string; color?: string }) {
+function Row({ label, value, color = 'text-ink-faint' }: { label: string; value: string; color?: string }) {
   return (
     <div className="flex gap-2">
-      <span className="text-gray-500 w-28 shrink-0">{label}</span>
+      <span className="text-ink-muted w-28 shrink-0">{label}</span>
       <span className={color}>{value}</span>
     </div>
   )

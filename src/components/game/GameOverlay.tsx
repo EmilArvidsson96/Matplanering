@@ -67,7 +67,7 @@ export default function GameOverlay() {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto game-toast flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl backdrop-blur-md
+            className={`pointer-events-auto game-toast flex items-center gap-3 px-4 py-2.5 rounded-3xl shadow-xl backdrop-blur-md
               ${t.kind === 'levelup' ? 'game-toast-levelup' : t.kind === 'achievement' ? 'game-toast-ach' : 'game-toast-score'}`}
             style={{
               borderLeft: `5px solid ${t.playerColor}`,

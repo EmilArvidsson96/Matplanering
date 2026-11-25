@@ -29,7 +29,7 @@ export default function GamePanel() {
   const recent = [...events].sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 12)
 
   return (
-    <div className={`max-w-4xl mx-auto px-4 py-6 ${data.gameMode ? 'game-mode-content' : ''}`}>
+    <div className={`max-w-4xl ${data.gameMode ? 'game-mode-content' : ''}`}>
       {/* Hero */}
       <div className="relative overflow-hidden rounded-3xl p-6 mb-6 shadow-lg game-hero">
         <div className="relative z-10 flex items-start justify-between flex-wrap gap-4">
@@ -57,7 +57,7 @@ export default function GamePanel() {
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500"/> Topplista</h2>
 
         {sorted.length === 0 && (
-          <p className="text-sm text-gray-500 italic mb-3">Lägg till spelare för att börja samla poäng.</p>
+          <p className="text-sm text-ink-muted italic mb-3">Lägg till spelare för att börja samla poäng.</p>
         )}
 
         <div className="grid sm:grid-cols-2 gap-3">
@@ -68,7 +68,7 @@ export default function GamePanel() {
             return (
               <div
                 key={p.id}
-                className={`relative p-4 rounded-2xl shadow transition cursor-pointer overflow-hidden
+                className={`relative p-4 rounded-3xl shadow transition cursor-pointer overflow-hidden
                   ${p.id === data.activePlayerId ? 'ring-2 ring-offset-2' : ''}`}
                 style={{
                   background: `linear-gradient(135deg, ${p.color}22, ${p.color}11)`,
@@ -80,19 +80,19 @@ export default function GamePanel() {
                 <div className="absolute top-2 right-2 text-lg">{medals[idx] ?? ''}</div>
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow"
+                    className="w-14 h-14 rounded-3xl flex items-center justify-center text-3xl shadow"
                     style={{ background: p.color }}
                   >
                     {p.avatar}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-900">{p.name}</h3>
+                      <h3 className="font-bold text-ink">{p.name}</h3>
                       {p.id === data.activePlayerId && (
                         <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/80" style={{ color: p.color }}>aktiv</span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-600 flex items-center gap-3 mt-0.5">
+                    <div className="text-xs text-ink-muted flex items-center gap-3 mt-0.5">
                       <span className="flex items-center gap-1"><Star className="w-3 h-3"/>Nivå {stats.level}</span>
                       <span>{stats.totalPoints} p</span>
                       {stats.streak > 0 && <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-500"/>{stats.streak}</span>}
@@ -103,7 +103,7 @@ export default function GamePanel() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1 mt-3 text-center text-[11px] text-gray-700">
+                <div className="grid grid-cols-4 gap-1 mt-3 text-center text-[11px] text-ink-soft">
                   <div className="bg-white/60 rounded p-1">📅 {stats.weeksCompleted}</div>
                   <div className="bg-white/60 rounded p-1">📖 {stats.dishesPolished}</div>
                   <div className="bg-white/60 rounded p-1">🌍 {stats.ecoMealCount}</div>
@@ -111,7 +111,7 @@ export default function GamePanel() {
                 </div>
 
                 <button
-                  className="absolute bottom-2 right-2 text-gray-400 hover:text-red-500 p-1"
+                  className="absolute bottom-2 right-2 text-ink-faint hover:text-red-500 p-1"
                   onClick={(e) => { e.stopPropagation(); if (confirm(`Ta bort ${p.name}?`)) removePlayer(p.id) }}
                 >
                   <Trash2 className="w-3.5 h-3.5"/>
@@ -122,18 +122,18 @@ export default function GamePanel() {
         </div>
 
         {/* Add player */}
-        <div className="mt-4 p-4 rounded-2xl border border-dashed border-gray-300 bg-white/60">
+        <div className="mt-4 p-4 rounded-3xl border border-dashed border-line bg-white/60">
           <h3 className="font-semibold text-sm mb-2 flex items-center gap-2"><Plus className="w-4 h-4"/> Lägg till spelare</h3>
           <div className="flex flex-wrap gap-3 items-center">
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Namn"
-              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm"
+              className="px-3 py-1.5 rounded-lg border border-line text-sm"
             />
             <div className="flex gap-1 flex-wrap">
               {AVATARS.slice(0, 10).map(a => (
-                <button key={a} onClick={() => setNewAvatar(a)} className={`text-xl w-8 h-8 rounded-lg ${newAvatar === a ? 'bg-brand-100 ring-2 ring-brand-500' : 'bg-gray-100'}`}>{a}</button>
+                <button key={a} onClick={() => setNewAvatar(a)} className={`text-xl w-8 h-8 rounded-lg ${newAvatar === a ? 'bg-brand-100 ring-2 ring-brand-500' : 'bg-line-soft'}`}>{a}</button>
               ))}
             </div>
             <div className="flex gap-1">
@@ -141,7 +141,7 @@ export default function GamePanel() {
                 <button
                   key={c}
                   onClick={() => setNewColor(c)}
-                  className={`w-6 h-6 rounded-full ${newColor === c ? 'ring-2 ring-offset-1 ring-gray-700' : ''}`}
+                  className={`w-6 h-6 rounded-full ${newColor === c ? 'ring-2 ring-offset-1 ring-ink' : ''}`}
                   style={{ background: c }}
                 />
               ))}
@@ -149,7 +149,7 @@ export default function GamePanel() {
             <button
               disabled={!newName.trim()}
               onClick={() => { addPlayer(newName.trim(), newAvatar, newColor); setNewName('') }}
-              className="px-4 py-1.5 rounded-lg bg-brand-600 text-white font-semibold text-sm disabled:opacity-40"
+              className="px-4 py-1.5 rounded-full bg-brand-600 text-white font-semibold text-sm disabled:opacity-40"
             >
               Lägg till
             </button>
@@ -164,14 +164,14 @@ export default function GamePanel() {
       <section className="mb-8">
         <button
           onClick={() => setHandbookOpen(o => !o)}
-          className="w-full flex items-center justify-between bg-white/70 rounded-2xl px-4 py-3 shadow-sm hover:shadow"
+          className="w-full flex items-center justify-between bg-white/70 rounded-3xl px-4 py-3 shadow-sm hover:shadow"
         >
           <h2 className="text-lg font-bold flex items-center gap-2"><BookOpen className="w-5 h-5"/> Handbok — så funkar spelet</h2>
           {handbookOpen ? <ChevronDown className="w-5 h-5"/> : <ChevronRight className="w-5 h-5"/>}
         </button>
 
         {handbookOpen && (
-          <div className="mt-3 bg-white/70 rounded-2xl p-4 sm:p-5 shadow-sm space-y-5 text-sm leading-relaxed">
+          <div className="mt-3 bg-white/70 rounded-3xl p-4 sm:p-5 shadow-sm space-y-5 text-sm leading-relaxed">
             <div>
               <h3 className="font-bold text-base mb-1">🎮 Grunden</h3>
               <p>
@@ -251,9 +251,9 @@ export default function GamePanel() {
                 Visa hela lexikonet ({INGREDIENT_LEXICON.length} poster)
               </button>
               {lexiconOpen && (
-                <div className="mt-2 max-h-72 overflow-y-auto border border-gray-200 rounded-xl">
+                <div className="mt-2 max-h-72 overflow-y-auto border border-line rounded-xl">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-100 sticky top-0">
+                    <thead className="bg-line-soft sticky top-0">
                       <tr>
                         <th className="px-2 py-1 text-left">Ingrediens</th>
                         <th className="px-2 py-1 text-right">kr/kg</th>
@@ -265,7 +265,7 @@ export default function GamePanel() {
                       {INGREDIENT_LEXICON.map((e, i) => {
                         const g = climateGrade(e.co2ePerKg / 4)  // approx per ~250 g portion
                         return (
-                          <tr key={i} className="border-t border-gray-100 odd:bg-white even:bg-gray-50/50">
+                          <tr key={i} className="border-t border-line-soft odd:bg-white even:bg-canvas/60">
                             <td className="px-2 py-1">{e.name}</td>
                             <td className="px-2 py-1 text-right tabular-nums">{e.costPerKg}</td>
                             <td className="px-2 py-1 text-right tabular-nums">{e.co2ePerKg}</td>
@@ -305,11 +305,11 @@ export default function GamePanel() {
             return (
               <div
                 key={ach.id}
-                className={`p-3 rounded-xl border text-center ${unlocked ? 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-orange-100 shadow' : 'border-gray-200 bg-gray-50 opacity-60'}`}
+                className={`p-3 rounded-xl border text-center ${unlocked ? 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-orange-100 shadow' : 'border-line bg-canvas opacity-60'}`}
               >
                 <div className="text-3xl mb-1">{unlocked ? ach.emoji : '🔒'}</div>
-                <div className="text-xs font-bold text-gray-800">{ach.name}</div>
-                <div className="text-[10px] text-gray-600">{ach.description}</div>
+                <div className="text-xs font-bold text-ink">{ach.name}</div>
+                <div className="text-[10px] text-ink-muted">{ach.description}</div>
                 {unlocked && (
                   <div className="flex justify-center gap-1 mt-1">
                     {unlockedBy.map(p => (
@@ -327,7 +327,7 @@ export default function GamePanel() {
       <section>
         <h2 className="text-lg font-bold mb-3">📜 Senaste händelser</h2>
         {recent.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">Inga händelser ännu — börja planera!</p>
+          <p className="text-sm text-ink-muted italic">Inga händelser ännu — börja planera!</p>
         ) : (
           <ul className="space-y-1.5">
             {recent.map(e => {
@@ -336,7 +336,7 @@ export default function GamePanel() {
                 <li key={e.id} className="flex items-center gap-2 text-sm bg-white/70 rounded-lg px-3 py-1.5">
                   <span className="text-lg">{p?.avatar ?? '?'}</span>
                   <span className="font-medium" style={{ color: p?.color }}>{p?.name ?? '?'}</span>
-                  <span className="text-gray-700 flex-1">{e.label}</span>
+                  <span className="text-ink-soft flex-1">{e.label}</span>
                   <span className="font-bold text-brand-700">+{e.points}</span>
                 </li>
               )
@@ -371,27 +371,27 @@ function RecipeQuests() {
 
   return (
     <section className="mb-8">
-      <div className="bg-white/80 rounded-2xl p-4 sm:p-5 shadow-sm">
+      <div className="bg-white/80 rounded-3xl p-4 sm:p-5 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Target className="w-5 h-5 text-pink-500"/> Receptmål
-            <span className="text-sm font-normal text-gray-600">— polera dina recept</span>
+            <span className="text-sm font-normal text-ink-muted">— polera dina recept</span>
           </h2>
           <div className="flex items-center gap-2 text-sm">
             <span className="font-bold">{complete}/{dishes.length}</span>
-            <span className="text-gray-500">kompletta</span>
-            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <span className="text-ink-muted">kompletta</span>
+            <div className="w-32 h-2 bg-line rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all" style={{ width: `${totalPct}%` }} />
             </div>
-            <span className="text-xs text-gray-500 tabular-nums">{totalPct}%</span>
+            <span className="text-xs text-ink-muted tabular-nums">{totalPct}%</span>
           </div>
         </div>
 
         {enriched.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">🎉 Alla recept är kompletta! Lägg till nya i biblioteket för fler mål.</p>
+          <p className="text-sm text-ink-muted italic">🎉 Alla recept är kompletta! Lägg till nya i biblioteket för fler mål.</p>
         ) : (
           <>
-            <p className="text-sm text-gray-700 mb-3">
+            <p className="text-sm text-ink-soft mb-3">
               <Sparkles className="inline w-4 h-4 text-yellow-500 mr-1"/>
               <b>Polera</b> ett recept för att fylla i saknade fält. Du får poäng per fält och en
               komboboost (<b>+25 p</b>, dubbel under de första 5 receptkompletteringarna!) när du
@@ -404,10 +404,10 @@ function RecipeQuests() {
                   <li key={dish.id}>
                     <Link
                       to={`/bibliotek?edit=${dish.id}`}
-                      className="block p-3 rounded-xl border border-gray-200 bg-white hover:border-pink-300 hover:shadow transition group"
+                      className="block p-3 rounded-xl border border-line bg-white hover:border-pink-300 hover:shadow transition group"
                     >
                       <div className="flex items-center justify-between gap-3 mb-1.5">
-                        <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                        <h3 className="font-semibold text-sm text-ink flex items-center gap-2">
                           {dish.name}
                           <span className="flex">{Array.from({length:5}).map((_, i) =>
                             <Star key={i} className="w-3.5 h-3.5" fill={i < c.stars ? '#facc15' : 'transparent'} stroke={i < c.stars ? '#facc15' : '#d4d4d8'} strokeWidth={2}/>
@@ -415,7 +415,7 @@ function RecipeQuests() {
                         </h3>
                         <span className="text-xs font-bold text-pink-600 tabular-nums shrink-0">+{c.totalWorth} p möjliga</span>
                       </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
+                      <div className="h-2 w-full bg-line-soft rounded-full overflow-hidden mb-2">
                         <div className="h-full bg-gradient-to-r from-pink-400 to-purple-500" style={{ width: `${c.pct}%` }} />
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -425,7 +425,7 @@ function RecipeQuests() {
                           </span>
                         ))}
                         {missing.length > 8 && (
-                          <span className="text-[10px] text-gray-500">+{missing.length - 8}</span>
+                          <span className="text-[10px] text-ink-muted">+{missing.length - 8}</span>
                         )}
                       </div>
                     </Link>

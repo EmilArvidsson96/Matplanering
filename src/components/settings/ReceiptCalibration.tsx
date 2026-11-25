@@ -67,9 +67,9 @@ export default function ReceiptCalibration() {
   const selectedCount = proposals ? proposals.filter(p => selected[p.name]).length : 0
 
   return (
-    <section className="bg-white rounded-2xl p-5 shadow-sm">
-      <h2 className="font-semibold text-gray-700 mb-1">Priskalibrering med kvitto</h2>
-      <p className="text-xs text-gray-400 mb-4">
+    <section className="card p-5">
+      <h2 className="font-display text-lg font-bold text-ink mb-1">Priskalibrering med kvitto</h2>
+      <p className="text-xs text-ink-faint mb-4">
         Ladda upp foton på matkvitton så läser AI:n av priserna och justerar kostnadsuppskattningarna.
         Närliggande ingredienser kalibreras relativt (t.ex. oxbuljong följer kycklingbuljong, flankstek följer entrecôte).
       </p>
@@ -77,18 +77,18 @@ export default function ReceiptCalibration() {
       <div className="space-y-3">
         {/* Model selector */}
         <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-600 flex-1">Modell för kalibrering</label>
+          <label className="text-sm text-ink-muted flex-1">Modell för kalibrering</label>
           <select
             value={settings.calibrationModel ?? 'sonnet'}
             onChange={e => update({ calibrationModel: e.target.value as AiModel })}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="field bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
           >
             <option value="haiku">Haiku (snabb, billig)</option>
             <option value="sonnet">Sonnet (rekommenderas)</option>
             <option value="opus">Opus (mest kapabel)</option>
           </select>
         </div>
-        <p className="text-[11px] text-gray-400 -mt-1">
+        <p className="text-[11px] text-ink-faint -mt-1">
           Sonnet rekommenderas: bra på att läsa kvitton och resonera om relaterade priser, billigare än Opus.
         </p>
 
@@ -100,36 +100,36 @@ export default function ReceiptCalibration() {
             accept="image/*"
             multiple
             onChange={e => onFiles(e.target.files)}
-            className="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+            className="text-sm text-ink-muted file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-line-soft file:text-ink-soft hover:file:bg-line"
           />
           <button
             onClick={analyze}
             disabled={loading || images.length === 0}
-            className="bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-xl text-sm font-medium"
+            className="bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full text-sm font-medium"
           >
             {loading ? 'Analyserar…' : 'Analysera kvitto'}
           </button>
         </div>
         {fileNames.length > 0 && (
-          <p className="text-xs text-gray-400">{fileNames.length} bild(er): {fileNames.join(', ')}</p>
+          <p className="text-xs text-ink-faint">{fileNames.length} bild(er): {fileNames.join(', ')}</p>
         )}
 
         {error && (
-          <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>
+          <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>
         )}
 
         {/* Proposals */}
         {proposals && proposals.length === 0 && (
-          <p className="text-sm text-gray-400 italic">Inga prisändringar föreslogs från kvittot.</p>
+          <p className="text-sm text-ink-faint italic">Inga prisändringar föreslogs från kvittot.</p>
         )}
         {proposals && proposals.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">Förslag — bocka av det du inte vill använda:</p>
+            <p className="text-xs text-ink-muted">Förslag — bocka av det du inte vill använda:</p>
             <div className="space-y-1 max-h-80 overflow-y-auto">
               {proposals.map(p => (
                 <label
                   key={p.name}
-                  className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2 cursor-pointer"
+                  className="flex items-start gap-2 bg-canvas rounded-xl px-3 py-2 cursor-pointer"
                 >
                   <input
                     type="checkbox"
@@ -138,7 +138,7 @@ export default function ReceiptCalibration() {
                     className="mt-1"
                   />
                   <span className="flex-1 text-sm">
-                    <span className="font-medium text-gray-800">{p.name}</span>
+                    <span className="font-medium text-ink">{p.name}</span>
                     <span
                       className={`ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
                         p.kind === 'direct'
@@ -148,10 +148,10 @@ export default function ReceiptCalibration() {
                     >
                       {p.kind === 'direct' ? 'kvitto' : 'relaterad'}
                     </span>
-                    <span className="block text-gray-600">
+                    <span className="block text-ink-muted">
                       {Math.round(p.oldCostPerKg)} → <span className="font-semibold">{p.newCostPerKg}</span> kr/kg
                     </span>
-                    {p.reason && <span className="block text-[11px] text-gray-400">{p.reason}</span>}
+                    {p.reason && <span className="block text-[11px] text-ink-faint">{p.reason}</span>}
                   </span>
                 </label>
               ))}
@@ -159,7 +159,7 @@ export default function ReceiptCalibration() {
             <button
               onClick={applySelected}
               disabled={selectedCount === 0}
-              className="bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white px-4 py-2 rounded-xl text-sm font-medium"
+              className="bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white px-4 py-2 rounded-full text-sm font-medium"
             >
               Använd {selectedCount} prisändring(ar)
             </button>
@@ -167,35 +167,35 @@ export default function ReceiptCalibration() {
         )}
 
         {/* Current overrides */}
-        <div className="pt-2 border-t border-gray-100">
+        <div className="pt-2 border-t border-line-soft">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600">Kalibrerade priser</h3>
+            <h3 className="text-sm font-medium text-ink-muted">Kalibrerade priser</h3>
             {overrideEntries.length > 0 && (
               <button
                 onClick={clearCostOverrides}
-                className="text-xs text-gray-400 hover:text-red-400 underline"
+                className="text-xs text-ink-faint hover:text-red-400 underline"
               >
                 Återställ alla
               </button>
             )}
           </div>
           {overrideEntries.length === 0 ? (
-            <p className="text-xs text-gray-300 italic">Inga kalibrerade priser än — standardvärden används.</p>
+            <p className="text-xs text-ink-faint italic">Inga kalibrerade priser än — standardvärden används.</p>
           ) : (
             <div className="space-y-1">
               {overrideEntries.map(([name, cost]) => {
                 const base = LEX_BY_NAME.get(name)?.costPerKg
                 return (
-                  <div key={name} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-                    <span className="text-sm text-gray-700">
+                  <div key={name} className="flex items-center justify-between bg-canvas rounded-xl px-3 py-2">
+                    <span className="text-sm text-ink-soft">
                       {name}: <span className="font-semibold">{Math.round(cost)} kr/kg</span>
                       {base != null && base !== Math.round(cost) && (
-                        <span className="text-gray-400"> (standard {base})</span>
+                        <span className="text-ink-faint"> (standard {base})</span>
                       )}
                     </span>
                     <button
                       onClick={() => removeCostOverride(name)}
-                      className="text-gray-300 hover:text-red-400 text-xs ml-2"
+                      className="text-ink-faint hover:text-red-400 text-xs ml-2"
                     >✕</button>
                   </div>
                 )

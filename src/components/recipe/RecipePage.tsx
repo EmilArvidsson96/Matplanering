@@ -114,11 +114,13 @@ export default function RecipePage() {
   // On mobile, show detail if selected
   if (!isDesktop && selectedDish) {
     return (
-      <RecipeDetail
-        dish={selectedDish}
-        plannedPortions={plannedPortions}
-        onBack={() => setSearchParams({}, { replace: true })}
-      />
+      <div key={selectedDish.id} className="h-full motion-safe:animate-page-from-right">
+        <RecipeDetail
+          dish={selectedDish}
+          plannedPortions={plannedPortions}
+          onBack={() => setSearchParams({}, { replace: true })}
+        />
+      </div>
     )
   }
 
@@ -126,7 +128,7 @@ export default function RecipePage() {
     if (!it.dish) {
       // Free-text component (e.g. a sauce) — shown for context, no recipe to open
       return (
-        <li key={it.key} className="px-4 py-2 flex items-center justify-between gap-2 text-gray-400">
+        <li key={it.key} className="px-4 py-2 flex items-center justify-between gap-2 text-ink-faint">
           <span className="text-sm truncate">
             {it.name} <span className="text-xs">(fritext)</span>
           </span>
@@ -139,16 +141,16 @@ export default function RecipePage() {
       <li key={it.key}>
         <button
           onClick={() => handleSelect(dish)}
-          className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2 ${
-            selectedId === dish.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''
+          className={`w-full text-left px-4 min-h-[52px] hover:bg-canvas transition-colors flex items-center justify-between gap-2 ${
+            selectedId === dish.id ? 'bg-mint' : ''
           }`}
         >
-          <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
-          <span className="shrink-0 flex items-center gap-1 text-xs text-gray-400">
+          <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
+          <span className="shrink-0 flex items-center gap-1 text-xs text-ink-muted">
             {it.extra && (
               <ExtraTypeIcon
                 type={it.extra}
-                className={`w-3 h-3 ${it.extra === 'bak' ? 'text-pink-400' : 'text-sky-400'}`}
+                className={`w-3.5 h-3.5 ${it.extra === 'bak' ? 'text-pink-600' : 'text-sky-600'}`}
               />
             )}
             {it.portions}{dish.yieldUnit?.trim() ? ` ${dish.yieldUnit.trim()}` : 'p'}
@@ -161,28 +163,25 @@ export default function RecipePage() {
   const listPanel = (
     <div className="flex flex-col h-full">
       {/* Search + filter bar */}
-      <div className="p-3 space-y-2 border-b border-gray-200 bg-white">
+      <div className="px-4 pt-4 pb-3 space-y-3 border-b border-line-soft">
+        <h1 className="font-display text-[32px] font-extrabold tracking-tight leading-none md:text-2xl">Recept</h1>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-ink-muted" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Sök recept…"
-            className="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="field pl-11 pr-10 rounded-full bg-white border-line md:bg-canvas md:border-transparent"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setSearch('')} aria-label="Rensa sökning" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-ink-muted hover:text-ink">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
         <button
           onClick={() => setWeekFilter(v => !v)}
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${
-            weekFilter
-              ? 'bg-brand-100 border-brand-300 text-brand-700'
-              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
+          className={`chip ${weekFilter ? 'chip-on' : 'chip-off'}`}
         >
           <CalendarDays className="w-3.5 h-3.5" />
           Veckans rätter
@@ -195,25 +194,25 @@ export default function RecipePage() {
         // Cooking view: group each combined meal's components together
         <div className="flex-1 overflow-y-auto">
           {weekGroups.length === 0 ? (
-            <p className="p-6 text-center text-sm text-gray-400">
+            <p className="p-6 text-center text-sm text-ink-faint">
               Inga rätter planerade den här veckan
             </p>
           ) : (
             weekGroups.map(group =>
               group.isCombo ? (
-                <div key={group.mealId} className="border-b border-gray-100 py-1">
+                <div key={group.mealId} className="border-b border-line-soft py-1">
                   <div className="px-4 pt-1.5 pb-1 flex items-baseline gap-1.5">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
+                    <span className="eyebrow truncate">
                       {group.mealName}
                     </span>
-                    <span className="text-[10px] text-gray-400 shrink-0">· {group.total}p</span>
+                    <span className="text-[10px] text-ink-faint shrink-0">· {group.total}p</span>
                   </div>
                   <ul className="ml-3 border-l-2 border-brand-100">
                     {group.items.map(it => renderItem(it))}
                   </ul>
                 </div>
               ) : (
-                <ul key={group.mealId} className="border-b border-gray-100">
+                <ul key={group.mealId} className="border-b border-line-soft">
                   {group.items.filter(it => it.dish).map(it => renderItem(it))}
                 </ul>
               )
@@ -221,9 +220,9 @@ export default function RecipePage() {
           )}
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto divide-y divide-gray-100">
+        <ul className="flex-1 overflow-y-auto divide-y divide-line-soft">
           {filtered.length === 0 && (
-            <li className="p-6 text-center text-sm text-gray-400">
+            <li className="p-6 text-center text-sm text-ink-faint">
               Inga recept hittades
             </li>
           )}
@@ -231,11 +230,11 @@ export default function RecipePage() {
             <li key={dish.id}>
               <button
                 onClick={() => handleSelect(dish)}
-                className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2 ${
-                  selectedId === dish.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''
+                className={`w-full text-left px-4 min-h-[52px] hover:bg-canvas transition-colors flex items-center justify-between gap-2 ${
+                  selectedId === dish.id ? 'bg-mint' : ''
                 }`}
               >
-                <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
+                <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
                 {weekDishIds.has(dish.id) && (
                   <span className="shrink-0 text-xs bg-brand-100 text-brand-700 rounded-full px-1.5 py-0.5">
                     denna vecka
@@ -251,22 +250,24 @@ export default function RecipePage() {
 
   if (isDesktop) {
     return (
-      <div className="flex h-full -m-6 overflow-hidden">
+      <div className="flex h-full overflow-hidden">
         {/* Recipe list sidebar */}
-        <aside className="w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden">
+        <aside className="w-72 shrink-0 border-r border-line-soft bg-white flex flex-col overflow-hidden">
           {listPanel}
         </aside>
 
         {/* Recipe detail */}
-        <div className="flex-1 overflow-hidden bg-gray-50">
+        <div className="flex-1 overflow-hidden bg-canvas">
           {selectedDish ? (
+            <div key={selectedDish.id} className="h-full motion-safe:animate-fade-up">
             <RecipeDetail
               dish={selectedDish}
               plannedPortions={plannedPortions}
               onBack={null}
             />
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-full text-ink-faint text-sm">
               Välj ett recept
             </div>
           )}
@@ -276,5 +277,5 @@ export default function RecipePage() {
   }
 
   // Mobile: list view
-  return <div className="flex flex-col h-full bg-white">{listPanel}</div>
+  return <div className="flex flex-col h-full motion-safe:animate-page-from-left">{listPanel}</div>
 }

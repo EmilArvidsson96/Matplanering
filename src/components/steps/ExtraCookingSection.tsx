@@ -84,10 +84,10 @@ export default function ExtraCookingSection() {
     .filter(Boolean) as string[]
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="card p-4 space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-gray-800">Bak & matlagning till frysen</h3>
-        <p className="text-xs text-gray-500">
+        <h3 className="text-sm font-semibold text-ink">Bak & matlagning till frysen</h3>
+        <p className="text-xs text-ink-muted">
           Räknas inte in i veckans portioner, men ingredienserna hamnar på inköpslistan.
         </p>
       </div>
@@ -123,19 +123,19 @@ export default function ExtraCookingSection() {
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setPickerType('frys')}
-          className="flex items-center gap-1.5 border border-sky-200 hover:bg-sky-50 text-sky-700 font-medium px-3 py-2 rounded-xl text-sm"
+          className="flex items-center gap-1.5 border border-sky-200 hover:bg-sky-50 text-sky-700 font-medium px-3 py-2 rounded-full text-sm"
         >
           <Snowflake className="w-3.5 h-3.5" /> Laga till frysen
         </button>
         <button
           onClick={() => setPickerType('bak')}
-          className="flex items-center gap-1.5 border border-pink-200 hover:bg-pink-50 text-pink-700 font-medium px-3 py-2 rounded-xl text-sm"
+          className="flex items-center gap-1.5 border border-pink-200 hover:bg-pink-50 text-pink-700 font-medium px-3 py-2 rounded-full text-sm"
         >
           <CakeSlice className="w-3.5 h-3.5" /> Baka
         </button>
         <button
           onClick={() => setFreeType(freeType ? null : 'bak')}
-          className="border border-gray-200 hover:bg-gray-50 text-gray-600 font-medium px-3 py-2 rounded-xl text-sm"
+          className="border border-line hover:bg-canvas text-ink-muted font-medium px-3 py-2 rounded-full text-sm"
         >
           + Skriv fritt
         </button>
@@ -151,11 +151,11 @@ export default function ExtraCookingSection() {
             value={freeName}
             onChange={e => setFreeName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && submitFree()}
-            className="flex-1 min-w-[140px] border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="flex-1 min-w-[140px] field focus:outline-none focus:ring-2 focus:ring-brand-300"
           />
           <button
             onClick={submitFree}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
+            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-full text-sm font-medium"
           >
             Lägg till
           </button>
@@ -184,14 +184,14 @@ export default function ExtraCookingSection() {
 
 function TypeToggle({ value, onChange }: { value: ExtraType; onChange: (t: ExtraType) => void }) {
   return (
-    <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs shrink-0">
+    <div className="flex rounded-xl border border-line overflow-hidden text-xs shrink-0">
       {(['frys', 'bak'] as ExtraType[]).map(t => (
         <button
           key={t}
           type="button"
           onClick={() => onChange(t)}
           className={`flex items-center gap-1 px-3 py-2 font-medium transition-colors
-            ${value === t ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            ${value === t ? 'bg-brand-600 text-white' : 'text-ink-muted hover:bg-canvas'}`}
         >
           <ExtraTypeIcon type={t} className="w-3.5 h-3.5" />
           {EXTRA_LABELS[t]}
@@ -251,7 +251,7 @@ function ExtraRow({
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
           <button
             onClick={onOpenDish}
-            className="font-medium text-sm text-gray-800 text-left hover:text-brand-600 truncate"
+            className="font-medium text-sm text-ink text-left hover:text-brand-600 truncate"
             title={dish ? 'Öppna recept' : 'Skapa recept i biblioteket'}
           >
             {meal.name}
@@ -267,7 +267,7 @@ function ExtraRow({
           )}
         </div>
 
-        <button onClick={onDelete} className="p-1 text-gray-300 hover:text-red-400" title="Ta bort">
+        <button onClick={onDelete} className="p-1 text-ink-faint hover:text-red-400" title="Ta bort">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -276,7 +276,7 @@ function ExtraRow({
         <div className="flex items-center gap-1">
           <button
             onClick={() => step(-1)}
-            className="w-7 h-7 rounded-full bg-white border border-gray-200 hover:bg-gray-100 text-sm font-bold flex items-center justify-center"
+            className="w-9 h-9 shrink-0 rounded-full bg-white border border-line hover:bg-canvas text-sm font-bold flex items-center justify-center"
           >−</button>
           <input
             type="text"
@@ -286,19 +286,19 @@ function ExtraRow({
             onChange={e => /^\d*$/.test(e.target.value) && setText(e.target.value)}
             onBlur={e => commit(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && commit((e.target as HTMLInputElement).value)}
-            className="w-12 text-center border border-gray-200 rounded-lg py-1 text-sm font-semibold"
+            className="w-12 text-center border border-line rounded-lg py-1 text-sm font-semibold"
           />
           <button
             onClick={() => step(1)}
-            className="w-7 h-7 rounded-full bg-white border border-gray-200 hover:bg-gray-100 text-sm font-bold flex items-center justify-center"
+            className="w-9 h-9 shrink-0 rounded-full bg-white border border-line hover:bg-canvas text-sm font-bold flex items-center justify-center"
           >+</button>
-          <span className="text-xs text-gray-500 ml-0.5">{unit}</span>
+          <span className="text-xs text-ink-muted ml-0.5">{unit}</span>
         </div>
 
         <select
           value={meal.plannedDate ?? ''}
           onChange={e => onUpdate({ plannedDate: e.target.value || undefined })}
-          className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white"
+          className="border border-line rounded-lg px-2 py-1 text-xs bg-white"
           aria-label="Planerad dag"
         >
           <option value="">Ingen dag vald</option>
@@ -310,7 +310,7 @@ function ExtraRow({
           placeholder="Notering…"
           value={meal.notes}
           onChange={e => onUpdate({ notes: e.target.value })}
-          className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
+          className="flex-1 min-w-[120px] border border-line rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
         />
       </div>
     </div>

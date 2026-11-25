@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Wand, Lightbulb, Loader2, X, Check, RefreshCw } from 'lucide-react'
+import { Wand, Lightbulb, Loader2, Check, RefreshCw } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { splitInstructions, splitInputHash, suggestRecipeImprovements } from '../../api/anthropic'
 import type { Dish, DishAiData, RecipeImprovement, RecipeStep } from '../../types'
+import SheetModal, { type ModalHandle } from '../common/Modal'
 
 /** Merge AI results into the dish's saved `ai` data, using the latest store state. */
 function saveAiData(dishId: string, patch: Partial<DishAiData>) {
@@ -17,23 +18,19 @@ function saveAiData(dishId: string, patch: Partial<DishAiData>) {
 // ---------------------------------------------------------------------------
 // Modal shell
 // ---------------------------------------------------------------------------
-function Modal({ title, onClose, children }: {
+function Modal({ title, onClose, children, modalRef }: {
   title: string
   onClose: () => void
   children: React.ReactNode
+  modalRef?: React.Ref<ModalHandle>
 }) {
+  // Shared sheet/dialog; the tools bring their own padding, so cancel the sheet's.
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[85vh] flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 shrink-0">
-          <h3 className="flex-1 text-sm font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <SheetModal ref={modalRef} title={title} onClose={onClose}>
+      <div className="-mx-4 md:-mx-7 -mb-6 bg-white rounded-t-3xl md:rounded-3xl md:mx-0 md:mb-0 overflow-hidden flex flex-col">
         {children}
       </div>
-    </div>
+    </SheetModal>
   )
 }
 
@@ -69,30 +66,32 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   // Kick off on first render (uses cached result if available)
   useEffect(() => { run() }, [])
 
+  const modalRef = useRef<ModalHandle>(null)
+
   function apply() {
     if (!steps) return
     const next: RecipeStep[] = steps.map(text => ({ id: uuid(), text }))
     updateDish(dish.id, { instructions: next })
-    onClose()
+    modalRef.current ? modalRef.current.close() : onClose()
   }
 
   const current = (dish.instructions ?? []).filter(s => s.text.trim())
 
   return (
-    <Modal title="Dela upp i tydligare steg" onClose={onClose}>
+    <Modal modalRef={modalRef} title="Dela upp i tydligare steg" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Analyserar med Sonnet…
           </div>
         )}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
         )}
         {steps && !loading && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-500">
-              {current.length} steg → <span className="font-semibold text-gray-700">{steps.length} steg</span>,
+            <p className="text-xs text-ink-muted">
+              {current.length} steg → <span className="font-semibold text-ink-soft">{steps.length} steg</span>,
               översatt till svenska med rättad stavning. Granska förslaget innan du använder det.
             </p>
             <ol className="space-y-2">
@@ -101,16 +100,16 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
                   <span className="shrink-0 w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-bold mt-0.5">
                     {i + 1}
                   </span>
-                  <p className="flex-1 text-gray-800 leading-relaxed">{s}</p>
+                  <p className="flex-1 text-ink leading-relaxed">{s}</p>
                 </li>
               ))}
             </ol>
           </div>
         )}
       </div>
-      <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
+      <div className="flex gap-2 px-4 py-3 border-t border-line shrink-0">
         {error && (
-          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas">
             Försök igen
           </button>
         )}
@@ -118,7 +117,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <button
             onClick={() => run(true)}
             title="Gör en ny förfrågan (sparat resultat används annars)"
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas"
           >
             <RefreshCw className="w-4 h-4" /> Gör om
           </button>
@@ -126,7 +125,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
         <button
           onClick={apply}
           disabled={!steps || loading}
-          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40"
+          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-full hover:bg-brand-600 disabled:opacity-40"
         >
           <Check className="w-4 h-4" /> Ersätt instruktionerna
         </button>
@@ -172,6 +171,8 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     })
   }
 
+  const modalRef = useRef<ModalHandle>(null)
+
   function apply() {
     if (!items) return
     const chosen = items.filter((_, i) => selected.has(i))
@@ -185,32 +186,32 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       notes,
       ai: { ...latest?.ai, improvements: { items: marked, at: latest?.ai?.improvements?.at ?? new Date().toISOString() } },
     })
-    onClose()
+    modalRef.current ? modalRef.current.close() : onClose()
   }
 
   return (
-    <Modal title="Förbättringsförslag" onClose={onClose}>
+    <Modal modalRef={modalRef} title="Förbättringsförslag" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Funderar med Sonnet…
           </div>
         )}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
         )}
         {items && !loading && (
           items.length === 0 ? (
-            <p className="text-sm text-gray-400 italic py-6 text-center">Inga förslag den här gången.</p>
+            <p className="text-sm text-ink-faint italic py-6 text-center">Inga förslag den här gången.</p>
           ) : (
             <>
-              <p className="text-xs text-gray-500">Bocka för de förslag du vill lägga till i receptets anteckningar. Förslagen sparas på receptet.</p>
+              <p className="text-xs text-ink-muted">Bocka för de förslag du vill lägga till i receptets anteckningar. Förslagen sparas på receptet.</p>
               <ul className="space-y-2">
                 {items.map((it, i) => (
                   <li key={i}>
                     <label className={`flex gap-2.5 items-start p-3 rounded-xl border transition-colors ${
-                      it.applied ? 'border-gray-100 bg-gray-50 opacity-60 cursor-default'
-                        : selected.has(i) ? 'border-brand-300 bg-brand-50 cursor-pointer' : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                      it.applied ? 'border-line-soft bg-canvas opacity-60 cursor-default'
+                        : selected.has(i) ? 'border-brand-300 bg-brand-50 cursor-pointer' : 'border-line hover:bg-canvas cursor-pointer'
                     }`}>
                       <input
                         type="checkbox"
@@ -221,11 +222,11 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-800">{it.title}</span>
+                          <span className="text-sm font-semibold text-ink">{it.title}</span>
                           <span className="text-[10px] uppercase tracking-wide text-brand-600 bg-brand-100 rounded px-1.5 py-0.5">{it.category}</span>
-                          {it.applied && <span className="text-[10px] text-gray-500">Tillagd</span>}
+                          {it.applied && <span className="text-[10px] text-ink-muted">Tillagd</span>}
                         </div>
-                        <p className="text-sm text-gray-600 leading-relaxed mt-0.5">{it.detail}</p>
+                        <p className="text-sm text-ink-muted leading-relaxed mt-0.5">{it.detail}</p>
                       </div>
                     </label>
                   </li>
@@ -235,9 +236,9 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           )
         )}
       </div>
-      <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
+      <div className="flex gap-2 px-4 py-3 border-t border-line shrink-0">
         {error && (
-          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas">
             Försök igen
           </button>
         )}
@@ -245,7 +246,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <button
             onClick={() => run(true)}
             title="Hämta nya förslag (sparat resultat används annars)"
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas"
           >
             <RefreshCw className="w-4 h-4" /> Nya förslag
           </button>
@@ -253,7 +254,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
         <button
           onClick={apply}
           disabled={selected.size === 0}
-          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40"
+          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-full hover:bg-brand-600 disabled:opacity-40"
         >
           <Check className="w-4 h-4" /> Lägg till {selected.size > 0 ? `(${selected.size})` : ''}
         </button>
@@ -273,16 +274,18 @@ export default function RecipeAiTools({ dish }: { dish: Dish }) {
       <button
         onClick={() => setTool('split')}
         title="Dela upp i tydligare steg, översätt till svenska och rätta stavning (AI)"
-        className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50"
+        aria-label="Dela upp i steg med AI"
+        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-brand-700 hover:bg-canvas"
       >
-        <Wand className="w-4 h-4" />
+        <Wand className="w-[18px] h-[18px]" />
       </button>
       <button
         onClick={() => setTool('improve')}
         title="Få förbättringsförslag för receptet (AI)"
-        className="p-1.5 text-gray-400 hover:text-amber-500 rounded-lg hover:bg-amber-50"
+        aria-label="Förbättringsförslag med AI"
+        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-amber-700 hover:bg-canvas"
       >
-        <Lightbulb className="w-4 h-4" />
+        <Lightbulb className="w-[18px] h-[18px]" />
       </button>
 
       {tool === 'split' && <SplitTool dish={dish} onClose={() => setTool(null)} />}

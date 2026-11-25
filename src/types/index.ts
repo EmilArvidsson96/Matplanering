@@ -178,6 +178,29 @@ export interface AppSettings {
   calibrationModel?: AiModel
   costOverrides?: Record<string, number>  // lexicon canonical name → calibrated SEK/kg
   recipeSiteRules?: Record<string, RecipeSiteRule>  // hostname (no www.) → learned scraping rule
+  /** Learned ingredient → store product choices, keyed by normalized ingredient name. */
+  productPreferences?: Record<string, ProductPreference>
+  /** Main rules for picking store products. */
+  shoppingRules?: ShoppingRules
+  /** Extra free-text household rules for picking products. */
+  productRules?: string
+}
+
+export interface ShoppingRules {
+  lactoseFree: boolean     // always lactose-free where a lactose-free variant exists
+  preferSwedish: boolean   // Swedish origin unless there's no reasonable Swedish option
+  preferOffers: boolean    // suggest swaps to extrapris products (the user confirms each swap)
+  organicFor: string       // product types that should always be organic, e.g. "spannmål, pasta, mjöl"
+}
+
+/** A store product the household has chosen for an ingredient before. */
+export interface ProductPreference {
+  store: 'mathem'
+  productId: number
+  name: string        // product full name when chosen
+  packSize: string    // e.g. "5 dl", "Sverige, 900 g"
+  chosenAt: string    // ISO date of the latest choice
+  timesChosen: number
 }
 
 /** CSS selectors learned (via AI) for scraping recipes from a site without AI next time. */
