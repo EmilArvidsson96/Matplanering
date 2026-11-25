@@ -1,9 +1,9 @@
-/** Feedback API — files bug reports / feature ideas as GitHub issues on the app repo,
- *  so they show up right alongside the code they describe. */
+/** Feedback API — posts bug reports / feature ideas to a small Cloudflare Worker
+ *  (cloudflare/report-worker/), which files them as GitHub issues on the private
+ *  matplanering-data repo. The Worker holds the GitHub token, so no credentials
+ *  ship to the client and reporters need no GitHub account. */
 
-const TOKEN      = import.meta.env.VITE_GITHUB_TOKEN as string
-const REPO_OWNER = 'EmilArvidsson96'
-const REPO_NAME  = 'Matplanering'
+const REPORT_ENDPOINT = 'https://matplanering-report.emil-arvidsson.workers.dev'
 
 export type FeedbackType = 'bug' | 'idea'
 
@@ -37,44 +37,20 @@ export interface FeedbackInput {
   context: FeedbackContext
 }
 
-function buildBody({ description, context }: FeedbackInput): string {
-  return [
-    description.trim() || '_Ingen beskrivning angiven._',
-    '',
-    '<details>',
-    '<summary>Teknisk kontext</summary>',
-    '',
-    '```json',
-    JSON.stringify(context, null, 2),
-    '```',
-    '</details>',
-  ].join('\n')
-}
-
 export async function submitFeedback(input: FeedbackInput): Promise<void> {
-  if (!TOKEN) {
-    throw new Error('Ingen GitHub-token konfigurerad (VITE_GITHUB_TOKEN).')
-  }
-
-  const prefix = input.type === 'bug' ? '[Bugg]' : '[Förslag]'
-  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`, {
+  const res = await fetch(REPORT_ENDPOINT, {
     method: 'POST',
-    headers: {
-      Authorization: `token ${TOKEN}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      title: `${prefix} ${input.title.trim()}`,
-      body: buildBody(input),
-      labels: ['feedback', input.type === 'bug' ? 'bug' : 'enhancement'],
+      kind: input.type,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      context: input.context,
     }),
   })
 
   if (!res.ok) {
-    let detail = res.status.toString()
-    try { detail += ' — ' + ((await res.json() as { message?: string }).message ?? '') } catch { /* ignore */ }
-    throw new Error(`Kunde inte skicka feedback: ${detail}`)
+    const body = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(`Kunde inte skicka feedback: ${body.error ?? `servern svarade ${res.status}`}`)
   }
 }
