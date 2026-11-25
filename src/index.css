@@ -39,13 +39,13 @@
     @apply w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors;
   }
   .btn-primary {
-    @apply h-12 px-5 rounded-full bg-brand-600 text-white font-semibold text-[15px] inline-flex items-center justify-center gap-2 hover:bg-brand-700 disabled:opacity-40 transition-colors;
+    @apply motion-safe:active:scale-[0.97] h-12 px-5 rounded-full bg-brand-600 text-white font-semibold text-[15px] inline-flex items-center justify-center gap-2 hover:bg-brand-700 disabled:opacity-40 transition duration-150;
   }
   .btn-secondary {
-    @apply h-12 px-5 rounded-full bg-white border border-line text-ink font-semibold text-[15px] inline-flex items-center justify-center gap-2 hover:bg-canvas disabled:opacity-40 transition-colors;
+    @apply motion-safe:active:scale-[0.97] h-12 px-5 rounded-full bg-white border border-line text-ink font-semibold text-[15px] inline-flex items-center justify-center gap-2 hover:bg-canvas disabled:opacity-40 transition duration-150;
   }
   .chip {
-    @apply h-10 px-4 rounded-full text-sm inline-flex items-center gap-1.5 border transition-colors;
+    @apply motion-safe:active:scale-95 h-10 px-4 rounded-full text-sm inline-flex items-center gap-1.5 border transition duration-150;
   }
   .chip-on {
     @apply bg-ink text-white border-ink font-semibold;
@@ -63,6 +63,14 @@
   }
   .field-label {
     @apply block text-[13px] font-semibold text-ink-muted mb-1.5;
+  }
+}
+
+/* Respect reduced-motion everywhere (sheets, pages, thumbs) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

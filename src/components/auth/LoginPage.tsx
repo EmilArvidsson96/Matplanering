@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { UtensilsCrossed } from 'lucide-react'
 
 interface Props {
   onLogin: (pin: string) => boolean
@@ -21,10 +22,13 @@ export default function LoginPage({ onLogin }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-brand-50 px-4">
-      <div className={`bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center ${shake ? 'animate-shake' : ''}`}>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Matplanering</h1>
-        <p className="text-gray-500 mb-8 text-sm">Ange PIN-kod för att logga in</p>
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-canvas px-4">
+      <div className={`bg-white rounded-4xl p-8 w-full max-w-sm text-center ${shake ? 'animate-shake' : ''}`}>
+        <span className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-brand-600 text-white flex items-center justify-center">
+          <UtensilsCrossed className="w-7 h-7" />
+        </span>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink mb-1">Matplanering</h1>
+        <p className="text-ink-muted mb-8 text-[15px]">Ange PIN-kod för att logga in</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="password"
@@ -32,14 +36,15 @@ export default function LoginPage({ onLogin }: Props) {
             placeholder="PIN-kod"
             value={pin}
             onChange={e => { setPin(e.target.value); setError(false) }}
-            className={`w-full border rounded-xl px-4 py-3 text-center text-lg tracking-widest outline-none transition-colors
-              ${error ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-brand-400'}`}
+            aria-label="PIN-kod"
+            className={`w-full h-14 border rounded-2xl px-4 text-center text-xl tracking-[0.4em] outline-none transition-colors
+              ${error ? 'border-red-400 bg-red-50' : 'border-line bg-canvas focus:border-brand-400 focus:bg-white'}`}
             autoFocus
           />
-          {error && <p className="text-red-500 text-sm -mt-2">Fel PIN-kod</p>}
+          {error && <p className="text-red-700 text-sm -mt-2">Fel PIN-kod</p>}
           <button
             type="submit"
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl transition-colors"
+            className="btn-primary w-full h-14 text-base"
           >
             Logga in
           </button>

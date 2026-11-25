@@ -382,19 +382,19 @@ function MergeSuggestionsPanel({
         <div className="divide-y divide-amber-100 border-t border-amber-200">
           {suggestions.map(s => (
             <div key={s.key} className="px-4 py-3 space-y-2">
-              <div className="flex flex-wrap gap-1 items-center text-sm text-gray-700">
+              <div className="flex flex-wrap gap-1 items-center text-sm text-ink-soft">
                 {s.items.map((item, i) => (
                   <span key={item.id}>
-                    {i > 0 && <span className="text-gray-400 mx-1">+</span>}
+                    {i > 0 && <span className="text-ink-faint mx-1">+</span>}
                     <span className="font-medium">{item.name}</span>
                     {(item.amount || item.unit) && (
-                      <span className="text-gray-400 ml-1">({item.amount} {item.unit})</span>
+                      <span className="text-ink-faint ml-1">({item.amount} {item.unit})</span>
                     )}
                   </span>
                 ))}
                 {s.suggestedAmount && (
                   <>
-                    <span className="text-gray-400 mx-1">→</span>
+                    <span className="text-ink-faint mx-1">→</span>
                     <span className="font-medium text-amber-800">
                       {s.suggestedName} ({s.suggestedAmount} {s.suggestedUnit})
                     </span>
@@ -469,10 +469,10 @@ function AiCleanupPanel({
       <div className="divide-y divide-violet-100 border-t border-violet-200">
         {result.merges.map((m, idx) => (
           <div key={`m${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-ink-soft">
               <span className="text-violet-500 text-xs uppercase mr-2">Slå ihop</span>
               {m.itemIds.map(nameOf).join(' + ')}
-              <span className="text-gray-400 mx-1">→</span>
+              <span className="text-ink-faint mx-1">→</span>
               <span className="font-medium text-violet-800">{m.name}</span>
             </span>
             <button
@@ -485,10 +485,10 @@ function AiCleanupPanel({
         ))}
         {result.recategorizations.map((r, idx) => (
           <div key={`r${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-ink-soft">
               <span className="text-violet-500 text-xs uppercase mr-2">Kategori</span>
               <span className="font-medium">{nameOf(r.itemId)}</span>
-              <span className="text-gray-400 mx-1">→</span>
+              <span className="text-ink-faint mx-1">→</span>
               <span className="font-medium text-violet-800">{CATEGORY_LABELS[r.category]}</span>
             </span>
             <button
@@ -501,10 +501,10 @@ function AiCleanupPanel({
         ))}
         {result.translations.map((t, idx) => (
           <div key={`t${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-ink-soft">
               <span className="text-violet-500 text-xs uppercase mr-2">Översätt</span>
               <span className="font-medium">{nameOf(t.itemId)}</span>
-              <span className="text-gray-400 mx-1">→</span>
+              <span className="text-ink-faint mx-1">→</span>
               <span className="font-medium text-violet-800">{t.name}</span>
             </span>
             <button

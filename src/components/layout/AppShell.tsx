@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2,
@@ -56,6 +56,40 @@ function PageHeader({ size }: { size: 'md' | 'lg' }) {
   )
 }
 
+// ─── Page transitions ──────────────────────────────────────────────────────────
+
+/** Visual order of routes — navigating "right" slides the new page in from the right. */
+const ROUTE_ORDER = ['/', '/planera', '/recept', '/bibliotek', '/inkop', '/spel', '/inst']
+const routeIndex = (p: string) => Math.max(0, ROUTE_ORDER.indexOf(p))
+
+/**
+ * Wraps a page so it slides/fades in when the route changes, in the direction
+ * of travel (like moving between tabs). Also resets scroll to the top.
+ */
+function PageTransition({ children, className = '', scrollRef }: {
+  children: React.ReactNode
+  className?: string
+  scrollRef?: React.RefObject<HTMLElement>
+}) {
+  const { pathname } = useLocation()
+  const prev = useRef(pathname)
+  const dir = useRef<'left' | 'right'>('right')
+  if (prev.current !== pathname) {
+    dir.current = routeIndex(pathname) >= routeIndex(prev.current) ? 'right' : 'left'
+    prev.current = pathname
+  }
+  useEffect(() => { scrollRef?.current?.scrollTo({ top: 0 }) }, [pathname, scrollRef])
+
+  return (
+    <div
+      key={pathname}
+      className={`${className} ${dir.current === 'right' ? 'motion-safe:animate-page-from-right' : 'motion-safe:animate-page-from-left'}`}
+    >
+      {children}
+    </div>
+  )
+}
+
 // ─── Desktop sidebar item ────────────────────────────────────────────────────
 
 function SideItem({ to, label, Icon }: NavDef) {
@@ -64,7 +98,7 @@ function SideItem({ to, label, Icon }: NavDef) {
       to={to}
       end={to === '/'}
       className={({ isActive }) =>
-        `h-11 px-3.5 rounded-full flex items-center gap-3 text-sm transition-colors
+        `h-11 px-3.5 rounded-full flex items-center gap-3 text-sm transition-all duration-200 motion-safe:active:scale-[0.97]
          ${isActive ? 'bg-ink text-white font-semibold' : 'text-ink-soft font-medium hover:bg-white'}`
       }
     >
@@ -77,12 +111,12 @@ function SideItem({ to, label, Icon }: NavDef) {
 // ─── Mobile floating tab bar item ────────────────────────────────────────────
 
 function TabItem({ label, Icon, active, onClick, to }: NavDef & { active: boolean; onClick?: () => void }) {
-  const cls = `h-12 rounded-full flex items-center justify-center gap-2 transition-all duration-200
+  const cls = `h-12 rounded-full flex items-center justify-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-safe:active:scale-90
     ${active ? 'px-4 bg-ink text-white' : 'w-12 text-ink-muted hover:text-ink'}`
   const inner = (
     <>
       <Icon className="w-[22px] h-[22px] shrink-0" />
-      {active && <span className="text-sm font-semibold whitespace-nowrap">{label}</span>}
+      {active && <span className="text-sm font-semibold whitespace-nowrap motion-safe:animate-fade-in">{label}</span>}
     </>
   )
   if (onClick) {
@@ -97,6 +131,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
   const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const mainRef = useRef<HTMLElement>(null)
 
   // Toggle debug panel with Ctrl+Shift+D
   useEffect(() => {
@@ -138,17 +173,17 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
         <div className="flex-1 flex flex-col overflow-hidden py-3 pr-3">
           {FULLBLEED_ROUTES.has(pathname) ? (
             <main className="flex-1 overflow-hidden rounded-4xl bg-white">
-              <Outlet />
+              <PageTransition className="h-full"><Outlet /></PageTransition>
             </main>
           ) : (
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl px-5 pt-5 pb-12">
+          <main ref={mainRef} className="flex-1 overflow-y-auto">
+            <PageTransition className="max-w-6xl px-5 pt-5 pb-12" scrollRef={mainRef}>
               <header className="flex flex-wrap items-end gap-4 mb-7">
                 <div className="flex-1 min-w-[280px]"><PageHeader size="lg" /></div>
                 <PlayerBar />
               </header>
               <Outlet />
-            </div>
+            </PageTransition>
           </main>
           )}
         </div>
@@ -167,10 +202,11 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
           className="flex-1 min-h-0 overflow-hidden flex flex-col"
           style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}
         >
-          <Outlet />
+          <PageTransition className="flex-1 min-h-0 flex flex-col"><Outlet /></PageTransition>
         </main>
       ) : (
-      <main className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+        <PageTransition scrollRef={mainRef}>
         <header
           className="px-5 pb-4 flex flex-col gap-3"
           style={{ paddingTop: 'max(20px, calc(env(safe-area-inset-top) + 12px))' }}
@@ -186,6 +222,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
         <div className="px-4 pb-32">
           <Outlet />
         </div>
+        </PageTransition>
       </main>
       )}
 

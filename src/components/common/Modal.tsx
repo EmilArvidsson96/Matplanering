@@ -31,19 +31,30 @@ export default function Modal({
   title, onClose, children, wide, subtitle, footer, headerAction, fullHeight, toolbar,
 }: Props) {
   const isDesktop = useIsDesktop()
-  const mouseDownOnBackdropRef = useRef(false)
-  const [dragY, setDragY] = useState(0)
-  const dragStartRef = useRef<number | null>(null)
-
   const idRef = useRef(Symbol('modal'))
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  const mouseDownOnBackdropRef = useRef(false)
+  const [dragY, setDragY] = useState(0)
+  const dragStartRef = useRef<number | null>(null)
+  const [closing, setClosing] = useState(false)
+
+  /** Play the exit animation, then tell the parent to unmount us. */
+  const requestClose = useRef(() => {})
+  requestClose.current = () => {
+    if (closing) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) { onClose(); return }
+    setClosing(true)
+    window.setTimeout(() => onCloseRef.current(), 200)
+  }
+
 
   useEffect(() => {
     const id = idRef.current
     openStack.push(id)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && openStack[openStack.length - 1] === id) onCloseRef.current()
+      if (e.key === 'Escape' && openStack[openStack.length - 1] === id) requestClose.current()
     }
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
@@ -69,13 +80,13 @@ export default function Modal({
   function onPointerUp() {
     if (dragStartRef.current == null) return
     dragStartRef.current = null
-    if (dragY > 110) onClose()
+    if (dragY > 110) requestClose.current()
     else setDragY(0)
   }
 
   const backdrop = (
     <div
-      className="fixed inset-0 bg-ink/45 animate-fade-in"
+      className={`fixed inset-0 bg-ink/45 ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}
       aria-hidden="true"
     />
   )
@@ -102,7 +113,7 @@ export default function Modal({
         </div>
         {headerAction}
         <button
-          onClick={onClose}
+          onClick={() => requestClose.current()}
           aria-label="Stäng"
           className="w-10 h-10 rounded-full bg-white border border-line flex items-center justify-center text-ink hover:bg-canvas shrink-0"
         >
@@ -138,24 +149,25 @@ export default function Modal({
       aria-label={title}
       onMouseDown={(e) => { mouseDownOnBackdropRef.current = e.target === e.currentTarget }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && mouseDownOnBackdropRef.current) onClose()
+        if (e.target === e.currentTarget && mouseDownOnBackdropRef.current) requestClose.current()
         mouseDownOnBackdropRef.current = false
       }}
     >
       {backdrop}
       {isDesktop ? (
         <div
-          className={`relative bg-canvas rounded-4xl shadow-2xl w-full max-h-[88vh] flex flex-col animate-pop-in
+          className={`relative bg-canvas rounded-4xl shadow-2xl w-full max-h-[88vh] flex flex-col ${closing ? 'animate-pop-out' : 'animate-pop-in'}
             ${wide ? 'max-w-4xl' : 'max-w-lg'}`}
         >
           {body}
         </div>
       ) : (
         <div
-          className={`relative bg-canvas rounded-t-[28px] w-full flex flex-col animate-sheet-up shadow-[0_-8px_32px_rgba(0,0,0,0.18)]
+          className={`relative bg-canvas rounded-t-[28px] w-full flex flex-col ${closing ? 'animate-sheet-down' : 'animate-sheet-up'} shadow-[0_-8px_32px_rgba(0,0,0,0.18)]
             ${fullHeight ? 'h-[94dvh]' : 'max-h-[94dvh]'}`}
           style={{
             transform: dragY ? `translateY(${dragY}px)` : undefined,
+            ['--drag-y' as string]: `${dragY}px`,
             transition: dragStartRef.current == null ? 'transform 0.2s ease-out' : 'none',
             paddingBottom: footer ? undefined : 'env(safe-area-inset-bottom)',
           }}

@@ -108,12 +108,12 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
           placeholder="Sök rätt…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+          className="flex-1 field focus:outline-none focus:ring-2 focus:ring-brand-300"
         />
         <select
           value={sort}
           onChange={e => setSort(e.target.value as SortOrder)}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white"
+          className="field bg-white"
         >
           <option value="alfabetisk">A–Ö</option>
           <option value="popularitet">Populärast</option>
@@ -122,7 +122,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
       </div>
 
       {/* Filter groups — each group is a collapsible row */}
-      <div className="border border-gray-100 rounded-xl overflow-hidden mb-3 divide-y divide-gray-100">
+      <div className="border border-line-soft rounded-xl overflow-hidden mb-3 divide-y divide-line-soft">
         {FILTERS.map(({ key, label, values }) => {
           const sel = active[key] ?? new Set()
           const isOpen = openGroup === key
@@ -130,16 +130,16 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
             <div key={key}>
               <button
                 onClick={() => setOpenGroup(isOpen ? null : key)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm bg-canvas hover:bg-canvas transition-colors"
               >
-                <span className="font-medium text-gray-600">{label}</span>
+                <span className="font-medium text-ink-muted">{label}</span>
                 <span className="flex items-center gap-2">
                   {sel.size > 0 && (
                     <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded-full">
                       {sel.size}
                     </span>
                   )}
-                  <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                  <span className="text-ink-faint text-xs">{isOpen ? '▲' : '▼'}</span>
                 </span>
               </button>
               {isOpen && (() => {
@@ -157,7 +157,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
                         className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
                           ${sel.has(v.id)
                             ? 'bg-brand-600 text-white border-brand-600'
-                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                            : 'border-line text-ink-muted hover:bg-canvas'
                           }`}
                       >
                         {v.label}
@@ -166,7 +166,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
                     {!showAll && hiddenCount > 0 && (
                       <button
                         onClick={() => setExpandedFilters(p => ({ ...p, [key]: true }))}
-                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-line text-ink-faint hover:bg-canvas font-medium transition-colors"
                       >
                         +{hiddenCount} fler
                       </button>
@@ -174,7 +174,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
                     {showAll && values.length > COLLAPSE_AFTER && (
                       <button
                         onClick={() => setExpandedFilters(p => ({ ...p, [key]: false }))}
-                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-full border border-dashed border-line text-ink-faint hover:bg-canvas font-medium transition-colors"
                       >
                         Visa färre
                       </button>
@@ -191,14 +191,14 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
       {activeCount > 0 && (
         <button
           onClick={() => setActive({})}
-          className="text-xs text-red-400 hover:text-red-600 mb-2"
+          className="text-xs text-red-700 hover:text-red-600 mb-2"
         >
           Rensa {activeCount} filter
         </button>
       )}
 
       {/* Results */}
-      <p className="text-xs text-gray-400 mb-2">{filtered.length} rätter</p>
+      <p className="text-xs text-ink-faint mb-2">{filtered.length} rätter</p>
       <div className="space-y-0.5">
         {filtered.map(dish => {
           const alreadyAdded = weekMealIds.includes(dish.id)
@@ -211,8 +211,8 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
               className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50 transition-colors ${alreadyAdded ? 'opacity-50' : ''}`}
             >
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-gray-800 truncate">{dish.name}</div>
-                <div className="text-xs text-gray-400 flex gap-1.5 flex-wrap">
+                <div className="font-medium text-sm text-ink truncate">{dish.name}</div>
+                <div className="text-xs text-ink-faint flex gap-1.5 flex-wrap">
                   {dish.protein.join(', ')}
                   {dish.carb.length > 0 && <span>· {dish.carb.join(', ')}</span>}
                   {last && <span>· {last.slice(0, 7)}</span>}
@@ -221,13 +221,13 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
                   )}
                 </div>
               </div>
-              {pop > 0 && <span className="text-xs text-gray-300 shrink-0">×{pop}</span>}
+              {pop > 0 && <span className="text-xs text-ink-faint shrink-0">×{pop}</span>}
               {alreadyAdded && <span className="text-xs text-brand-400 shrink-0">Tillagd</span>}
             </button>
           )
         })}
         {filtered.length === 0 && (
-          <p className="text-sm text-gray-400 py-6 text-center">Inga rätter matchar.</p>
+          <p className="text-sm text-ink-faint py-6 text-center">Inga rätter matchar.</p>
         )}
       </div>
     </Modal>

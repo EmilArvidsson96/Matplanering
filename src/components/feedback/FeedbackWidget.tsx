@@ -110,7 +110,7 @@ export default function FeedbackWidget() {
       {open && (
         <Modal title="Skicka feedback" onClose={close}>
           {state === 'sent' ? (
-            <div className="py-6 text-center text-green-600 font-medium">
+            <div className="py-6 text-center text-brand-700 font-medium">
               Tack! Vi har tagit emot din feedback.
             </div>
           ) : (
@@ -118,20 +118,20 @@ export default function FeedbackWidget() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setType('bug')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
                     type === 'bug'
                       ? 'bg-red-50 border-red-300 text-red-700'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      : 'border-line text-ink-muted hover:bg-canvas'
                   }`}
                 >
                   <Bug className="w-4 h-4" /> Bugg
                 </button>
                 <button
                   onClick={() => setType('idea')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
                     type === 'idea'
                       ? 'bg-amber-50 border-amber-300 text-amber-700'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      : 'border-line text-ink-muted hover:bg-canvas'
                   }`}
                 >
                   <Lightbulb className="w-4 h-4" /> Förslag
@@ -139,41 +139,41 @@ export default function FeedbackWidget() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500">Titel</label>
+                <label className="text-xs font-medium text-ink-muted">Titel</label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={type === 'bug' ? 'Vad gick fel?' : 'Vad vill du kunna göra?'}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  className="field focus:outline-none focus:ring-2 focus:ring-brand-300"
                   autoFocus
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500">Beskrivning (valfritt)</label>
+                <label className="text-xs font-medium text-ink-muted">Beskrivning (valfritt)</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   placeholder="Fler detaljer, t.ex. vad du gjorde när det hände."
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
+                  className="field h-auto py-3 resize-none"
                 />
               </div>
 
-              <p className="text-xs text-gray-400 -mt-1">
+              <p className="text-xs text-ink-faint -mt-1">
                 Sidan, enheten och lite teknisk info skickas med automatiskt för att göra det lättare att förstå.
               </p>
 
-              {state === 'error' && <p className="text-sm text-red-500">{error}</p>}
+              {state === 'error' && <p className="text-sm text-red-700">{error}</p>}
 
               <div className="flex justify-end gap-2">
-                <button onClick={close} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">
+                <button onClick={close} className="px-3 py-2 text-sm text-ink-muted hover:text-ink-soft">
                   Avbryt
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={!title.trim() || state === 'sending'}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {state === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Skicka

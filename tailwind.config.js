@@ -25,12 +25,43 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        'sheet-down': {
+          '0%': { transform: 'translateY(var(--drag-y, 0px))' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        'pop-out': {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+        },
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // Page change: slide in from the side we navigated towards
+        'page-from-right': {
+          '0%': { opacity: '0', transform: 'translateX(24px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        'page-from-left': {
+          '0%': { opacity: '0', transform: 'translateX(-24px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
       },
       animation: {
         shake: 'shake 0.4s ease-in-out',
         'sheet-up': 'sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'fade-in': 'fade-in 0.2s ease-out',
         'pop-in': 'pop-in 0.22s cubic-bezier(0.32, 0.72, 0, 1)',
+        'sheet-down': 'sheet-down 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards',
+        'fade-out': 'fade-out 0.22s ease-in forwards',
+        'pop-out': 'pop-out 0.16s ease-in forwards',
+        'fade-up': 'fade-up 0.28s cubic-bezier(0.32, 0.72, 0, 1) both',
+        'page-from-right': 'page-from-right 0.32s cubic-bezier(0.32, 0.72, 0, 1) both',
+        'page-from-left': 'page-from-left 0.32s cubic-bezier(0.32, 0.72, 0, 1) both',
       },
       colors: {
         // Basil green — single accent

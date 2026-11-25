@@ -78,17 +78,17 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     <Modal title="Dela upp i tydligare steg" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Analyserar med Sonnet…
           </div>
         )}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
         )}
         {steps && !loading && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-500">
-              {current.length} steg → <span className="font-semibold text-gray-700">{steps.length} steg</span>,
+            <p className="text-xs text-ink-muted">
+              {current.length} steg → <span className="font-semibold text-ink-soft">{steps.length} steg</span>,
               översatt till svenska med rättad stavning. Granska förslaget innan du använder det.
             </p>
             <ol className="space-y-2">
@@ -97,16 +97,16 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
                   <span className="shrink-0 w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-bold mt-0.5">
                     {i + 1}
                   </span>
-                  <p className="flex-1 text-gray-800 leading-relaxed">{s}</p>
+                  <p className="flex-1 text-ink leading-relaxed">{s}</p>
                 </li>
               ))}
             </ol>
           </div>
         )}
       </div>
-      <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
+      <div className="flex gap-2 px-4 py-3 border-t border-line shrink-0">
         {error && (
-          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas">
             Försök igen
           </button>
         )}
@@ -114,7 +114,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <button
             onClick={() => run(true)}
             title="Gör en ny förfrågan (sparat resultat används annars)"
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas"
           >
             <RefreshCw className="w-4 h-4" /> Gör om
           </button>
@@ -122,7 +122,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
         <button
           onClick={apply}
           disabled={!steps || loading}
-          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40"
+          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-full hover:bg-brand-600 disabled:opacity-40"
         >
           <Check className="w-4 h-4" /> Ersätt instruktionerna
         </button>
@@ -188,25 +188,25 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     <Modal title="Förbättringsförslag" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Funderar med Sonnet…
           </div>
         )}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
         )}
         {items && !loading && (
           items.length === 0 ? (
-            <p className="text-sm text-gray-400 italic py-6 text-center">Inga förslag den här gången.</p>
+            <p className="text-sm text-ink-faint italic py-6 text-center">Inga förslag den här gången.</p>
           ) : (
             <>
-              <p className="text-xs text-gray-500">Bocka för de förslag du vill lägga till i receptets anteckningar. Förslagen sparas på receptet.</p>
+              <p className="text-xs text-ink-muted">Bocka för de förslag du vill lägga till i receptets anteckningar. Förslagen sparas på receptet.</p>
               <ul className="space-y-2">
                 {items.map((it, i) => (
                   <li key={i}>
                     <label className={`flex gap-2.5 items-start p-3 rounded-xl border transition-colors ${
-                      it.applied ? 'border-gray-100 bg-gray-50 opacity-60 cursor-default'
-                        : selected.has(i) ? 'border-brand-300 bg-brand-50 cursor-pointer' : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                      it.applied ? 'border-line-soft bg-canvas opacity-60 cursor-default'
+                        : selected.has(i) ? 'border-brand-300 bg-brand-50 cursor-pointer' : 'border-line hover:bg-canvas cursor-pointer'
                     }`}>
                       <input
                         type="checkbox"
@@ -217,11 +217,11 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-800">{it.title}</span>
+                          <span className="text-sm font-semibold text-ink">{it.title}</span>
                           <span className="text-[10px] uppercase tracking-wide text-brand-600 bg-brand-100 rounded px-1.5 py-0.5">{it.category}</span>
-                          {it.applied && <span className="text-[10px] text-gray-500">Tillagd</span>}
+                          {it.applied && <span className="text-[10px] text-ink-muted">Tillagd</span>}
                         </div>
-                        <p className="text-sm text-gray-600 leading-relaxed mt-0.5">{it.detail}</p>
+                        <p className="text-sm text-ink-muted leading-relaxed mt-0.5">{it.detail}</p>
                       </div>
                     </label>
                   </li>
@@ -231,9 +231,9 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           )
         )}
       </div>
-      <div className="flex gap-2 px-4 py-3 border-t border-gray-200 shrink-0">
+      <div className="flex gap-2 px-4 py-3 border-t border-line shrink-0">
         {error && (
-          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+          <button onClick={() => run()} className="text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas">
             Försök igen
           </button>
         )}
@@ -241,7 +241,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <button
             onClick={() => run(true)}
             title="Hämta nya förslag (sparat resultat används annars)"
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-line rounded-lg text-ink-muted hover:bg-canvas"
           >
             <RefreshCw className="w-4 h-4" /> Nya förslag
           </button>
@@ -249,7 +249,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
         <button
           onClick={apply}
           disabled={selected.size === 0}
-          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40"
+          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 bg-brand-500 text-white rounded-full hover:bg-brand-600 disabled:opacity-40"
         >
           <Check className="w-4 h-4" /> Lägg till {selected.size > 0 ? `(${selected.size})` : ''}
         </button>

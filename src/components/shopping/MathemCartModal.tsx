@@ -208,7 +208,7 @@ export default function MathemCartModal({ items, onClose }: { items: ShoppingIte
   return (
     <Modal title="Handla på Mathem" onClose={onClose} wide>
       <div className="space-y-4">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           {loading > 0
             ? `Letar produkter… (${rows.length - loading}/${rows.length})`
             : `${chosen.length} av ${rows.length} varor valda. Ändra det som inte stämmer. Dina val sparas och används nästa gång.`}
@@ -221,7 +221,7 @@ export default function MathemCartModal({ items, onClose }: { items: ShoppingIte
           </div>
         )}
 
-        <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl">
+        <div className="divide-y divide-line-soft border border-line-soft rounded-xl">
           {sorted.map(row => (
             <CartRow
               key={row.item.id}
@@ -235,23 +235,23 @@ export default function MathemCartModal({ items, onClose }: { items: ShoppingIte
           ))}
         </div>
 
-        <div className="sticky bottom-0 bg-white pt-3 border-t border-gray-100 space-y-3">
+        <div className="sticky bottom-0 bg-white pt-3 border-t border-line-soft space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-700 mr-auto">
+            <span className="text-sm text-ink-soft mr-auto">
               <span className="font-semibold">{chosen.reduce((s, r) => s + r.quantity, 0)} varor</span>
-              <span className="text-gray-400"> · ca {Math.round(total)} kr</span>
+              <span className="text-ink-faint"> · ca {Math.round(total)} kr</span>
             </span>
             <button
               onClick={copyForClaude}
               disabled={loading > 0 || chosen.length === 0}
-              className="border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-xl text-sm font-medium"
+              className="border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-full text-sm font-medium"
             >
               {copied ? '✓ Kopierat' : 'Kopiera till Claude'}
             </button>
             <button
               onClick={openMathem}
               disabled={loading > 0 || chosen.length === 0}
-              className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-medium"
+              className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-2 rounded-full text-sm font-medium"
             >
               Öppna Mathem och fyll korgen
             </button>
@@ -287,7 +287,7 @@ function CartRow({ row, onChange, onAlwaysHome }: {
   }
 
   return (
-    <div className={`px-3 py-2.5 flex gap-3 items-start ${row.include ? '' : 'bg-gray-50/70'}`}>
+    <div className={`px-3 py-2.5 flex gap-3 items-start ${row.include ? '' : 'bg-canvas'}`}>
       <input
         type="checkbox"
         checked={row.include}
@@ -298,8 +298,8 @@ function CartRow({ row, onChange, onAlwaysHome }: {
       />
       <div className="flex-1 min-w-0 space-y-1">
         <div className="text-sm">
-          <span className={row.include ? 'text-gray-800 font-medium' : 'text-gray-400'}>{item.name}</span>
-          {(item.amount || item.unit) && <span className="text-xs text-gray-400 ml-2">{item.amount} {item.unit}</span>}
+          <span className={row.include ? 'text-ink font-medium' : 'text-ink-faint'}>{item.name}</span>
+          {(item.amount || item.unit) && <span className="text-xs text-ink-faint ml-2">{item.amount} {item.unit}</span>}
           {row.source && row.include && (
             <span className={`ml-2 text-[10px] rounded-full px-1.5 py-0.5 ${
               row.source === 'preference' ? 'bg-brand-50 text-brand-600' : 'bg-violet-50 text-violet-600'}`}>
@@ -308,8 +308,8 @@ function CartRow({ row, onChange, onAlwaysHome }: {
           )}
         </div>
 
-        {row.status === 'loading' && <div className="text-xs text-gray-400">Söker…</div>}
-        {row.note && <div className="text-xs text-gray-400 italic">{row.note}</div>}
+        {row.status === 'loading' && <div className="text-xs text-ink-faint">Söker…</div>}
+        {row.note && <div className="text-xs text-ink-faint italic">{row.note}</div>}
 
         {row.saleAlt && row.include && product && (
           <SaleSwap row={row} onAccept={() => onChange({
@@ -323,7 +323,7 @@ function CartRow({ row, onChange, onAlwaysHome }: {
           <div className="flex items-center gap-2">
             {product.imageUrl
               ? <img src={product.imageUrl} alt="" className="w-9 h-9 object-contain rounded bg-white shrink-0" />
-              : <div className="w-9 h-9 rounded bg-gray-100 shrink-0" />}
+              : <div className="w-9 h-9 rounded bg-line-soft shrink-0" />}
             <select
               value={product.id}
               onChange={e => {
@@ -333,7 +333,7 @@ function CartRow({ row, onChange, onAlwaysHome }: {
                   quantity: estimatePacks(item.amount, item.unit, p.packSize) ?? row.quantity ?? 1,
                 })
               }}
-              className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white"
+              className="flex-1 min-w-0 border border-line rounded-lg px-2 py-1 text-xs bg-white"
             >
               {row.candidates.map(c => (
                 <option key={c.id} value={c.id}>
@@ -351,7 +351,7 @@ function CartRow({ row, onChange, onAlwaysHome }: {
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && runSearch()}
               placeholder="Sök annan produkt…"
-              className="flex-1 min-w-0 border border-gray-100 rounded-lg px-2 py-1 text-xs"
+              className="flex-1 min-w-0 border border-line-soft rounded-lg px-2 py-1 text-xs"
             />
             <button onClick={runSearch} disabled={searching} className="text-xs text-brand-600 px-2">
               {searching ? '…' : 'Sök'}
@@ -365,24 +365,24 @@ function CartRow({ row, onChange, onAlwaysHome }: {
           <div className="flex items-center gap-1">
             <button
               onClick={() => onChange(row.quantity <= 1 ? { include: false } : { quantity: row.quantity - 1 })}
-              className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-sm leading-none"
+              className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-sm leading-none"
             >−</button>
             <span className="w-5 text-center text-sm font-semibold">{row.quantity}</span>
             <button
               onClick={() => onChange({ quantity: row.quantity + 1 })}
-              className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-sm leading-none"
+              className="w-9 h-9 shrink-0 rounded-full bg-line-soft hover:bg-line text-sm leading-none"
             >+</button>
           </div>
         )}
         {row.include && product && Number.isFinite(product.price) && (
-          <span className="text-xs text-gray-500">
-            {(product.price * row.quantity).toFixed(2)} kr{product.onSale && <span className="text-red-500"> %</span>}
+          <span className="text-xs text-ink-muted">
+            {(product.price * row.quantity).toFixed(2)} kr{product.onSale && <span className="text-red-700"> %</span>}
           </span>
         )}
         <button
           onClick={onAlwaysHome}
           title="Alltid hemma: lägg i skafferiet och hoppa över"
-          className="text-[11px] text-gray-300 hover:text-brand-500"
+          className="text-[11px] text-ink-faint hover:text-brand-500"
         >
           🏠 alltid hemma
         </button>
@@ -418,7 +418,7 @@ function BookmarkletHelp({ highlight }: { highlight: boolean }) {
   useEffect(() => { ref.current?.setAttribute('href', MATHEM_BOOKMARKLET) }, [])
 
   return (
-    <div className={`text-xs rounded-xl px-3 py-2 ${highlight ? 'bg-brand-50 text-brand-800' : 'bg-gray-50 text-gray-500'}`}>
+    <div className={`text-xs rounded-xl px-3 py-2 ${highlight ? 'bg-brand-50 text-brand-800' : 'bg-canvas text-ink-muted'}`}>
       {highlight && <p className="font-medium mb-1">Mathem öppnades i en ny flik. Klicka där på bokmärket nedan så läggs allt i korgen.</p>}
       <p>
         Första gången: dra{' '}

@@ -114,11 +114,13 @@ export default function RecipePage() {
   // On mobile, show detail if selected
   if (!isDesktop && selectedDish) {
     return (
-      <RecipeDetail
-        dish={selectedDish}
-        plannedPortions={plannedPortions}
-        onBack={() => setSearchParams({}, { replace: true })}
-      />
+      <div key={selectedDish.id} className="h-full motion-safe:animate-page-from-right">
+        <RecipeDetail
+          dish={selectedDish}
+          plannedPortions={plannedPortions}
+          onBack={() => setSearchParams({}, { replace: true })}
+        />
+      </div>
     )
   }
 
@@ -126,7 +128,7 @@ export default function RecipePage() {
     if (!it.dish) {
       // Free-text component (e.g. a sauce) — shown for context, no recipe to open
       return (
-        <li key={it.key} className="px-4 py-2 flex items-center justify-between gap-2 text-gray-400">
+        <li key={it.key} className="px-4 py-2 flex items-center justify-between gap-2 text-ink-faint">
           <span className="text-sm truncate">
             {it.name} <span className="text-xs">(fritext)</span>
           </span>
@@ -192,25 +194,25 @@ export default function RecipePage() {
         // Cooking view: group each combined meal's components together
         <div className="flex-1 overflow-y-auto">
           {weekGroups.length === 0 ? (
-            <p className="p-6 text-center text-sm text-gray-400">
+            <p className="p-6 text-center text-sm text-ink-faint">
               Inga rätter planerade den här veckan
             </p>
           ) : (
             weekGroups.map(group =>
               group.isCombo ? (
-                <div key={group.mealId} className="border-b border-gray-100 py-1">
+                <div key={group.mealId} className="border-b border-line-soft py-1">
                   <div className="px-4 pt-1.5 pb-1 flex items-baseline gap-1.5">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
+                    <span className="eyebrow truncate">
                       {group.mealName}
                     </span>
-                    <span className="text-[10px] text-gray-400 shrink-0">· {group.total}p</span>
+                    <span className="text-[10px] text-ink-faint shrink-0">· {group.total}p</span>
                   </div>
                   <ul className="ml-3 border-l-2 border-brand-100">
                     {group.items.map(it => renderItem(it))}
                   </ul>
                 </div>
               ) : (
-                <ul key={group.mealId} className="border-b border-gray-100">
+                <ul key={group.mealId} className="border-b border-line-soft">
                   {group.items.filter(it => it.dish).map(it => renderItem(it))}
                 </ul>
               )
@@ -220,7 +222,7 @@ export default function RecipePage() {
       ) : (
         <ul className="flex-1 overflow-y-auto divide-y divide-line-soft">
           {filtered.length === 0 && (
-            <li className="p-6 text-center text-sm text-gray-400">
+            <li className="p-6 text-center text-sm text-ink-faint">
               Inga recept hittades
             </li>
           )}
@@ -257,13 +259,15 @@ export default function RecipePage() {
         {/* Recipe detail */}
         <div className="flex-1 overflow-hidden bg-canvas">
           {selectedDish ? (
+            <div key={selectedDish.id} className="h-full motion-safe:animate-fade-up">
             <RecipeDetail
               dish={selectedDish}
               plannedPortions={plannedPortions}
               onBack={null}
             />
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-full text-ink-faint text-sm">
               Välj ett recept
             </div>
           )}
@@ -273,5 +277,5 @@ export default function RecipePage() {
   }
 
   // Mobile: list view
-  return <div className="flex flex-col h-full">{listPanel}</div>
+  return <div className="flex flex-col h-full motion-safe:animate-page-from-left">{listPanel}</div>
 }

@@ -8,6 +8,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useMinWidth } from '../../hooks/useDevice'
 import RecipeAiTools from './RecipeAiTools'
+import SegmentedControl from '../common/SegmentedControl'
 import type { Dish, RecipeStep, Ingredient } from '../../types'
 import { ingredientImpact, dishImpactPerPortion, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../../utils/ingredientImpact'
 
@@ -246,7 +247,7 @@ function InstructionsPanel({
         ) : (
           <button
             onClick={() => setAddingNew(true)}
-            className="w-full h-12 rounded-2xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
+            className="w-full h-12 rounded-3xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
           >
             <Plus className="w-4 h-4" /> Lägg till steg
           </button>
@@ -560,25 +561,19 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
 
       {/* Tabs */}
       <div className="px-4 md:px-6 pb-3 shrink-0">
-        <div role="tablist" className="h-11 rounded-full bg-line-soft p-1 grid grid-cols-2 gap-1">
-          {(['instruktioner', 'ingredienser'] as Tab[]).map(tab => (
-            <button
-              key={tab}
-              role="tab"
-              aria-selected={activeTab === tab}
-              onClick={() => switchTab(tab)}
-              className={`rounded-full text-sm transition-colors ${
-                activeTab === tab ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink-muted font-medium'
-              }`}
-            >
-              {tab === 'ingredienser' ? 'Ingredienser' : 'Gör så här'}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          ariaLabel="Receptvy"
+          value={activeTab}
+          onChange={switchTab}
+          options={[
+            { id: 'instruktioner', label: 'Gör så här' },
+            { id: 'ingredienser', label: 'Ingredienser' },
+          ]}
+        />
       </div>
 
       {/* Panel — always rendered for scroll-position memory, hidden via display */}
-      <div className={`flex-1 min-h-0 overflow-hidden ${activeTab === 'instruktioner' ? 'block' : 'hidden'}`}>
+      <div className={`flex-1 min-h-0 overflow-hidden ${activeTab === 'instruktioner' ? 'block motion-safe:animate-fade-up' : 'hidden'}`}>
         <InstructionsPanel
           dish={dish}
           portions={portions}
@@ -587,7 +582,7 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
           onStepsChange={handleStepsChange}
         />
       </div>
-      <div className={`flex-1 overflow-hidden ${activeTab === 'ingredienser' ? 'block' : 'hidden'}`}>
+      <div className={`flex-1 overflow-hidden ${activeTab === 'ingredienser' ? 'block motion-safe:animate-fade-up' : 'hidden'}`}>
         <IngredientsPanel
           dish={dish}
           portions={portions}

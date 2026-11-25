@@ -7,6 +7,7 @@ import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
 import Modal from '../common/Modal'
+import SegmentedControl from '../common/SegmentedControl'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
 } from '../../types'
@@ -474,7 +475,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           const id = addIngredient()
           if (!isDesktop) setEditingIngId(id)
         }}
-        className="w-full sm:w-auto h-12 px-5 rounded-2xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
+        className="w-full sm:w-auto h-12 px-5 rounded-3xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
       >
         <Plus className="w-[18px] h-[18px]" /> Lägg till ingrediens
       </button>
@@ -545,7 +546,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
       <button
         type="button"
         onClick={addStep}
-        className="w-full sm:w-auto h-12 px-5 rounded-2xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
+        className="w-full sm:w-auto h-12 px-5 rounded-3xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
       >
         <Plus className="w-[18px] h-[18px]" /> Lägg till steg
       </button>
@@ -600,7 +601,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
-          className="w-full h-12 rounded-2xl bg-white text-red-700 font-semibold text-[15px] flex items-center justify-center gap-2"
+          className="w-full h-12 rounded-3xl bg-white text-red-700 font-semibold text-[15px] flex items-center justify-center gap-2"
         >
           <Trash2 className="w-[18px] h-[18px]" /> Ta bort rätten
         </button>
@@ -613,21 +614,12 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   // ── Layout ───────────────────────────────────────────────────────────────────
 
   const mobileTabs = (
-    <div role="tablist" className="h-11 rounded-full bg-line-soft p-1 grid grid-cols-4 gap-0.5">
-      {tabs.map(t => (
-        <button
-          key={t.id}
-          role="tab"
-          aria-selected={tab === t.id}
-          onClick={() => setTab(t.id)}
-          className={`rounded-full text-[13px] transition-colors ${
-            tab === t.id ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink-muted font-medium'
-          }`}
-        >
-          {t.short}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      ariaLabel="Avsnitt"
+      value={tab}
+      onChange={setTab}
+      options={tabs.map(t => ({ id: t.id, label: <span className="text-[13px] truncate">{t.short}</span> }))}
+    />
   )
 
   const footer = isDesktop ? (
@@ -683,12 +675,12 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
                 </button>
               ))}
             </nav>
-            <div className="flex-1 min-w-0 bg-white rounded-3xl p-6">
+            <div key={tab} className="flex-1 min-w-0 bg-white rounded-3xl p-6 motion-safe:animate-fade-up">
               {panels[tab]}
             </div>
           </div>
         ) : (
-          <div className="pt-1">{panels[tab]}</div>
+          <div key={tab} className="pt-1 motion-safe:animate-fade-up">{panels[tab]}</div>
         )}
       </Modal>
 

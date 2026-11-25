@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import SegmentedControl from '../common/SegmentedControl'
 import { ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { formatDayLabel, scheduleDates } from '../../utils/weekUtils'
@@ -47,32 +48,32 @@ export default function PortionsStep() {
   return (
     <div className="space-y-6">
       {/* Household size */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm">
-        <h2 className="font-semibold text-gray-700 mb-4">Antal i hushållet (standard)</h2>
+      <section className="card p-5">
+        <h2 className="font-display text-lg font-bold text-ink mb-4">Antal i hushållet (standard)</h2>
         <div className="flex items-center gap-3">
           <Stepper
             value={week.householdSize}
             min={1}
             onChange={v => store.updateHouseholdSize(v)}
           />
-          <span className="text-sm text-gray-600">portioner per måltid som standard</span>
+          <span className="text-sm text-ink-muted">portioner per måltid som standard</span>
         </div>
       </section>
 
       {/* Week window */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm">
-        <h2 className="font-semibold text-gray-700 mb-1">Planeringsfönster</h2>
-        <p className="text-xs text-gray-500 mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
+      <section className="card p-5">
+        <h2 className="font-display text-lg font-bold text-ink mb-1">Planeringsfönster</h2>
+        <p className="text-xs text-ink-muted mb-4">{dates.length} dagar · {week.schedule.length} måltider</p>
 
-        <div className="flex flex-wrap gap-6">
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 items-start">
           {/* Start */}
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-600">Från</label>
+          <div className="space-y-2 min-w-0">
+            <label className="field-label mb-0">Från</label>
             <input
               type="date"
               value={week.startDate}
               onChange={e => setWindow(e.target.value, startMeal, week.endDate, endMeal)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="field px-3"
             />
             <MealToggle
               value={startMeal}
@@ -80,17 +81,17 @@ export default function PortionsStep() {
             />
           </div>
 
-          <div className="flex items-center pt-7 text-gray-400 text-xl">→</div>
+          <div className="hidden sm:flex items-center pt-10 text-ink-faint text-xl" aria-hidden="true">→</div>
 
           {/* End */}
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-600">Till</label>
+          <div className="space-y-2 min-w-0">
+            <label className="field-label mb-0">Till</label>
             <input
               type="date"
               value={week.endDate}
               min={week.startDate}
               onChange={e => setWindow(week.startDate, startMeal, e.target.value, endMeal)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="field px-3"
             />
             <MealToggle
               value={endMeal}
@@ -101,18 +102,18 @@ export default function PortionsStep() {
       </section>
 
       {/* Per-day portion overrides */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm">
-        <h2 className="font-semibold text-gray-700 mb-4">Portioner per dag</h2>
+      <section className="card p-5">
+        <h2 className="font-display text-lg font-bold text-ink mb-4">Portioner per dag</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {dates.map((date) => (
-            <div key={date} className="border border-gray-100 rounded-xl overflow-hidden">
+            <div key={date} className="border border-line-soft rounded-xl overflow-hidden">
               <div className="px-3 pt-3 pb-1">
-                <span className="text-sm font-medium text-gray-700 capitalize">
+                <span className="text-sm font-medium text-ink-soft capitalize">
                   {formatDayLabel(date)}
                 </span>
               </div>
               {(['lunch', 'middag'] as MealType[]).filter(type => hasSlot(date, type)).map(type => (
-                <div key={type} className="border-t border-gray-50 px-3 py-2 flex flex-wrap items-center gap-3">
+                <div key={type} className="border-t border-line-soft px-3 py-2 flex flex-wrap items-center gap-3">
                   <PortionPicker
                     label={type === 'lunch' ? 'Lunch' : 'Middag'}
                     value={slotPortions(date, type)}
@@ -123,7 +124,7 @@ export default function PortionsStep() {
                     placeholder="Notering…"
                     value={slotEvent(date, type)}
                     onChange={e => updateEvent(date, type, e.target.value)}
-                    className="flex-1 min-w-[120px] text-xs text-gray-600 bg-transparent border-none focus:outline-none placeholder:text-gray-400 italic"
+                    className="flex-1 min-w-[120px] text-xs text-ink-muted bg-transparent border-none focus:outline-none placeholder:text-ink-faint italic"
                   />
                 </div>
               ))}
@@ -136,7 +137,7 @@ export default function PortionsStep() {
       <div className="flex justify-end">
         <button
           onClick={markDoneAndNext}
-          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-full transition-colors text-sm"
         >
           {week.stepsCompleted?.portioner ? 'Uppdaterat – gå till brainstorm' : 'Klar – gå till brainstorm'}
           <ChevronRight className="w-4 h-4" />
@@ -149,7 +150,7 @@ export default function PortionsStep() {
 function PortionPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-gray-600 w-12">{label}</span>
+      <span className="text-xs text-ink-muted w-12">{label}</span>
       <Stepper value={value} min={0} onChange={onChange} small />
     </div>
   )
@@ -157,36 +158,31 @@ function PortionPicker({ label, value, onChange }: { label: string; value: numbe
 
 function MealToggle({ value, onChange }: { value: MealType; onChange: (v: MealType) => void }) {
   return (
-    <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-      {(['lunch', 'middag'] as MealType[]).map(m => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => onChange(m)}
-          className={`px-3 py-1.5 font-medium transition-colors capitalize
-            ${value === m ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-        >
-          {m === 'lunch' ? 'Lunch' : 'Middag'}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      ariaLabel="Måltid"
+      value={value}
+      onChange={onChange}
+      options={[{ id: 'lunch', label: 'Lunch' }, { id: 'middag', label: 'Middag' }]}
+    />
   )
 }
 
 function Stepper({ value, min, onChange, small }: { value: number; min: number; onChange: (v: number) => void; small?: boolean }) {
   const cls = small
-    ? 'w-6 h-6 text-xs'
-    : 'w-9 h-9 text-lg'
+    ? 'w-9 h-9 text-base'
+    : 'w-11 h-11 text-lg'
   return (
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
-        className={`${cls} rounded-full bg-gray-100 hover:bg-gray-200 font-bold leading-none flex items-center justify-center`}
+        className={`${cls} rounded-full bg-line-soft hover:bg-line font-bold leading-none flex items-center justify-center`}
+        aria-label="Minska"
       >−</button>
-      <span className={`${small ? 'w-5 text-sm' : 'w-8 text-xl'} text-center font-semibold`}>{value}</span>
+      <span className={`${small ? 'w-6 text-[15px]' : 'w-8 text-xl'} text-center font-display font-extrabold tabular-nums`}>{value}</span>
       <button
         onClick={() => onChange(value + 1)}
-        className={`${cls} rounded-full bg-gray-100 hover:bg-gray-200 font-bold leading-none flex items-center justify-center`}
+        className={`${cls} rounded-full bg-line-soft hover:bg-line font-bold leading-none flex items-center justify-center`}
+        aria-label="Öka"
       >+</button>
     </div>
   )

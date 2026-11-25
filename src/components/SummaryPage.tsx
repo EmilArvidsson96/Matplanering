@@ -140,7 +140,7 @@ function ClimateCard({ week }: { week: WeekPlan }) {
     <div className="card p-5 space-y-3">
       <h2 className="eyebrow">Klimat & uppskattad kostnad</h2>
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-display font-extrabold shrink-0" style={{ background: CLIMATE_COLORS[grade] }}>
+        <div className="w-14 h-14 rounded-3xl flex items-center justify-center text-white text-2xl font-display font-extrabold shrink-0" style={{ background: CLIMATE_COLORS[grade] }}>
           {grade}
         </div>
         <div className="flex-1 grid grid-cols-2 gap-3">
@@ -180,8 +180,8 @@ function ExtraCookingCard({ week, dishMap, today }: { week: WeekPlan; dishMap: M
   )
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Bak & till frysen</h2>
+    <div className="card p-4 space-y-2">
+      <h2 className="eyebrow">Bak & till frysen</h2>
       {sorted.map(meal => {
         const type = meal.extraType ?? 'frys'
         const comp = meal.components[0]
@@ -192,16 +192,16 @@ function ExtraCookingCard({ week, dishMap, today }: { week: WeekPlan; dishMap: M
             <ExtraTypeIcon type={type} className={`w-4 h-4 shrink-0 ${type === 'bak' ? 'text-pink-500' : 'text-sky-500'}`} />
             <div className="flex-1 min-w-0">
               {dish ? (
-                <Link to={`/recept?dish=${encodeURIComponent(dish.id)}`} className="text-sm font-medium text-gray-800 hover:underline hover:text-brand-700">
+                <Link to={`/recept?dish=${encodeURIComponent(dish.id)}`} className="text-sm font-medium text-ink hover:underline hover:text-brand-700">
                   {meal.name}
                 </Link>
               ) : (
-                <span className="text-sm font-medium text-gray-800">{meal.name}</span>
+                <span className="text-sm font-medium text-ink">{meal.name}</span>
               )}
-              <span className="text-xs text-gray-500"> · {comp?.portions ?? 0} {unit}</span>
-              {meal.notes && <p className="text-xs text-gray-500 italic">{meal.notes}</p>}
+              <span className="text-xs text-ink-muted"> · {comp?.portions ?? 0} {unit}</span>
+              {meal.notes && <p className="text-xs text-ink-muted italic">{meal.notes}</p>}
             </div>
-            <span className={`text-xs shrink-0 ${meal.plannedDate === today ? 'text-brand-700 font-semibold' : 'text-gray-500'}`}>
+            <span className={`text-xs shrink-0 ${meal.plannedDate === today ? 'text-brand-700 font-semibold' : 'text-ink-muted'}`}>
               {meal.plannedDate ? (meal.plannedDate === today ? 'Idag' : formatDayShort(meal.plannedDate)) : EXTRA_LABELS[type]}
             </span>
           </div>
@@ -210,7 +210,7 @@ function ExtraCookingCard({ week, dishMap, today }: { week: WeekPlan; dishMap: M
       {freezeMeals.map(meal => (
         <div key={meal.id} className="flex items-center gap-2">
           <ExtraTypeIcon type="frys" className="w-4 h-4 shrink-0 text-sky-500" />
-          <span className="flex-1 text-sm text-gray-700">
+          <span className="flex-1 text-sm text-ink-soft">
             Laga <span className="font-medium">{meal.freezePortions} port.</span> extra av {meal.name}
           </span>
         </div>
