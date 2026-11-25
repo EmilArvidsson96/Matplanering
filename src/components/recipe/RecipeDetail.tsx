@@ -470,7 +470,9 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
 
   const portionControl = (
     <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shrink-0">
-      <span className="text-xs text-gray-500 mr-1">Portioner:</span>
+      <span className="text-xs text-gray-500 mr-1">
+        {dish.yieldUnit?.trim() ? `${dish.yieldUnit.trim().charAt(0).toUpperCase()}${dish.yieldUnit.trim().slice(1)}:` : 'Portioner:'}
+      </span>
       <button
         onClick={() => setPortions(p => Math.max(1, p - 1))}
         className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100"

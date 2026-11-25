@@ -66,6 +66,7 @@ export interface Dish {
   preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
   /** AI results saved on the recipe so they survive reloads and other devices. */
   ai?: DishAiData
+  yieldUnit?: string          // what the recipe yields, e.g. "bullar", "limpor"; empty = portioner
 }
 
 export interface RecipeImprovement {
@@ -101,7 +102,16 @@ export interface PlannedMeal {
   notes: string
   usesIngredientsFromHome: string
   temporaryIngredients: TemporaryIngredient[]
+  /** Extra portions cooked on top of what's eaten, to put in the freezer. */
+  freezePortions?: number
+  /** 'extra' = cooked/baked for later (freezer, baking) — not eaten from this week's portions. */
+  kind?: 'meal' | 'extra'
+  extraType?: ExtraType
+  /** Day the extra cooking/baking is planned for ("YYYY-MM-DD"), optional. */
+  plannedDate?: string
 }
+
+export type ExtraType = 'frys' | 'bak'
 
 export interface MealAssignment {
   mealId: string

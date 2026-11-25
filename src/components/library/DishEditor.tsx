@@ -70,6 +70,33 @@ function AmountInput({ value, onChange }: { value: number; onChange: (n: number)
   )
 }
 
+/** Recipe yield (portions, or e.g. 24 buns) — typeable since baking yields can be large. */
+function BaseInput({ value, disabled, onChange }: { value: number; disabled: boolean; onChange: (n: number) => void }) {
+  const [text, setText] = useState(String(value))
+  const focused = useRef(false)
+  useEffect(() => {
+    if (!focused.current) setText(String(value))
+  }, [value])
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      aria-label="Receptet ger"
+      disabled={disabled}
+      value={text}
+      onFocus={() => { focused.current = true }}
+      onBlur={() => { focused.current = false; setText(String(value)) }}
+      onChange={e => {
+        if (!/^\d*$/.test(e.target.value)) return
+        setText(e.target.value)
+        const n = parseInt(e.target.value, 10)
+        if (!isNaN(n) && n > 0) onChange(n)
+      }}
+      className="w-9 border border-gray-200 rounded-lg px-1 py-0.5 text-xs font-semibold text-gray-700 text-center disabled:opacity-40"
+    />
+  )
+}
+
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
   return {
     name: '', protein: [], carb: [], cuisine: 'övrigt',
@@ -330,9 +357,11 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               >
                 <Minus className="w-2.5 h-2.5" />
               </button>
-              <span className="text-xs font-semibold text-gray-700 w-4 text-center">
-                {form.ingredients[0]?.portionsBase ?? 4}
-              </span>
+              <BaseInput
+                value={form.ingredients[0]?.portionsBase ?? 4}
+                disabled={form.ingredients.length === 0}
+                onChange={setAllPortionsBase}
+              />
               <button
                 type="button"
                 onClick={() => setAllPortionsBase((form.ingredients[0]?.portionsBase ?? 4) + 1)}
@@ -341,7 +370,15 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               >
                 <Plus className="w-2.5 h-2.5" />
               </button>
-              <span className="text-xs text-gray-400">port.</span>
+              <input
+                type="text"
+                value={form.yieldUnit ?? ''}
+                onChange={e => setForm(f => ({ ...f, yieldUnit: e.target.value }))}
+                placeholder="port."
+                title="Vad receptet ger, t.ex. bullar, limpor, kakor. Tomt = portioner."
+                aria-label="Enhet för receptets mängd"
+                className="w-16 border border-gray-200 rounded-lg px-1.5 py-0.5 text-xs text-gray-700 placeholder:text-gray-400"
+              />
               <button
                 type="button"
                 onClick={addIngredient}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RotateCcw, ChevronRight, ChevronDown, X } from 'lucide-react'
+import { RotateCcw, ChevronRight, ChevronDown, X, Snowflake } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -10,7 +10,9 @@ import {
   remainderPortions,
   mealTotalPortions,
   resolveComponentPortions,
+  eatenMeals,
 } from '../../utils/weekUtils'
+import ExtraCookingSection from './ExtraCookingSection'
 import DishPicker from './DishPicker'
 import DishEditor from '../library/DishEditor'
 import type { Dish, PlannedMeal, MealComponent, TemporaryIngredient, ShoppingCategory } from '../../types'
@@ -130,12 +132,12 @@ export default function BrainstormStep() {
 
       {/* Meal list */}
       <div className="space-y-2">
-        {week.meals.length === 0 && (
+        {eatenMeals(week.meals).length === 0 && (
           <p className="text-sm text-gray-500 py-4 text-center">
             Inga rätter planerade än. Lägg till nedan!
           </p>
         )}
-        {week.meals.map(meal => {
+        {eatenMeals(week.meals).map(meal => {
           const primaryComp = meal.components[0]
           const primaryDish = primaryComp?.dishId ? dishes.find(d => d.id === primaryComp.dishId) : null
           const missingIngredients = primaryDish && primaryDish.ingredients.length === 0
@@ -209,6 +211,9 @@ export default function BrainstormStep() {
         )}
       </div>
 
+      {/* Baking & cooking for the freezer */}
+      <ExtraCookingSection />
+
       {/* Add meal from library picker */}
       {showPicker && (
         <DishPicker
@@ -237,7 +242,7 @@ export default function BrainstormStep() {
       )}
 
       {/* Next-step CTA */}
-      {week.meals.length > 0 && (
+      {eatenMeals(week.meals).length > 0 && (
         <div className="flex items-center justify-between gap-3 bg-white rounded-2xl p-4 shadow-sm">
           {portionsOk ? (
             <p className="text-sm text-green-700 font-medium">Portioner täcker veckan ✓</p>
@@ -376,6 +381,15 @@ function MealRow({
               >
                 inga ingredienser
               </button>
+            )}
+
+            {(meal.freezePortions ?? 0) > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full"
+                title={`Laga ${meal.freezePortions} portioner extra till frysen`}
+              >
+                <Snowflake className="w-3 h-3" />+{meal.freezePortions}
+              </span>
             )}
           </div>
 
@@ -554,6 +568,31 @@ function MealRow({
               </div>
             )}
           </div>
+
+          {/* Extra portions for the freezer */}
+          {!meal.isRemainder && (
+            <div className="flex items-center gap-2 bg-sky-50 rounded-lg px-2 py-1.5">
+              <Snowflake className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span className="flex-1 text-xs text-sky-800">
+                Laga extra till frysen
+                {(meal.freezePortions ?? 0) > 0 && (
+                  <span className="text-sky-600"> · totalt {totalPortions + (meal.freezePortions ?? 0)} port. lagas</span>
+                )}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => onUpdate({ freezePortions: Math.max(0, (meal.freezePortions ?? 0) - 1) })}
+                  className="w-6 h-6 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
+                >−</button>
+                <span className="w-5 text-center text-sm font-semibold">{meal.freezePortions ?? 0}</span>
+                <button
+                  onClick={() => onUpdate({ freezePortions: (meal.freezePortions ?? 0) + 1 })}
+                  className="w-6 h-6 rounded-full bg-white border border-sky-200 hover:bg-sky-100 text-xs font-bold flex items-center justify-center"
+                >+</button>
+                <span className="text-xs text-sky-700 ml-0.5">port.</span>
+              </div>
+            </div>
+          )}
 
           {/* Notes & home ingredients */}
           <input

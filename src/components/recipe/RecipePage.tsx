@@ -4,8 +4,11 @@ import { Search, CalendarDays, X } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { useIsDesktop } from '../../hooks/useDevice'
-import { mealTotalPortions, resolveComponentPortions } from '../../utils/weekUtils'
-import type { Dish } from '../../types'
+import { componentCookPortions, mealCookPortions, isExtraMeal } from '../../utils/weekUtils'
+import type { Dish, ExtraType } from '../../types'
+import { ExtraTypeIcon } from '../steps/ExtraCookingSection'
+
+type WeekItem = { key: string; dish: Dish | null; name: string; portions: number; extra: ExtraType | null }
 import RecipeDetail from './RecipeDetail'
 
 export default function RecipePage() {
@@ -56,15 +59,20 @@ export default function RecipePage() {
       mealName: string
       isCombo: boolean
       total: number
-      items: { key: string; dish: Dish | null; name: string; portions: number }[]
+      items: WeekItem[]
     }[] = []
     for (const meal of plan.meals) {
-      const total = mealTotalPortions(meal)
+      // Portions to cook: includes extra for the freezer / baking batches
+      const total = mealCookPortions(meal)
+      const extra: ExtraType | null = isExtraMeal(meal)
+        ? (meal.extraType ?? 'frys')
+        : (meal.freezePortions ?? 0) > 0 ? 'frys' : null
       const items = meal.components.map(comp => ({
         key: comp.id,
         dish: comp.dishId ? dishes.find(d => d.id === comp.dishId) ?? null : null,
         name: comp.name,
-        portions: resolveComponentPortions(comp, total),
+        portions: Math.round(componentCookPortions(comp, meal)),
+        extra,
       }))
       // Nothing cookable (e.g. a free-text "Rester" meal) → skip
       if (!items.some(it => it.dish)) continue
@@ -94,10 +102,7 @@ export default function RecipePage() {
     if (!plan) return null
     for (const meal of plan.meals) {
       const comp = meal.components.find(c => c.dishId === selectedId)
-      if (comp) {
-        const total = mealTotalPortions(meal)
-        return comp.portionsMode === 'total' ? total : comp.portions
-      }
+      if (comp) return Math.round(componentCookPortions(comp, meal))
     }
     return null
   }, [selectedId, weeks, activeWeekId])
@@ -117,7 +122,7 @@ export default function RecipePage() {
     )
   }
 
-  function renderItem(it: { key: string; dish: Dish | null; name: string; portions: number }) {
+  function renderItem(it: WeekItem) {
     if (!it.dish) {
       // Free-text component (e.g. a sauce) — shown for context, no recipe to open
       return (
@@ -139,7 +144,15 @@ export default function RecipePage() {
           }`}
         >
           <span className="text-sm font-medium text-gray-800 truncate">{dish.name}</span>
-          <span className="shrink-0 text-xs text-gray-400">{it.portions}p</span>
+          <span className="shrink-0 flex items-center gap-1 text-xs text-gray-400">
+            {it.extra && (
+              <ExtraTypeIcon
+                type={it.extra}
+                className={`w-3 h-3 ${it.extra === 'bak' ? 'text-pink-400' : 'text-sky-400'}`}
+              />
+            )}
+            {it.portions}{dish.yieldUnit?.trim() ? ` ${dish.yieldUnit.trim()}` : 'p'}
+          </span>
         </button>
       </li>
     )

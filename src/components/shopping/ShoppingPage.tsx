@@ -7,6 +7,7 @@ import type { ShoppingItem, ShoppingCategory } from '../../types'
 import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
+import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
@@ -39,19 +40,19 @@ export default function ShoppingPage() {
     const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
 
     for (const meal of week.meals) {
-      if (meal.isRemainder) continue
-      const total = meal.components.filter(c => c.portionsMode === 'own').reduce((s, c) => s + c.portions, 0)
+      if (meal.isRemainder && !isExtraMeal(meal)) continue
 
       for (const comp of meal.components) {
         if (!comp.dishId) continue
         const dish = dishes.find(d => d.id === comp.dishId)
         if (!dish || dish.ingredients.length === 0) continue
 
-        const effectivePortions = comp.portionsMode === 'total' ? Math.max(1, total) : comp.portions
+        // Includes extra portions for the freezer and baking batches
+        const effectivePortions = componentCookPortions(comp, meal)
 
         for (const ing of dish.ingredients) {
           if (pantry.has(ing.name.toLowerCase())) continue
-          const scale = effectivePortions / ing.portionsBase
+          const scale = effectivePortions / (ing.portionsBase || 1)
           raw.push({
             id: uuid(),
             name: ing.name,
