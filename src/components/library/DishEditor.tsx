@@ -183,25 +183,28 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           ? 'Okänd sajt – tolkad med AI. Appen har lärt sig sajten och hämtar utan AI nästa gång.'
           : 'Okänd sajt – tolkad med AI. Kontrollera resultatet.'
         : undefined
-      if (field === 'ingredients') {
-        if (data.ingredients.length === 0) {
-          setFetchStatus({ state: 'error', error: 'Hittade inga ingredienser i receptet.' })
-        } else {
-          setForm(f => ({
-            ...f,
-            ingredients: data.ingredients,
-            ...(f.name === '' && data.title ? { name: data.title } : {}),
-          }))
-          setFetchStatus({ state: 'idle', error: '', info })
-        }
-      } else {
-        if (!data.instructions?.length) {
-          setFetchStatus({ state: 'error', error: 'Hittade inga instruktioner i receptet.' })
-        } else {
-          setForm(f => ({ ...f, instructions: data.instructions! }))
-          setFetchStatus({ state: 'idle', error: '', info })
-        }
+      const found = field === 'ingredients' ? data.ingredients.length > 0 : !!data.instructions?.length
+      if (!found) {
+        setFetchStatus({
+          state: 'error',
+          error: field === 'ingredients' ? 'Hittade inga ingredienser i receptet.' : 'Hittade inga instruktioner i receptet.',
+        })
+        return
       }
+      // Use everything the fetch found: the requested field always, and the
+      // other one too if it's still empty (an AI parse returns both at once).
+      const patch: Partial<Dish> = {}
+      const wantIngredients = field === 'ingredients' || (form.ingredients.length === 0 && data.ingredients.length > 0)
+      const wantInstructions = field === 'instructions'
+        || (form.instructions.every(s => !s.text.trim()) && !!data.instructions?.length)
+      if (wantIngredients) patch.ingredients = data.ingredients
+      if (wantInstructions) patch.instructions = data.instructions!
+      if (form.name.trim() === '' && data.title) patch.name = data.title
+      setForm(f => ({ ...f, ...patch }))
+      // Existing recipe: save the fetched data right away so it isn't lost if
+      // the editor is closed without pressing Spara (AI fetches cost money).
+      if (dish) updateDish(dish.id, { ...patch, recipeUrl: form.recipeUrl })
+      setFetchStatus({ state: 'idle', error: '', info })
     } catch (e) {
       setFetchStatus({ state: 'error', error: e instanceof Error ? e.message : 'Okänt fel' })
     }

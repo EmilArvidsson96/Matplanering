@@ -1,6 +1,6 @@
 /** Anthropic API — calls the Messages API directly from the browser. */
 
-import type { AiModel, AppSettings, Dish, ShoppingCategory, ShoppingItem } from '../types'
+import type { AiModel, AppSettings, Dish, RecipeImprovement, ShoppingCategory, ShoppingItem } from '../types'
 import { LEX_BY_NAME } from '../data/ingredientLexicon'
 
 const MODEL_IDS: Record<AiModel, string> = {
@@ -410,6 +410,19 @@ Regler:
 
 Returnera den fullständiga listan med steg.`
 
+function splitPayload(dish: Dish) {
+  return {
+    name: dish.name,
+    ingredients: dish.ingredients.map(i => i.name),
+    instructions: (dish.instructions ?? []).map(s => s.text).filter(t => t.trim()),
+  }
+}
+
+/** Hash of the inputs the split tool sends — stored with the result on the dish. */
+export function splitInputHash(dish: Dish): string {
+  return hashInputs(JSON.stringify(splitPayload(dish)))
+}
+
 export async function splitInstructions(
   dish: Dish,
   settings: AppSettings,
@@ -424,18 +437,15 @@ export async function splitInstructions(
     throw new Error('Receptet har inga instruktioner att dela upp.')
   }
 
-  const ingredientNames = dish.ingredients.map(i => i.name)
-  const payload = {
-    name: dish.name,
-    ingredients: ingredientNames,
-    instructions: steps,
-  }
+  const payload = splitPayload(dish)
 
   // v3: split now uses Sonnet (was Haiku) for more accurate Swedish — bump the
   // version so results cached under the old model/prompt are regenerated.
   const cacheKey = `mp_ai_split_v3_${dish.id}`
-  const hash = hashInputs(JSON.stringify(payload))
+  const hash = splitInputHash(dish)
   if (!opts.force) {
+    // Result saved on the recipe (synced to every device) wins over the local cache.
+    if (dish.ai?.split?.hash === hash) return dish.ai.split.steps
     const cached = readCache<string[]>(cacheKey, hash)
     if (cached) return cached
   }
@@ -484,11 +494,7 @@ export async function splitInstructions(
 // Recipe improvement suggestions (Sonnet)
 // ════════════════════════════════════════════════════════════════════════
 
-export interface RecipeImprovement {
-  title: string         // short label
-  detail: string        // the actual suggestion, ready to add as a note
-  category: string      // e.g. "smak", "teknik", "hälsa", "tid", "tillbehör"
-}
+export type { RecipeImprovement }
 
 const IMPROVE_TOOL = {
   name: 'submit_improvements',
@@ -549,6 +555,10 @@ export async function suggestRecipeImprovements(
   const cacheKey = `mp_ai_improve_v1_${dish.id}`
   const hash = hashInputs(JSON.stringify(payload))
   if (!opts.force) {
+    // Suggestions saved on the recipe are kept even after notes change (e.g.
+    // when some of them were added), so they're always available again.
+    const saved = dish.ai?.improvements?.items
+    if (saved?.length) return saved
     const cached = readCache<RecipeImprovement[]>(cacheKey, hash)
     if (cached) return cached
   }

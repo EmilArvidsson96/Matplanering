@@ -3,9 +3,16 @@ import { v4 as uuid } from 'uuid'
 import { Wand, Lightbulb, Loader2, X, Check, RefreshCw } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
-import { splitInstructions, suggestRecipeImprovements } from '../../api/anthropic'
-import type { RecipeImprovement } from '../../api/anthropic'
-import type { Dish, RecipeStep } from '../../types'
+import { splitInstructions, splitInputHash, suggestRecipeImprovements } from '../../api/anthropic'
+import type { Dish, DishAiData, RecipeImprovement, RecipeStep } from '../../types'
+
+/** Merge AI results into the dish's saved `ai` data, using the latest store state. */
+function saveAiData(dishId: string, patch: Partial<DishAiData>) {
+  const { dishes, updateDish } = useLibraryStore.getState()
+  const current = dishes.find(d => d.id === dishId)
+  if (!current) return
+  updateDish(dishId, { ai: { ...current.ai, ...patch } })
+}
 
 // ---------------------------------------------------------------------------
 // Modal shell
@@ -43,7 +50,15 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   async function run(force = false) {
     setLoading(true); setError(null); setSteps(null)
     try {
-      setSteps(await splitInstructions(dish, settings, { force }))
+      const result = await splitInstructions(dish, settings, { force })
+      setSteps(result)
+      // Save on the recipe right away, so the result isn't lost if the
+      // dialog is closed without applying it.
+      if (dish.ai?.split?.hash !== splitInputHash(dish) || force) {
+        saveAiData(dish.id, {
+          split: { hash: splitInputHash(dish), steps: result, at: new Date().toISOString() },
+        })
+      }
     } catch (e: any) {
       setError(e.message ?? String(e))
     } finally {
@@ -134,7 +149,11 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   async function run(force = false) {
     setLoading(true); setError(null); setItems(null); setSelected(new Set())
     try {
-      setItems(await suggestRecipeImprovements(dish, settings, { force }))
+      const result = await suggestRecipeImprovements(dish, settings, { force })
+      setItems(result)
+      if (result !== dish.ai?.improvements?.items) {
+        saveAiData(dish.id, { improvements: { items: result, at: new Date().toISOString() } })
+      }
     } catch (e: any) {
       setError(e.message ?? String(e))
     } finally {
@@ -160,7 +179,12 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     const additions = chosen.map(c => `• ${c.title}: ${c.detail}`).join('\n')
     const existing = (dish.notes ?? '').trim()
     const notes = existing ? `${existing}\n${additions}` : additions
-    updateDish(dish.id, { notes })
+    const marked = items.map((it, i) => (selected.has(i) ? { ...it, applied: true } : it))
+    const latest = useLibraryStore.getState().dishes.find(d => d.id === dish.id)
+    updateDish(dish.id, {
+      notes,
+      ai: { ...latest?.ai, improvements: { items: marked, at: latest?.ai?.improvements?.at ?? new Date().toISOString() } },
+    })
     onClose()
   }
 
@@ -180,16 +204,18 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
             <p className="text-sm text-gray-400 italic py-6 text-center">Inga förslag den här gången.</p>
           ) : (
             <>
-              <p className="text-xs text-gray-500">Bocka för de förslag du vill lägga till i receptets anteckningar.</p>
+              <p className="text-xs text-gray-500">Bocka för de förslag du vill lägga till i receptets anteckningar. Förslagen sparas på receptet.</p>
               <ul className="space-y-2">
                 {items.map((it, i) => (
                   <li key={i}>
-                    <label className={`flex gap-2.5 items-start p-3 rounded-xl border cursor-pointer transition-colors ${
-                      selected.has(i) ? 'border-brand-300 bg-brand-50' : 'border-gray-200 hover:bg-gray-50'
+                    <label className={`flex gap-2.5 items-start p-3 rounded-xl border transition-colors ${
+                      it.applied ? 'border-gray-100 bg-gray-50 opacity-60 cursor-default'
+                        : selected.has(i) ? 'border-brand-300 bg-brand-50 cursor-pointer' : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
                     }`}>
                       <input
                         type="checkbox"
-                        checked={selected.has(i)}
+                        checked={it.applied || selected.has(i)}
+                        disabled={it.applied}
                         onChange={() => toggle(i)}
                         className="mt-1 accent-brand-500"
                       />
@@ -197,6 +223,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-gray-800">{it.title}</span>
                           <span className="text-[10px] uppercase tracking-wide text-brand-600 bg-brand-100 rounded px-1.5 py-0.5">{it.category}</span>
+                          {it.applied && <span className="text-[10px] text-gray-500">Tillagd</span>}
                         </div>
                         <p className="text-sm text-gray-600 leading-relaxed mt-0.5">{it.detail}</p>
                       </div>

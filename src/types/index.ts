@@ -64,6 +64,23 @@ export interface Dish {
   notes: string
   cookingHistory: CookingRecord[]
   preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
+  /** AI results saved on the recipe so they survive reloads and other devices. */
+  ai?: DishAiData
+}
+
+export interface RecipeImprovement {
+  title: string         // short label
+  detail: string        // the actual suggestion, ready to add as a note
+  category: string      // e.g. "smak", "teknik", "hälsa", "tid", "tillbehör"
+  /** True once the suggestion has been added to the recipe's notes. */
+  applied?: boolean
+}
+
+export interface DishAiData {
+  /** Last "split into clearer steps" result; `hash` is of the instructions it was made from. */
+  split?: { hash: string; steps: string[]; at: string }
+  /** Last improvement suggestions (kept even after the recipe changes). */
+  improvements?: { items: RecipeImprovement[]; at: string }
 }
 
 export type MealType = 'lunch' | 'middag'
