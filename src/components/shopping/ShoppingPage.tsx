@@ -20,6 +20,20 @@ const CATEGORY_ORDER: ShoppingCategory[] = [
   'grönsaker','frukt','mejeri','kött','fisk','bröd','torrvaror','konserver','frys','kryddor','övrigt',
 ]
 
+const UNIT_OPTIONS = ['st', 'förp', 'g', 'kg', 'ml', 'dl', 'l', 'msk', 'tsk', 'krm', 'burk', 'paket']
+
+/** Step size for the −/+ buttons, based on unit and current amount. */
+function amountStep(unit: string, current: number): number {
+  const u = unit.trim().toLowerCase()
+  if (u === 'g' || u === 'ml') return current >= 500 ? 100 : 50
+  if (u === 'kg' || u === 'l') return 0.5
+  return 1
+}
+
+function formatAmount(n: number): string {
+  return (Math.round(n * 10) / 10).toString()
+}
+
 export default function ShoppingPage() {
   const store         = useWeekStore()
   const week          = activeWeek(store)
@@ -27,6 +41,8 @@ export default function ShoppingPage() {
   const { settings }  = useSettingsStore()
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
+  const [newAmount, setNewAmount] = useState('')
+  const [newUnit, setNewUnit]     = useState('st')
   const [showPurchased, setShowPurchased] = useState(false)
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -76,10 +92,14 @@ export default function ShoppingPage() {
   function addManual() {
     if (!newItem.trim()) return
     store.addShoppingItem({
-      name: newItem.trim(), amount: '', unit: '', category: newCat,
+      name: newItem.trim(),
+      amount: newAmount.trim().replace(',', '.'),
+      unit: newAmount.trim() ? newUnit.trim() : '',
+      category: newCat,
       isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
     setNewItem('')
+    setNewAmount('')
   }
 
   function markAllPurchased() {
@@ -277,6 +297,29 @@ export default function ShoppingPage() {
           onKeyDown={e => e.key === 'Enter' && addManual()}
           className="flex-1 min-w-[180px] border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
         />
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder="Mängd"
+          aria-label="Mängd"
+          value={newAmount}
+          onChange={e => setNewAmount(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addManual()}
+          className="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+        />
+        <input
+          type="text"
+          list="shopping-units"
+          placeholder="Enhet"
+          aria-label="Enhet"
+          value={newUnit}
+          onChange={e => setNewUnit(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addManual()}
+          className="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+        />
+        <datalist id="shopping-units">
+          {UNIT_OPTIONS.map(u => <option key={u} value={u} />)}
+        </datalist>
         <select
           value={newCat}
           onChange={e => setNewCat(e.target.value as ShoppingCategory)}
@@ -565,6 +608,11 @@ function ShoppingItemRow({
         </button>
       )}
 
+      {/* Quantity stepper */}
+      {!editing && !item.isPurchased && (
+        <QuantityStepper item={item} onUpdate={onUpdate} />
+      )}
+
       {/* Actions */}
       <div className="flex gap-1 shrink-0">
         <button
@@ -579,6 +627,47 @@ function ShoppingItemRow({
           className="text-gray-300 hover:text-red-400 text-sm px-1"
         >✕</button>
       </div>
+    </div>
+  )
+}
+
+function QuantityStepper({
+  item, onUpdate,
+}: {
+  item: ShoppingItem
+  onUpdate: (p: Partial<ShoppingItem>) => void
+}) {
+  const current = parseFloat(item.amount.replace(',', '.'))
+  const numeric = !isNaN(current)
+  // Free-text amounts ("en näve") can't be stepped; edit them by tapping the name
+  if (item.amount.trim() && !numeric) return null
+
+  const value = numeric ? current : 0
+  const step  = amountStep(item.unit, value)
+
+  function change(dir: 1 | -1) {
+    const next = Math.max(0, value + dir * amountStep(item.unit, dir < 0 ? value - 0.0001 : value))
+    if (next === 0) onUpdate({ amount: '', unit: '' })
+    else onUpdate({ amount: formatAmount(next), unit: item.unit || 'st' })
+  }
+
+  return (
+    <div className="flex items-center shrink-0 border border-gray-200 rounded-lg overflow-hidden text-sm">
+      <button
+        onClick={() => change(-1)}
+        disabled={value <= 0}
+        aria-label={`Minska mängd ${item.name}`}
+        className="w-7 h-7 text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+      >−</button>
+      <span className="min-w-[2rem] text-center text-xs text-gray-600 tabular-nums">
+        {numeric ? formatAmount(value) : '–'}
+      </span>
+      <button
+        onClick={() => change(1)}
+        aria-label={`Öka mängd ${item.name}`}
+        title={`+${formatAmount(step)} ${item.unit || 'st'}`}
+        className="w-7 h-7 text-gray-500 hover:bg-gray-50"
+      >+</button>
     </div>
   )
 }
