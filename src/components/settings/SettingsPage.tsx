@@ -3,6 +3,7 @@ import { useSettingsStore } from '../../store/settingsStore'
 import { DEFAULT_CONVERSIONS } from '../../utils/unitConversions'
 import type { AiModel } from '../../types'
 import ReceiptCalibration from './ReceiptCalibration'
+import ShoppingRulesSection from './ShoppingRulesSection'
 
 export default function SettingsPage() {
   const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion, setRecipeSiteRule } = useSettingsStore()
@@ -240,6 +241,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <ShoppingRulesSection />
 
       {/* Recipe sites learned via AI */}
       <section className="bg-white rounded-2xl p-5 shadow-sm">
