@@ -24,7 +24,13 @@ export function useAutoSave() {
   const settingsStore = useSettingsStore()
   const gameStore     = useGameStore()
 
+  const inFlightRef = useRef(false)
+
   const save = useCallback(async () => {
+    // Two overlapping saves would send the same sha and conflict. Anything
+    // changed meanwhile stays dirty and is picked up by the next debounce.
+    if (inFlightRef.current) return
+    inFlightRef.current = true
     setStatus('saving')
     try {
       // Save dirty weeks
@@ -37,16 +43,21 @@ export function useAutoSave() {
         weekStore.markClean(weekId, newSha)
       }
 
-      // Save library if dirty
-      if (libraryStore.isDirty) {
-        const data: LibraryData = { dishes: libraryStore.dishes }
+      // Save library if dirty. Read live state (not the render snapshot) and
+      // remember the revision, so edits made while the request is in flight —
+      // e.g. an AI result applied right after another change — stay dirty and
+      // get saved in the next round instead of being marked as saved.
+      const lib = useLibraryStore.getState()
+      if (lib.isDirty) {
+        const revision = lib.revision
+        const data: LibraryData = { dishes: lib.dishes }
         const newSha = await saveFile(
           'library.json',
           JSON.stringify(data, null, 2),
-          libraryStore.sha,
+          lib.sha,
           'Uppdaterat bibliotek',
         )
-        libraryStore.markClean(newSha)
+        useLibraryStore.getState().markClean(newSha, revision)
       }
 
       // Save game data if dirty
@@ -77,8 +88,10 @@ export function useAutoSave() {
       console.error('AutoSave failed', e)
       setStatus('error')
       setSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      inFlightRef.current = false
     }
-  }, [weekStore, libraryStore, settingsStore])
+  }, [weekStore, libraryStore, settingsStore, gameStore])
 
   const isDirty =
     weekStore.dirtyWeeks.size > 0 || libraryStore.isDirty || settingsStore.isDirty || gameStore.isDirty
@@ -89,6 +102,27 @@ export function useAutoSave() {
     timerRef.current = setTimeout(save, DEBOUNCE_MS)
     return () => clearTimeout(timerRef.current)
   }, [isDirty, save])
+
+  // Save right away when the app is hidden or closed (mobile app switch, tab
+  // close) so changes inside the debounce window aren't lost.
+  const saveRef = useRef(save)
+  saveRef.current = save
+  const dirtyRef = useRef(isDirty)
+  dirtyRef.current = isDirty
+  useEffect(() => {
+    const flush = () => {
+      if (!dirtyRef.current) return
+      clearTimeout(timerRef.current)
+      void saveRef.current()
+    }
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', flush)
+    }
+  }, [])
 
   // Poll for remote changes every 30s and silently refresh non-dirty data.
   const pollRef = useRef<() => Promise<void>>()

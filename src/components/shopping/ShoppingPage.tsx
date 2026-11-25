@@ -8,7 +8,9 @@ import type { ShoppingItem, ShoppingCategory } from '../../types'
 import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
+import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
+import MathemCartModal from './MathemCartModal'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -31,6 +33,7 @@ export default function ShoppingPage() {
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
+  const [showMathem, setShowMathem] = useState(false)
 
   const items = week.shoppingList
   const dismissed = week.dismissedMergePairs ?? []
@@ -40,19 +43,19 @@ export default function ShoppingPage() {
     const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
 
     for (const meal of week.meals) {
-      if (meal.isRemainder) continue
-      const total = meal.components.filter(c => c.portionsMode === 'own').reduce((s, c) => s + c.portions, 0)
+      if (meal.isRemainder && !isExtraMeal(meal)) continue
 
       for (const comp of meal.components) {
         if (!comp.dishId) continue
         const dish = dishes.find(d => d.id === comp.dishId)
         if (!dish || dish.ingredients.length === 0) continue
 
-        const effectivePortions = comp.portionsMode === 'total' ? Math.max(1, total) : comp.portions
+        // Includes extra portions for the freezer and baking batches
+        const effectivePortions = componentCookPortions(comp, meal)
 
         for (const ing of dish.ingredients) {
           if (pantry.has(ing.name.toLowerCase())) continue
-          const scale = effectivePortions / ing.portionsBase
+          const scale = effectivePortions / (ing.portionsBase || 1)
           raw.push({
             id: uuid(),
             name: ing.name,
@@ -242,11 +245,23 @@ export default function ShoppingPage() {
           <Sparkles className="w-4 h-4" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
         {unpurchasedCount > 0 && (
+          <button onClick={() => setShowMathem(true)} className="chip shrink-0 bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700">
+            <ShoppingCart className="w-4 h-4" /> Handla på Mathem
+          </button>
+        )}
+        {unpurchasedCount > 0 && (
           <button onClick={markAllPurchased} className="chip chip-off shrink-0 font-medium">
             <CheckCheck className="w-4 h-4" /> Allt handlat ({unpurchasedCount})
           </button>
         )}
       </div>
+
+      {showMathem && (
+        <MathemCartModal
+          items={items.filter(i => !i.isPurchased && !i.isExcluded)}
+          onClose={() => setShowMathem(false)}
+        />
+      )}
 
       {/* AI cleanup */}
       {aiError && (

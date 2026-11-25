@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
-import { computeBalances, slotKey, formatDayShort, mealTotalPortions } from '../../utils/weekUtils'
+import { computeBalances, slotKey, formatDayShort, mealTotalPortions, eatenMeals } from '../../utils/weekUtils'
 import Modal from '../common/Modal'
 import type { ScheduleSlot, PlannedMeal, MealType, WeekPlan } from '../../types'
 
@@ -12,10 +12,10 @@ export default function ScheduleStep() {
   const navigate = useNavigate()
   const [pickingSlot, setPickingSlot] = useState<ScheduleSlot | null>(null)
 
-  const unassignedMeals = week.meals.filter(meal =>
+  const unassignedMeals = eatenMeals(week.meals).filter(meal =>
     !week.schedule.some(slot => slot.assignments.some(a => a.mealId === meal.id))
   )
-  const allAssigned = week.meals.length > 0 && unassignedMeals.length === 0
+  const allAssigned = eatenMeals(week.meals).length > 0 && unassignedMeals.length === 0
 
   function markDoneAndFinish() {
     store.markStepCompleted('schema')
@@ -246,7 +246,7 @@ function MealAssignPicker({
 
   const [counts, setCounts] = useState<Record<string, number>>(() =>
     Object.fromEntries(
-      week.meals.filter(m => !inThisSlot.has(m.id))
+      eatenMeals(week.meals).filter(m => !inThisSlot.has(m.id))
                .map(m => [m.id, Math.max(1, remaining(m))])
     )
   )
@@ -255,8 +255,8 @@ function MealAssignPicker({
     setCounts(c => ({ ...c, [mealId]: Math.min(max, Math.max(1, (c[mealId] ?? 1) + delta)) }))
   }
 
-  const unassigned = week.meals.filter(m => !inThisSlot.has(m.id))
-  const assigned   = week.meals.filter(m => inThisSlot.has(m.id))
+  const unassigned = eatenMeals(week.meals).filter(m => !inThisSlot.has(m.id))
+  const assigned   = eatenMeals(week.meals).filter(m => inThisSlot.has(m.id))
 
   return (
     <Modal title={`Tilldela matlagning – ${slot.type === 'lunch' ? 'Lunch' : 'Middag'} ${slot.date}`} onClose={onClose}>

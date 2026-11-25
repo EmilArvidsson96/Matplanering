@@ -183,7 +183,7 @@ export function removLastDayFromSchedule(week: WeekPlan): WeekPlan {
 /** Running portion balance after each schedule slot. */
 export function computeBalances(week: WeekPlan): Map<string, number> {
   let balance = week.meals
-    .filter(m => m.isRemainder)
+    .filter(m => m.isRemainder && !isExtraMeal(m))
     .reduce((s, m) => s + mealTotalPortions(m), 0)
 
   const result = new Map<string, number>()
@@ -192,7 +192,7 @@ export function computeBalances(week: WeekPlan): Map<string, number> {
     const key = slotKey(slot)
     for (const { mealId, portions } of (slot.assignments ?? [])) {
       const meal = week.meals.find(m => m.id === mealId)
-      if (meal && !meal.isRemainder) {
+      if (meal && !meal.isRemainder && !isExtraMeal(meal)) {
         balance += portions   // only the portions cooked at this specific slot
       }
     }
@@ -210,6 +210,30 @@ export function slotKey(slot: ScheduleSlot): string {
 export function mealTotalPortions(meal: PlannedMeal): number {
   const own = meal.components.filter(c => c.portionsMode === 'own')
   return Math.max(1, own.reduce((s, c) => s + c.portions, 0))
+}
+
+/** Meals cooked/baked for later (freezer, baking) — outside this week's portion balance. */
+export function isExtraMeal(meal: PlannedMeal): boolean {
+  return meal.kind === 'extra'
+}
+
+/** Meals that are eaten this week (regular meals + leftovers). */
+export function eatenMeals(meals: PlannedMeal[]): PlannedMeal[] {
+  return meals.filter(m => !isExtraMeal(m))
+}
+
+/** Portions actually cooked for a meal: eaten portions + extra for the freezer. */
+export function mealCookPortions(meal: PlannedMeal): number {
+  return mealTotalPortions(meal) + Math.max(0, meal.freezePortions ?? 0)
+}
+
+/** Portions of one component to cook, scaled up by the meal's freezer extra. */
+export function componentCookPortions(component: MealComponent, meal: PlannedMeal): number {
+  const total = mealTotalPortions(meal)
+  const eaten = resolveComponentPortions(component, total)
+  const freeze = Math.max(0, meal.freezePortions ?? 0)
+  if (!freeze || isExtraMeal(meal)) return eaten
+  return eaten * (total + freeze) / total
 }
 
 export function mealPrimaryDishId(meal: PlannedMeal): string | null {
@@ -239,7 +263,7 @@ export function scaleMealComponents(meal: PlannedMeal, newTotal: number): MealCo
 }
 
 export function totalPlannedPortions(meals: PlannedMeal[]): number {
-  return meals.filter(m => !m.isRemainder).reduce((s, m) => s + mealTotalPortions(m), 0)
+  return meals.filter(m => !m.isRemainder && !isExtraMeal(m)).reduce((s, m) => s + mealTotalPortions(m), 0)
 }
 
 export function totalNeededPortions(schedule: ScheduleSlot[]): number {
@@ -247,7 +271,7 @@ export function totalNeededPortions(schedule: ScheduleSlot[]): number {
 }
 
 export function remainderPortions(meals: PlannedMeal[]): number {
-  return meals.filter(m => m.isRemainder).reduce((s, m) => s + mealTotalPortions(m), 0)
+  return meals.filter(m => m.isRemainder && !isExtraMeal(m)).reduce((s, m) => s + mealTotalPortions(m), 0)
 }
 
 export function dishPopularity(dishId: string, weeks: WeekPlan[]): number {

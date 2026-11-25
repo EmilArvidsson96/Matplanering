@@ -82,6 +82,33 @@ function formatAmount(n: number): string {
   return String(n).replace('.', ',')
 }
 
+/** Recipe yield (portions, or e.g. 24 buns) — typeable since baking yields can be large. */
+function BaseInput({ value, disabled, onChange }: { value: number; disabled: boolean; onChange: (n: number) => void }) {
+  const [text, setText] = useState(String(value))
+  const focused = useRef(false)
+  useEffect(() => {
+    if (!focused.current) setText(String(value))
+  }, [value])
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      aria-label="Receptet ger"
+      disabled={disabled}
+      value={text}
+      onFocus={() => { focused.current = true }}
+      onBlur={() => { focused.current = false; setText(String(value)) }}
+      onChange={e => {
+        if (!/^\d*$/.test(e.target.value)) return
+        setText(e.target.value)
+        const n = parseInt(e.target.value, 10)
+        if (!isNaN(n) && n > 0) onChange(n)
+      }}
+      className="w-10 h-9 bg-transparent text-center font-display font-extrabold text-base text-ink focus:outline-none focus:ring-2 focus:ring-brand-300 rounded-lg disabled:opacity-40"
+    />
+  )
+}
+
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
   return {
     name: '', protein: [], carb: [], cuisine: 'övrigt',
@@ -199,25 +226,28 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           ? 'Okänd sajt – tolkad med AI. Appen har lärt sig sajten och hämtar utan AI nästa gång.'
           : 'Okänd sajt – tolkad med AI. Kontrollera resultatet.'
         : undefined
-      if (field === 'ingredients') {
-        if (data.ingredients.length === 0) {
-          setFetchStatus({ state: 'error', error: 'Hittade inga ingredienser i receptet.' })
-        } else {
-          setForm(f => ({
-            ...f,
-            ingredients: data.ingredients,
-            ...(f.name === '' && data.title ? { name: data.title } : {}),
-          }))
-          setFetchStatus({ state: 'idle', error: '', info })
-        }
-      } else {
-        if (!data.instructions?.length) {
-          setFetchStatus({ state: 'error', error: 'Hittade inga instruktioner i receptet.' })
-        } else {
-          setForm(f => ({ ...f, instructions: data.instructions! }))
-          setFetchStatus({ state: 'idle', error: '', info })
-        }
+      const found = field === 'ingredients' ? data.ingredients.length > 0 : !!data.instructions?.length
+      if (!found) {
+        setFetchStatus({
+          state: 'error',
+          error: field === 'ingredients' ? 'Hittade inga ingredienser i receptet.' : 'Hittade inga instruktioner i receptet.',
+        })
+        return
       }
+      // Use everything the fetch found: the requested field always, and the
+      // other one too if it's still empty (an AI parse returns both at once).
+      const patch: Partial<Dish> = {}
+      const wantIngredients = field === 'ingredients' || (form.ingredients.length === 0 && data.ingredients.length > 0)
+      const wantInstructions = field === 'instructions'
+        || (form.instructions.every(s => !s.text.trim()) && !!data.instructions?.length)
+      if (wantIngredients) patch.ingredients = data.ingredients
+      if (wantInstructions) patch.instructions = data.instructions!
+      if (form.name.trim() === '' && data.title) patch.name = data.title
+      setForm(f => ({ ...f, ...patch }))
+      // Existing recipe: save the fetched data right away so it isn't lost if
+      // the editor is closed without pressing Spara (AI fetches cost money).
+      if (dish) updateDish(dish.id, { ...patch, recipeUrl: form.recipeUrl })
+      setFetchStatus({ state: 'idle', error: '', info })
     } catch (e) {
       setFetchStatus({ state: 'error', error: e instanceof Error ? e.message : 'Okänt fel' })
     }
@@ -330,7 +360,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         >
           <Minus className="w-4 h-4" />
         </button>
-        <span className="w-7 text-center font-display font-extrabold text-ink">{portionsBase}</span>
+        <BaseInput value={portionsBase} disabled={form.ingredients.length === 0} onChange={setAllPortionsBase} />
         <button
           type="button"
           onClick={() => setAllPortionsBase(portionsBase + 1)}
@@ -341,7 +371,15 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           <Plus className="w-4 h-4" />
         </button>
       </div>
-      <span>port.</span>
+      <input
+        type="text"
+        value={form.yieldUnit ?? ''}
+        onChange={e => setForm(f => ({ ...f, yieldUnit: e.target.value }))}
+        placeholder="port."
+        title="Vad receptet ger, t.ex. bullar, limpor, kakor. Tomt = portioner."
+        aria-label="Enhet för receptets mängd"
+        className="w-20 h-10 rounded-full bg-white border border-line px-3 text-base md:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-300"
+      />
     </div>
   )
 

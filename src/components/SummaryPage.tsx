@@ -12,8 +12,9 @@ import { useSettingsStore } from '../store/settingsStore'
 import {
   formatDayLabel, formatDayShort,
   totalPlannedPortions, totalNeededPortions, remainderPortions,
-  mealPrimaryDishId,
+  mealPrimaryDishId, isExtraMeal,
 } from '../utils/weekUtils'
+import { ExtraTypeIcon, EXTRA_LABELS } from './steps/ExtraCookingSection'
 import { weekPlanImpact, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../utils/ingredientImpact'
 import type { WeekPlan, PlannedMeal, Dish, ScheduleSlot } from '../types'
 
@@ -38,7 +39,8 @@ function getStepStatuses(week: WeekPlan, needed: number, planned: number): StepS
   const brainstormDone    = brainstormForced || brainstormAuto
   const brainstormStarted = week.meals.length > 0
   const schemaForced = week.stepsCompleted?.schema === true
-  const schemaAuto   = week.meals.length > 0 && week.meals.every(meal =>
+  const eaten        = week.meals.filter(m => !isExtraMeal(m))
+  const schemaAuto   = eaten.length > 0 && eaten.every(meal =>
     week.schedule.some(slot => slot.assignments.some(a => a.mealId === meal.id))
   )
   const schemaDone = schemaForced || schemaAuto
@@ -105,8 +107,10 @@ export default function SummaryPage() {
           {week.schedule.length > 0 && <CostCard week={week} needed={needed} />}
           {week.schedule.length > 0 && <ClimateCard week={week} />}
         </div>
-        <div className="lg:col-start-1 lg:row-start-1 min-w-0">
+        <div className="lg:col-start-1 lg:row-start-1 min-w-0 space-y-5">
           <WeekOverview week={week} dishMap={dishMap} today={today} />
+          {/* Baking & freezer cooking */}
+          <ExtraCookingCard week={week} dishMap={dishMap} today={today} />
         </div>
       </div>
     </div>
@@ -159,6 +163,58 @@ function ClimateCard({ week }: { week: WeekPlan }) {
         </div>
       </div>
       <p className="text-xs text-ink-muted">Uppskattat från ingredienslexikonet. Se Spel för detaljer och hur det påverkar dina poäng.</p>
+    </div>
+  )
+}
+
+// ─── Baking & freezer cooking ─────────────────────────────────────────────────
+
+function ExtraCookingCard({ week, dishMap, today }: { week: WeekPlan; dishMap: Map<string, Dish>; today: string }) {
+  const extras = week.meals.filter(isExtraMeal)
+  const freezeMeals = week.meals.filter(m => !isExtraMeal(m) && (m.freezePortions ?? 0) > 0)
+  if (extras.length === 0 && freezeMeals.length === 0) return null
+
+  // Dated items first (chronologically), then undated
+  const sorted = [...extras].sort((a, b) =>
+    (a.plannedDate ?? '9999').localeCompare(b.plannedDate ?? '9999'),
+  )
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Bak & till frysen</h2>
+      {sorted.map(meal => {
+        const type = meal.extraType ?? 'frys'
+        const comp = meal.components[0]
+        const dish = comp?.dishId ? dishMap.get(comp.dishId) : undefined
+        const unit = dish?.yieldUnit?.trim() || 'port.'
+        return (
+          <div key={meal.id} className="flex items-center gap-2">
+            <ExtraTypeIcon type={type} className={`w-4 h-4 shrink-0 ${type === 'bak' ? 'text-pink-500' : 'text-sky-500'}`} />
+            <div className="flex-1 min-w-0">
+              {dish ? (
+                <Link to={`/recept?dish=${encodeURIComponent(dish.id)}`} className="text-sm font-medium text-gray-800 hover:underline hover:text-brand-700">
+                  {meal.name}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-gray-800">{meal.name}</span>
+              )}
+              <span className="text-xs text-gray-500"> · {comp?.portions ?? 0} {unit}</span>
+              {meal.notes && <p className="text-xs text-gray-500 italic">{meal.notes}</p>}
+            </div>
+            <span className={`text-xs shrink-0 ${meal.plannedDate === today ? 'text-brand-700 font-semibold' : 'text-gray-500'}`}>
+              {meal.plannedDate ? (meal.plannedDate === today ? 'Idag' : formatDayShort(meal.plannedDate)) : EXTRA_LABELS[type]}
+            </span>
+          </div>
+        )
+      })}
+      {freezeMeals.map(meal => (
+        <div key={meal.id} className="flex items-center gap-2">
+          <ExtraTypeIcon type="frys" className="w-4 h-4 shrink-0 text-sky-500" />
+          <span className="flex-1 text-sm text-gray-700">
+            Laga <span className="font-medium">{meal.freezePortions} port.</span> extra av {meal.name}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

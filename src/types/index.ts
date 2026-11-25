@@ -64,6 +64,24 @@ export interface Dish {
   notes: string
   cookingHistory: CookingRecord[]
   preferredMonths: number[]   // 1–12, overrides computed season; empty = use history
+  /** AI results saved on the recipe so they survive reloads and other devices. */
+  ai?: DishAiData
+  yieldUnit?: string          // what the recipe yields, e.g. "bullar", "limpor"; empty = portioner
+}
+
+export interface RecipeImprovement {
+  title: string         // short label
+  detail: string        // the actual suggestion, ready to add as a note
+  category: string      // e.g. "smak", "teknik", "hälsa", "tid", "tillbehör"
+  /** True once the suggestion has been added to the recipe's notes. */
+  applied?: boolean
+}
+
+export interface DishAiData {
+  /** Last "split into clearer steps" result; `hash` is of the instructions it was made from. */
+  split?: { hash: string; steps: string[]; at: string }
+  /** Last improvement suggestions (kept even after the recipe changes). */
+  improvements?: { items: RecipeImprovement[]; at: string }
 }
 
 export type MealType = 'lunch' | 'middag'
@@ -84,7 +102,16 @@ export interface PlannedMeal {
   notes: string
   usesIngredientsFromHome: string
   temporaryIngredients: TemporaryIngredient[]
+  /** Extra portions cooked on top of what's eaten, to put in the freezer. */
+  freezePortions?: number
+  /** 'extra' = cooked/baked for later (freezer, baking) — not eaten from this week's portions. */
+  kind?: 'meal' | 'extra'
+  extraType?: ExtraType
+  /** Day the extra cooking/baking is planned for ("YYYY-MM-DD"), optional. */
+  plannedDate?: string
 }
+
+export type ExtraType = 'frys' | 'bak'
 
 export interface MealAssignment {
   mealId: string
@@ -151,6 +178,29 @@ export interface AppSettings {
   calibrationModel?: AiModel
   costOverrides?: Record<string, number>  // lexicon canonical name → calibrated SEK/kg
   recipeSiteRules?: Record<string, RecipeSiteRule>  // hostname (no www.) → learned scraping rule
+  /** Learned ingredient → store product choices, keyed by normalized ingredient name. */
+  productPreferences?: Record<string, ProductPreference>
+  /** Main rules for picking store products. */
+  shoppingRules?: ShoppingRules
+  /** Extra free-text household rules for picking products. */
+  productRules?: string
+}
+
+export interface ShoppingRules {
+  lactoseFree: boolean     // always lactose-free where a lactose-free variant exists
+  preferSwedish: boolean   // Swedish origin unless there's no reasonable Swedish option
+  preferOffers: boolean    // suggest swaps to extrapris products (the user confirms each swap)
+  organicFor: string       // product types that should always be organic, e.g. "spannmål, pasta, mjöl"
+}
+
+/** A store product the household has chosen for an ingredient before. */
+export interface ProductPreference {
+  store: 'mathem'
+  productId: number
+  name: string        // product full name when chosen
+  packSize: string    // e.g. "5 dl", "Sverige, 900 g"
+  chosenAt: string    // ISO date of the latest choice
+  timesChosen: number
 }
 
 /** CSS selectors learned (via AI) for scraping recipes from a site without AI next time. */

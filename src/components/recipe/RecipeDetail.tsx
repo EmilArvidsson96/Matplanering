@@ -483,7 +483,9 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
     <div className="px-4 md:px-6 pb-3 shrink-0">
       <div className="card py-1.5 pl-4 pr-1.5 flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-semibold">Portioner</p>
+          <p className="text-[15px] font-semibold">
+            {dish.yieldUnit?.trim() ? `${dish.yieldUnit.trim().charAt(0).toUpperCase()}${dish.yieldUnit.trim().slice(1)}` : 'Portioner'}
+          </p>
           {plannedPortions !== null && portions !== plannedPortions ? (
             <button onClick={() => setPortions(plannedPortions)} className="text-xs font-semibold text-brand-700 hover:underline">
               Återställ till {plannedPortions}
