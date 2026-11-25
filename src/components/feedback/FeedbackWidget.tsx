@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom'
 import { Bug, Lightbulb, Loader2, MessageSquarePlus, Send } from 'lucide-react'
 import Modal from '../common/Modal'
 import { useIsDesktop } from '../../hooks/useDevice'
-import { useNearBottom } from '../../hooks/useNearBottom'
 import { useWeekStore } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
@@ -25,7 +24,6 @@ type SubmitState = 'idle' | 'sending' | 'sent' | 'error'
 
 export default function FeedbackWidget() {
   const isDesktop = useIsDesktop()
-  const nearBottom = useNearBottom()
   const location = useLocation()
 
   const [open, setOpen] = useState(false)
@@ -89,24 +87,23 @@ export default function FeedbackWidget() {
     }
   }
 
-  // Anchored to `top` so the position transition is a single animatable value:
-  // resting state parks it near the bottom, near-bottom scroll shifts it up top.
-  const bottomOffset = isDesktop ? 24 : 76 // clears the mobile bottom nav
-  const topOffset     = isDesktop ? 24 : 96 // clears the mobile header
-  const buttonSize    = 56
+  // Desktop: sits in the sidebar above the save status. Mobile: above the floating tab bar
+  // (pages keep bottom padding for it), so it never covers headers or actions.
+  const bottomOffset = isDesktop ? 120 : 104
+  const buttonSize   = 48
 
   return (
     <>
       <div
-        className="fixed right-4 md:right-6 z-40 transition-[top] duration-500 ease-in-out"
-        style={{ top: nearBottom ? topOffset : `calc(100dvh - ${bottomOffset + buttonSize}px)` }}
+        className="fixed right-4 md:right-auto md:left-7 z-40"
+        style={{ top: `calc(100dvh - ${bottomOffset + buttonSize}px)` }}
       >
         <button
           onClick={() => setOpen(true)}
-          className="w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center hover:bg-brand-700 active:scale-95 transition-all"
+          className="w-12 h-12 rounded-full bg-white text-ink border border-line shadow-[0_4px_16px_rgba(21,23,26,0.10)] flex items-center justify-center hover:bg-canvas active:scale-95 transition-all"
           aria-label="Ge feedback"
         >
-          <MessageSquarePlus className="w-6 h-6" />
+          <MessageSquarePlus className="w-5 h-5" />
         </button>
       </div>
 

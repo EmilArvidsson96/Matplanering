@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Wand, Lightbulb, Loader2, X, Check, RefreshCw } from 'lucide-react'
+import { Wand, Lightbulb, Loader2, Check, RefreshCw } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { splitInstructions, suggestRecipeImprovements } from '../../api/anthropic'
 import type { RecipeImprovement } from '../../api/anthropic'
 import type { Dish, RecipeStep } from '../../types'
+import SheetModal from '../common/Modal'
 
 // ---------------------------------------------------------------------------
 // Modal shell
@@ -15,18 +16,13 @@ function Modal({ title, onClose, children }: {
   onClose: () => void
   children: React.ReactNode
 }) {
+  // Shared sheet/dialog; the tools bring their own padding, so cancel the sheet's.
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[85vh] flex flex-col">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 shrink-0">
-          <h3 className="flex-1 text-sm font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <SheetModal title={title} onClose={onClose}>
+      <div className="-mx-4 md:-mx-7 -mb-6 bg-white rounded-t-3xl md:rounded-3xl md:mx-0 md:mb-0 overflow-hidden flex flex-col">
         {children}
       </div>
-    </div>
+    </SheetModal>
   )
 }
 
@@ -246,16 +242,18 @@ export default function RecipeAiTools({ dish }: { dish: Dish }) {
       <button
         onClick={() => setTool('split')}
         title="Dela upp i tydligare steg, översätt till svenska och rätta stavning (AI)"
-        className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50"
+        aria-label="Dela upp i steg med AI"
+        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-brand-700 hover:bg-canvas"
       >
-        <Wand className="w-4 h-4" />
+        <Wand className="w-[18px] h-[18px]" />
       </button>
       <button
         onClick={() => setTool('improve')}
         title="Få förbättringsförslag för receptet (AI)"
-        className="p-1.5 text-gray-400 hover:text-amber-500 rounded-lg hover:bg-amber-50"
+        aria-label="Förbättringsförslag med AI"
+        className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-ink-muted hover:text-amber-700 hover:bg-canvas"
       >
-        <Lightbulb className="w-4 h-4" />
+        <Lightbulb className="w-[18px] h-[18px]" />
       </button>
 
       {tool === 'split' && <SplitTool dish={dish} onClose={() => setTool(null)} />}

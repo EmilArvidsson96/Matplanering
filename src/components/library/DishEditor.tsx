@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Minus, Plus } from 'lucide-react'
+import { Minus, Plus, X, ChevronRight, ChevronUp, ChevronDown, Link2, Download, Trash2 } from 'lucide-react'
+import { useIsDesktop } from '../../hooks/useDevice'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
@@ -43,31 +44,42 @@ interface Props {
   onSaved?: (id: string) => void
 }
 
-function AmountInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  const [text, setText] = useState(String(value))
+function AmountInput({ value, onChange, className, id }: { value: number; onChange: (n: number) => void; className?: string; id?: string }) {
+  const [text, setText] = useState(formatAmount(value))
   const focused = useRef(false)
 
   useEffect(() => {
-    if (!focused.current) setText(String(value))
+    if (!focused.current) setText(formatAmount(value))
   }, [value])
 
   return (
     <input
+      id={id}
+      aria-label={id ? undefined : 'Mängd'}
       type="text"
       inputMode="decimal"
       placeholder="Mängd"
       value={text}
       onFocus={() => { focused.current = true }}
-      onBlur={() => { focused.current = false; setText(String(value)) }}
+      onBlur={() => { focused.current = false; setText(formatAmount(value)) }}
       onChange={e => {
         const raw = e.target.value.replace(/,/g, '.')
         if (!/^\d*\.?\d*$/.test(raw)) return
         setText(e.target.value)
         onChange(raw === '' || raw === '.' ? 0 : parseFloat(raw))
       }}
-      className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs"
+      className={className}
     />
   )
+}
+
+const COMMON_UNITS = ['st', 'g', 'kg', 'ml', 'dl', 'l', 'msk', 'tsk', 'krm']
+
+type EditorTab = 'grund' | 'ingredienser' | 'steg' | 'mer'
+
+/** 2.5 → "2,5" (Swedish decimal comma) */
+function formatAmount(n: number): string {
+  return String(n).replace('.', ',')
 }
 
 function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
@@ -86,6 +98,9 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
       : { ...blank(), name: initialName ?? '' }
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [tab, setTab] = useState<EditorTab>('grund')
+  const [editingIngId, setEditingIngId] = useState<string | null>(null)
+  const isDesktop = useIsDesktop()
   const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string; info?: string }>({ state: 'idle', error: '' })
   const fetchCacheRef = useRef<{ url: string; promise: Promise<RecipeFetchResult> } | null>(null)
 
@@ -110,12 +125,13 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
   // ── Ingredients ──────────────────────────────────────────────────────────────
 
-  function addIngredient() {
+  function addIngredient(): string {
     const portionsBase = form.ingredients[0]?.portionsBase ?? 4
     const ing: Ingredient = {
       id: uuid(), name: '', amount: 1, unit: 'g', category: 'övrigt', portionsBase,
     }
     setForm(f => ({ ...f, ingredients: [...f.ingredients, ing] }))
+    return ing.id
   }
 
   function setAllPortionsBase(n: number) {
@@ -207,320 +223,530 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     }
   }
 
-  return (
-    <Modal
-      title={isNew ? 'Ny rätt' : 'Redigera rätt'}
-      onClose={onClose}
-      wide
-    >
-      <div className="space-y-5">
-        {/* Name */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Namn *</label>
-          <input
-            autoFocus
-            type="text"
-            value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-          />
-        </div>
+  const tabs: { id: EditorTab; label: string; short: string; count?: number }[] = [
+    { id: 'grund',        label: 'Grund',                 short: 'Grund' },
+    { id: 'ingredienser', label: 'Ingredienser',          short: 'Ingred.', count: form.ingredients.length },
+    { id: 'steg',         label: 'Gör så här',            short: 'Gör så', count: form.instructions.length },
+    { id: 'mer',          label: 'Säsong & anteckningar', short: 'Mer' },
+  ]
+  const portionsBase = form.ingredients[0]?.portionsBase ?? 4
+  const editingIng = form.ingredients.find(i => i.id === editingIngId) ?? null
 
-        {/* Protein */}
-        <ChipGroup
-          label="Protein"
-          options={ALL_PROTEINS}
-          selected={form.protein}
-          onToggle={v => setForm(f => ({ ...f, protein: toggle(f.protein, v as Protein) }))}
+  const fetchMessages = (
+    <>
+      {fetchStatus.error && (
+        <p className="text-sm text-red-700 mt-2 whitespace-pre-line">{fetchStatus.error}</p>
+      )}
+      {!fetchStatus.error && fetchStatus.info && (
+        <p className="text-sm text-brand-700 mt-2">{fetchStatus.info}</p>
+      )}
+    </>
+  )
+
+  const urlField = (action: React.ReactNode) => (
+    <div className={`p-1.5 pl-4 flex items-center gap-2 rounded-3xl ${isDesktop ? 'bg-canvas' : 'bg-white'}`}>
+      <Link2 className="w-[18px] h-[18px] text-ink-muted shrink-0" />
+      <input
+        type="url"
+        aria-label="Receptlänk"
+        value={form.recipeUrl}
+        onChange={e => {
+          fetchCacheRef.current = null
+          setFetchStatus({ state: 'idle', error: '' })
+          setForm(f => ({ ...f, recipeUrl: e.target.value }))
+        }}
+        placeholder="Klistra in receptlänk"
+        className="flex-1 min-w-0 h-10 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+      />
+      {action}
+    </div>
+  )
+
+  // ── Tab panels ───────────────────────────────────────────────────────────────
+
+  const grund = (
+    <div className="space-y-6">
+      <div>
+        <label htmlFor="dish-name" className="field-label">Namn</label>
+        <input
+          id="dish-name"
+          autoFocus={isNew}
+          type="text"
+          value={form.name}
+          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          className="field text-[17px] font-semibold"
+          placeholder="T.ex. Linsgryta"
         />
+      </div>
+      <ChipGroup
+        label="Protein"
+        options={ALL_PROTEINS}
+        selected={form.protein}
+        onToggle={v => setForm(f => ({ ...f, protein: toggle(f.protein, v as Protein) }))}
+      />
+      <ChipGroup
+        label="Kolhydrat"
+        options={ALL_CARBS}
+        selected={form.carb}
+        onToggle={v => setForm(f => ({ ...f, carb: toggle(f.carb, v as Carb) }))}
+      />
+      <div>
+        <label htmlFor="dish-cuisine" className="field-label">Kök</label>
+        <select
+          id="dish-cuisine"
+          value={form.cuisine}
+          onChange={e => setForm(f => ({ ...f, cuisine: e.target.value as Cuisine }))}
+          className="field"
+        >
+          {ALL_CUISINES.map(c => <option key={c} value={c}>{LABEL[c]}</option>)}
+        </select>
+      </div>
+      <ChipGroup
+        label="Typ"
+        options={ALL_TYPES}
+        selected={form.type}
+        onToggle={v => setForm(f => ({ ...f, type: toggle(f.type, v as DishType) }))}
+        collapseAfter={8}
+      />
+      <ChipGroup
+        label="Taggar"
+        options={ALL_TAGS}
+        selected={form.tags}
+        onToggle={v => setForm(f => ({ ...f, tags: toggle(f.tags, v as Tag) }))}
+      />
+    </div>
+  )
 
-        {/* Carb */}
-        <ChipGroup
-          label="Kolhydrat"
-          options={ALL_CARBS}
-          selected={form.carb}
-          onToggle={v => setForm(f => ({ ...f, carb: toggle(f.carb, v as Carb) }))}
-        />
+  const portionsStepper = (
+    <div className="flex items-center gap-2 text-sm text-ink-muted">
+      <span>Receptet gäller</span>
+      <div className="flex items-center bg-white border border-line rounded-full p-0.5">
+        <button
+          type="button"
+          onClick={() => setAllPortionsBase(portionsBase - 1)}
+          disabled={form.ingredients.length === 0}
+          aria-label="Färre portioner"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-ink hover:bg-canvas disabled:opacity-30"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <span className="w-7 text-center font-display font-extrabold text-ink">{portionsBase}</span>
+        <button
+          type="button"
+          onClick={() => setAllPortionsBase(portionsBase + 1)}
+          disabled={form.ingredients.length === 0}
+          aria-label="Fler portioner"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-ink hover:bg-canvas disabled:opacity-30"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      <span>port.</span>
+    </div>
+  )
 
-        {/* Cuisine */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Kök</label>
-          <select
-            value={form.cuisine}
-            onChange={e => setForm(f => ({ ...f, cuisine: e.target.value as Cuisine }))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-brand-300"
+  const ingredienser = (
+    <div className="space-y-4">
+      <div>
+        {urlField(
+          <button
+            type="button"
+            onClick={() => handleFetch('ingredients')}
+            disabled={!form.recipeUrl.trim() || fetchStatus.state === 'loading'}
+            className="h-10 px-4 rounded-full bg-mint text-mint-ink font-semibold text-sm disabled:opacity-40 whitespace-nowrap shrink-0"
           >
-            {ALL_CUISINES.map(c => <option key={c} value={c}>{LABEL[c]}</option>)}
-          </select>
-        </div>
+            {fetchStatus.state === 'loading' ? 'Hämtar…' : isDesktop ? 'Hämta ingredienser' : 'Hämta'}
+          </button>
+        )}
+        {fetchMessages}
+      </div>
 
-        {/* Type */}
-        <ChipGroup
-          label="Typ"
-          options={ALL_TYPES}
-          selected={form.type}
-          onToggle={v => setForm(f => ({ ...f, type: toggle(f.type, v as DishType) }))}
-          collapseAfter={8}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <span className="text-[13px] font-semibold text-ink-muted">
+          {form.ingredients.length} {form.ingredients.length === 1 ? 'ingrediens' : 'ingredienser'}
+        </span>
+        {portionsStepper}
+      </div>
 
-        {/* Tags */}
-        <ChipGroup
-          label="Taggar"
-          options={ALL_TAGS}
-          selected={form.tags}
-          onToggle={v => setForm(f => ({ ...f, tags: toggle(f.tags, v as Tag) }))}
-        />
-
-        {/* Recipe URL */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Receptlänk</label>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={form.recipeUrl}
-              onChange={e => {
-                fetchCacheRef.current = null
-                setFetchStatus({ state: 'idle', error: '' })
-                setForm(f => ({ ...f, recipeUrl: e.target.value }))
-              }}
-              placeholder="https://…"
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-            />
-            <button
-              type="button"
-              onClick={() => handleFetch('ingredients')}
-              disabled={!form.recipeUrl.trim() || fetchStatus.state === 'loading'}
-              className="shrink-0 border border-brand-200 text-brand-600 hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap"
-            >
-              {fetchStatus.state === 'loading' ? 'Hämtar…' : 'Hämta ingredienser'}
-            </button>
+      {form.ingredients.length > 0 && (isDesktop ? (
+        <div className="card overflow-hidden border border-line-soft">
+          <div className="grid grid-cols-[2fr_90px_100px_1.3fr_44px] gap-2.5 px-4 py-2.5 bg-canvas/60 text-xs font-semibold text-ink-muted">
+            <span>Ingrediens</span><span>Mängd</span><span>Enhet</span><span>Kategori</span><span />
           </div>
-          {form.recipeUrl.trim() && (
-            <button
-              type="button"
-              onClick={() => handleFetch('instructions')}
-              disabled={fetchStatus.state === 'loading'}
-              className="mt-1.5 text-xs text-brand-600 hover:text-brand-800 font-medium disabled:opacity-40"
-            >
-              {fetchStatus.state === 'loading' ? '⏳ Hämtar…' : '↓ Hämta instruktioner'}
-            </button>
-          )}
-          {fetchStatus.error && (
-            <p className="text-xs text-red-500 mt-1 whitespace-pre-line">{fetchStatus.error}</p>
-          )}
-          {!fetchStatus.error && fetchStatus.info && (
-            <p className="text-xs text-brand-600 mt-1">{fetchStatus.info}</p>
-          )}
-        </div>
-
-        {/* Ingredients */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-gray-500">Ingredienser</label>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-400">för</span>
+          {form.ingredients.map(ing => (
+            <div key={ing.id} className="grid grid-cols-[2fr_90px_100px_1.3fr_44px] gap-2.5 px-4 py-2 items-center border-t border-line-soft">
+              <input
+                aria-label="Ingrediens"
+                placeholder="Ingrediens"
+                value={ing.name}
+                onChange={e => updateIngredient(ing.id, { name: e.target.value })}
+                className="cell"
+              />
+              <AmountInput value={ing.amount} onChange={n => updateIngredient(ing.id, { amount: n })} className="cell text-right" />
+              <input
+                aria-label="Enhet"
+                placeholder="Enhet"
+                value={ing.unit}
+                onChange={e => updateIngredient(ing.id, { unit: e.target.value })}
+                className="cell"
+              />
+              <select
+                aria-label="Kategori"
+                value={ing.category}
+                onChange={e => updateIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
+                className="cell"
+              >
+                {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
+              </select>
               <button
                 type="button"
-                onClick={() => setAllPortionsBase((form.ingredients[0]?.portionsBase ?? 4) - 1)}
-                disabled={form.ingredients.length === 0}
-                className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-30"
+                onClick={() => removeIngredient(ing.id)}
+                aria-label={`Ta bort ${ing.name || 'ingrediens'}`}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-ink-faint hover:text-red-700 hover:bg-red-50"
               >
-                <Minus className="w-2.5 h-2.5" />
-              </button>
-              <span className="text-xs font-semibold text-gray-700 w-4 text-center">
-                {form.ingredients[0]?.portionsBase ?? 4}
-              </span>
-              <button
-                type="button"
-                onClick={() => setAllPortionsBase((form.ingredients[0]?.portionsBase ?? 4) + 1)}
-                disabled={form.ingredients.length === 0}
-                className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-30"
-              >
-                <Plus className="w-2.5 h-2.5" />
-              </button>
-              <span className="text-xs text-gray-400">port.</span>
-              <button
-                type="button"
-                onClick={addIngredient}
-                className="ml-2 text-xs text-brand-600 hover:text-brand-800 font-medium"
-              >
-                + Lägg till
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
-          {form.ingredients.length === 0 && (
-            <p className="text-xs text-gray-300 italic">Inga ingredienser än.</p>
-          )}
-          <div className="space-y-2">
-            {form.ingredients.map(ing => (
-              <div key={ing.id} className="flex flex-wrap gap-2 items-center bg-gray-50 rounded-xl p-2">
-                <input
-                  type="text"
-                  placeholder="Ingrediens"
-                  value={ing.name}
-                  onChange={e => updateIngredient(ing.id, { name: e.target.value })}
-                  className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2 py-1 text-xs"
-                />
-                <AmountInput
-                  value={ing.amount}
-                  onChange={n => updateIngredient(ing.id, { amount: n })}
-                />
-                <input
-                  type="text"
-                  placeholder="Enhet"
-                  value={ing.unit}
-                  onChange={e => updateIngredient(ing.id, { unit: e.target.value })}
-                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs"
-                />
-                <select
-                  value={ing.category}
-                  onChange={e => updateIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
-                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white"
-                >
-                  {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
-                </select>
-                <button
-                  onClick={() => removeIngredient(ing.id)}
-                  className="text-gray-300 hover:text-red-400 text-sm"
-                >✕</button>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
+      ) : (
+        <div className="card overflow-hidden">
+          {form.ingredients.map((ing, i) => (
+            <button
+              key={ing.id}
+              type="button"
+              onClick={() => setEditingIngId(ing.id)}
+              className={`w-full min-h-[52px] px-4 flex items-center gap-3 text-left ${i > 0 ? 'border-t border-line-soft' : ''}`}
+            >
+              <span className={`flex-1 text-[15px] truncate ${ing.name ? 'text-ink' : 'text-ink-faint italic'}`}>
+                {ing.name || 'Namnlös'}
+              </span>
+              <span className="text-[15px] font-semibold text-ink whitespace-nowrap">
+                {formatAmount(ing.amount)} {ing.unit}
+              </span>
+              <ChevronRight className="w-4 h-4 text-ink-faint shrink-0" />
+            </button>
+          ))}
+        </div>
+      ))}
 
-        {/* Instructions */}
+      <button
+        type="button"
+        onClick={() => {
+          const id = addIngredient()
+          if (!isDesktop) setEditingIngId(id)
+        }}
+        className="w-full sm:w-auto h-12 px-5 rounded-2xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
+      >
+        <Plus className="w-[18px] h-[18px]" /> Lägg till ingrediens
+      </button>
+    </div>
+  )
+
+  const steg = (
+    <div className="space-y-3">
+      {form.recipeUrl.trim() && (
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-gray-500">Tillagning</label>
+          <button
+            type="button"
+            onClick={() => handleFetch('instructions')}
+            disabled={fetchStatus.state === 'loading'}
+            className="h-11 px-4 rounded-full bg-mint text-mint-ink font-semibold text-sm disabled:opacity-40 inline-flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {fetchStatus.state === 'loading' ? 'Hämtar…' : 'Hämta instruktioner från länken'}
+          </button>
+          {fetchMessages}
+        </div>
+      )}
+      {form.instructions.length === 0 && (
+        <p className="text-sm text-ink-muted px-1">Inga steg än.</p>
+      )}
+      {form.instructions.map((step, idx) => (
+        <div key={step.id} className={`p-3 flex gap-3 items-start rounded-3xl ${isDesktop ? 'bg-canvas' : 'bg-white'}`}>
+          <span className="w-7 h-7 mt-1.5 rounded-full bg-ink text-white font-display font-bold text-sm flex items-center justify-center shrink-0">
+            {idx + 1}
+          </span>
+          <textarea
+            aria-label={`Steg ${idx + 1}`}
+            value={step.text}
+            onChange={e => updateStep(step.id, e.target.value)}
+            rows={3}
+            className={`flex-1 min-w-0 rounded-xl px-3 py-2 text-base leading-relaxed text-ink resize-none focus:outline-none focus:ring-2 focus:ring-brand-300 ${isDesktop ? 'bg-white' : 'bg-canvas'}`}
+          />
+          <div className="flex flex-col shrink-0">
             <button
               type="button"
-              onClick={addStep}
-              className="text-xs text-brand-600 hover:text-brand-800 font-medium"
+              onClick={() => moveStep(step.id, -1)}
+              disabled={idx === 0}
+              aria-label="Flytta upp"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-ink-muted hover:bg-canvas disabled:opacity-20"
             >
-              + Lägg till steg
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveStep(step.id, 1)}
+              disabled={idx === form.instructions.length - 1}
+              aria-label="Flytta ned"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-ink-muted hover:bg-canvas disabled:opacity-20"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => removeStep(step.id)}
+              aria-label="Ta bort steg"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-ink-faint hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
-          {form.instructions.length === 0 && (
-            <p className="text-xs text-gray-300 italic">Inga steg än.</p>
-          )}
-          <div className="space-y-2">
-            {form.instructions.map((step, idx) => (
-              <div key={step.id} className="flex gap-2 items-start bg-gray-50 rounded-xl p-2">
-                <span className="text-xs text-gray-400 font-medium pt-2 w-5 shrink-0 text-right">{idx + 1}.</span>
-                <textarea
-                  value={step.text}
-                  onChange={e => updateStep(step.id, e.target.value)}
-                  rows={2}
-                  className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-brand-300"
-                />
-                <div className="flex flex-col gap-0.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => moveStep(step.id, -1)}
-                    disabled={idx === 0}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-20 text-xs leading-none px-1"
-                  >▲</button>
-                  <button
-                    type="button"
-                    onClick={() => moveStep(step.id, 1)}
-                    disabled={idx === form.instructions.length - 1}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-20 text-xs leading-none px-1"
-                  >▼</button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeStep(step.id)}
-                  className="text-gray-300 hover:text-red-400 text-sm shrink-0 pt-1"
-                >✕</button>
-              </div>
-            ))}
-          </div>
         </div>
+      ))}
+      <button
+        type="button"
+        onClick={addStep}
+        className="w-full sm:w-auto h-12 px-5 rounded-2xl border-[1.5px] border-dashed border-ink-faint/60 text-ink font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-white"
+      >
+        <Plus className="w-[18px] h-[18px]" /> Lägg till steg
+      </button>
+    </div>
+  )
 
-        {/* Preferred months */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">
-            Föredragna månader
-            {historyMonth && (
-              <span className="ml-2 text-gray-400 font-normal">
-                (vanligast i historiken: {MONTH_NAMES[historyMonth]})
-              </span>
-            )}
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {ALL_MONTHS.map(m => (
+  const mer = (
+    <div className="space-y-6">
+      <div>
+        <p className="field-label">
+          Säsong
+          {historyMonth && (
+            <span className="ml-2 font-normal">(vanligast i historiken: {MONTH_NAMES[historyMonth]})</span>
+          )}
+        </p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {ALL_MONTHS.map(m => {
+            const on = form.preferredMonths.includes(m)
+            return (
               <button
                 key={m}
                 type="button"
+                aria-pressed={on}
                 onClick={() => setForm(f => ({
                   ...f,
-                  preferredMonths: f.preferredMonths.includes(m)
-                    ? f.preferredMonths.filter(x => x !== m)
-                    : [...f.preferredMonths, m],
+                  preferredMonths: on ? f.preferredMonths.filter(x => x !== m) : [...f.preferredMonths, m],
                 }))}
-                className={`text-xs px-2 py-1 rounded-full border font-medium transition-colors
-                  ${form.preferredMonths.includes(m)
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
+                className={`h-11 rounded-xl text-[13px] transition-colors ${
+                  on ? 'bg-brand-600 text-white font-semibold' : 'bg-white border border-line text-ink hover:bg-canvas'
+                }`}
               >
                 {MONTH_NAMES[m]}
               </button>
-            ))}
+            )
+          })}
+        </div>
+        {form.preferredMonths.length === 0 && (
+          <p className="text-[13px] text-ink-muted mt-2">Inga valda – används året runt</p>
+        )}
+      </div>
+      <div>
+        <label htmlFor="dish-notes" className="field-label">Anteckningar</label>
+        <textarea
+          id="dish-notes"
+          value={form.notes}
+          onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+          rows={4}
+          className="field h-auto py-3 resize-none"
+        />
+      </div>
+      {!isNew && !isDesktop && (
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="w-full h-12 rounded-2xl bg-white text-red-700 font-semibold text-[15px] flex items-center justify-center gap-2"
+        >
+          <Trash2 className="w-[18px] h-[18px]" /> Ta bort rätten
+        </button>
+      )}
+    </div>
+  )
+
+  const panels: Record<EditorTab, React.ReactNode> = { grund, ingredienser, steg, mer }
+
+  // ── Layout ───────────────────────────────────────────────────────────────────
+
+  const mobileTabs = (
+    <div role="tablist" className="h-11 rounded-full bg-line-soft p-1 grid grid-cols-4 gap-0.5">
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          role="tab"
+          aria-selected={tab === t.id}
+          onClick={() => setTab(t.id)}
+          className={`rounded-full text-[13px] transition-colors ${
+            tab === t.id ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink-muted font-medium'
+          }`}
+        >
+          {t.short}
+        </button>
+      ))}
+    </div>
+  )
+
+  const footer = isDesktop ? (
+    <div className="flex items-center justify-between gap-3">
+      {!isNew ? (
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="h-11 px-4 rounded-full text-red-700 font-semibold text-sm hover:bg-red-50"
+        >
+          Ta bort rätten
+        </button>
+      ) : <span />}
+      <div className="flex gap-2.5">
+        <button type="button" onClick={onClose} className="btn-secondary">Avbryt</button>
+        <button type="button" onClick={save} disabled={!form.name.trim()} className="btn-primary px-7">
+          {isNew ? 'Lägg till' : 'Spara'}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <button type="button" onClick={save} disabled={!form.name.trim()} className="btn-primary w-full h-14 text-base">
+      {isNew ? 'Lägg till rätten' : 'Spara'}
+    </button>
+  )
+
+  return (
+    <>
+      <Modal
+        title={form.name.trim() || (isNew ? 'Ny rätt' : 'Namnlös rätt')}
+        subtitle={isNew ? 'Ny rätt' : 'Redigera rätt'}
+        onClose={onClose}
+        wide
+        fullHeight
+        toolbar={isDesktop ? undefined : mobileTabs}
+        footer={footer}
+      >
+        {isDesktop ? (
+          <div className="flex gap-5 min-h-[520px]">
+            <nav aria-label="Avsnitt" className="w-52 shrink-0 flex flex-col gap-1">
+              {tabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`h-12 px-4 rounded-full text-sm text-left flex items-center justify-between transition-colors ${
+                    tab === t.id ? 'bg-ink text-white font-semibold' : 'text-ink-soft font-medium hover:bg-white'
+                  }`}
+                >
+                  <span>{t.label}</span>
+                  {t.count != null && t.count > 0 && (
+                    <span className={`text-xs font-semibold ${tab === t.id ? 'text-mint-bright' : 'text-ink-muted'}`}>{t.count}</span>
+                  )}
+                </button>
+              ))}
+            </nav>
+            <div className="flex-1 min-w-0 bg-white rounded-3xl p-6">
+              {panels[tab]}
+            </div>
           </div>
-          {form.preferredMonths.length === 0 && (
-            <p className="text-xs text-gray-300 mt-1">Inga valda — används året runt</p>
-          )}
-        </div>
+        ) : (
+          <div className="pt-1">{panels[tab]}</div>
+        )}
+      </Modal>
 
-        {/* Notes */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Anteckningar</label>
-          <textarea
-            value={form.notes}
-            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            rows={2}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
-          <button
-            onClick={save}
-            disabled={!form.name.trim()}
-            className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm"
-          >
-            {isNew ? 'Lägg till' : 'Spara'}
-          </button>
-          {!isNew && (
-            confirmDelete ? (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => { deleteDish(dish.id); onClose() }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-sm font-medium"
-                >
-                  Bekräfta radering
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="border border-gray-200 px-3 py-2 rounded-xl text-sm text-gray-600"
-                >
-                  Avbryt
-                </button>
-              </div>
-            ) : (
+      {/* Mobile: edit one ingredient in its own half sheet */}
+      {editingIng && !isDesktop && (
+        <Modal title="Ingrediens" onClose={() => setEditingIngId(null)}
+          footer={
+            <div className="flex gap-2.5">
               <button
-                onClick={() => setConfirmDelete(true)}
-                className="border border-red-200 text-red-400 hover:bg-red-50 px-3 py-2 rounded-xl text-sm"
+                type="button"
+                onClick={() => { removeIngredient(editingIng.id); setEditingIngId(null) }}
+                aria-label="Ta bort ingrediens"
+                className="w-14 h-14 rounded-full bg-red-50 text-red-700 flex items-center justify-center shrink-0"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button type="button" onClick={() => setEditingIngId(null)} className="btn-primary flex-1 h-14 text-base">Klar</button>
+            </div>
+          }
+        >
+          <div className="space-y-5 pt-1">
+            <div>
+              <label htmlFor="ing-name" className="field-label">Namn</label>
+              <input
+                id="ing-name"
+                autoFocus={!editingIng.name}
+                value={editingIng.name}
+                onChange={e => updateIngredient(editingIng.id, { name: e.target.value })}
+                placeholder="T.ex. Kokosmjölk"
+                className="field text-[17px] font-semibold"
+              />
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2.5">
+              <div>
+                <label htmlFor="ing-amount" className="field-label">Mängd</label>
+                <AmountInput id="ing-amount" value={editingIng.amount} onChange={n => updateIngredient(editingIng.id, { amount: n })} className="field text-[17px] font-semibold" />
+              </div>
+              <div className="w-28">
+                <label htmlFor="ing-unit" className="field-label">Enhet</label>
+                <input
+                  id="ing-unit"
+                  value={editingIng.unit}
+                  onChange={e => updateIngredient(editingIng.id, { unit: e.target.value })}
+                  className="field"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 -mt-2">
+              {COMMON_UNITS.map(u => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => updateIngredient(editingIng.id, { unit: u })}
+                  className={`chip min-w-[48px] justify-center ${editingIng.unit === u ? 'chip-on' : 'chip-off'}`}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label htmlFor="ing-cat" className="field-label">Kategori i inköpslistan</label>
+              <select
+                id="ing-cat"
+                value={editingIng.category}
+                onChange={e => updateIngredient(editingIng.id, { category: e.target.value as ShoppingCategory })}
+                className="field"
+              >
+                {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
+              </select>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Confirm delete */}
+      {confirmDelete && dish && (
+        <Modal title={`Ta bort ${dish.name}?`} onClose={() => setConfirmDelete(false)}
+          footer={
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+              <button type="button" onClick={() => setConfirmDelete(false)} className="btn-secondary h-14 sm:h-12">Avbryt</button>
+              <button
+                type="button"
+                onClick={() => { deleteDish(dish.id); setConfirmDelete(false); onClose() }}
+                className="h-14 sm:h-12 px-6 rounded-full bg-red-700 hover:bg-red-800 text-white font-semibold text-[15px]"
               >
                 Ta bort
               </button>
-            )
-          )}
-        </div>
-      </div>
-    </Modal>
+            </div>
+          }
+        >
+          <p className="text-[15px] text-ink-muted leading-relaxed pt-1">
+            Rätten försvinner från biblioteket. Det går inte att ångra.
+          </p>
+        </Modal>
+      )}
+    </>
   )
 }
 
@@ -536,18 +762,15 @@ function ChipGroup<T extends string>({
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-      <div className="flex flex-wrap gap-1.5">
+      <p className="field-label">{label}</p>
+      <div className="flex flex-wrap gap-2">
         {visible.map(opt => (
           <button
             key={opt}
             type="button"
             onClick={() => onToggle(opt)}
-            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors
-              ${selected.includes(opt)
-                ? 'bg-brand-600 text-white border-brand-600'
-                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
+            aria-pressed={selected.includes(opt)}
+            className={`chip ${selected.includes(opt) ? 'chip-on' : 'chip-off'}`}
           >
             {LABEL[opt] ?? opt}
           </button>
@@ -556,7 +779,7 @@ function ChipGroup<T extends string>({
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+            className="chip border-dashed border-ink-faint/60 text-ink-muted hover:bg-white"
           >
             +{hiddenCount} fler
           </button>
@@ -565,7 +788,7 @@ function ChipGroup<T extends string>({
           <button
             type="button"
             onClick={() => setExpanded(false)}
-            className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 font-medium transition-colors"
+            className="chip border-dashed border-ink-faint/60 text-ink-muted hover:bg-white"
           >
             Visa färre
           </button>

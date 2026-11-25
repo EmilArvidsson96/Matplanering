@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { RefreshCw, Sparkles, CheckCheck, ShoppingCart, Plus, Check, Home, X } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -203,45 +204,53 @@ export default function ShoppingPage() {
 
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
+  const activeItems = items.filter(i => !i.isExcluded)
+  const purchasedCount = activeItems.filter(i => i.isPurchased).length
+  const progressPct = activeItems.length ? Math.round((purchasedCount / activeItems.length) * 100) : 0
+
   return (
-    <div className="max-w-2xl space-y-4">
-      {/* Top actions */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={rebuildAutoItems}
-          className="border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-xl text-sm font-medium"
-        >
-          ↺ Uppdatera från recept
+    <div className="max-w-2xl space-y-5">
+      {/* Progress */}
+      {activeItems.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-[13px]">
+            <span className="font-semibold">{purchasedCount} av {activeItems.length} klara</span>
+            <button
+              onClick={() => setShowPurchased(v => !v)}
+              aria-pressed={showPurchased}
+              className="text-ink-muted hover:text-ink font-medium"
+            >
+              {showPurchased ? 'Dölj handlade' : 'Visa handlade'}
+            </button>
+          </div>
+          <div className="h-2 rounded-full bg-line overflow-hidden">
+            <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap pb-0.5 [scrollbar-width:none]">
+        <button onClick={rebuildAutoItems} className="chip chip-off shrink-0 font-medium">
+          <RefreshCw className="w-4 h-4" /> Uppdatera från recept
         </button>
         <button
           onClick={runAiCleanup}
           disabled={aiLoading}
-          className="border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-3 py-2 rounded-xl text-sm font-medium"
+          className="chip chip-off shrink-0 font-medium disabled:opacity-50"
         >
-          {aiLoading ? '✨ Städar…' : '✨ Städa med AI'}
+          <Sparkles className="w-4 h-4" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
         {unpurchasedCount > 0 && (
-          <button
-            onClick={markAllPurchased}
-            className="border border-brand-200 text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-xl text-sm font-medium"
-          >
-            ✓ Markera allt som handlat ({unpurchasedCount})
+          <button onClick={markAllPurchased} className="chip chip-off shrink-0 font-medium">
+            <CheckCheck className="w-4 h-4" /> Allt handlat ({unpurchasedCount})
           </button>
         )}
-        <label className="flex items-center gap-2 text-sm text-gray-500 ml-auto cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showPurchased}
-            onChange={e => setShowPurchased(e.target.checked)}
-            className="accent-brand-600 rounded"
-          />
-          Visa handlade
-        </label>
       </div>
 
       {/* AI cleanup */}
       {aiError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">
+        <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-3xl px-4 py-3">
           {aiError}
         </div>
       )}
@@ -266,48 +275,19 @@ export default function ShoppingPage() {
         />
       )}
 
-      {/* Add item */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap gap-2">
-        <input
-          type="text"
-          placeholder="Lägg till vara…"
-          value={newItem}
-          onChange={e => setNewItem(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addManual()}
-          className="flex-1 min-w-[180px] border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-        />
-        <select
-          value={newCat}
-          onChange={e => setNewCat(e.target.value as ShoppingCategory)}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
-        >
-          {CATEGORY_ORDER.map(c => (
-            <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-          ))}
-        </select>
-        <button
-          onClick={addManual}
-          className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium"
-        >
-          Lägg till
-        </button>
-      </div>
-
       {/* Grouped list */}
       {grouped.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">
-          Inköpslistan är tom. Tryck "Uppdatera från recept" eller lägg till varor manuellt.
-        </p>
+        <div className="card px-6 py-10 text-center">
+          <ShoppingCart className="w-8 h-8 text-ink-faint mx-auto mb-3" />
+          <p className="text-[15px] font-semibold">Inköpslistan är tom</p>
+          <p className="text-sm text-ink-muted mt-1">Tryck "Uppdatera från recept" eller lägg till varor nedan.</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-5">
           {grouped.map(([cat, catItems]) => (
-            <div key={cat} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2 bg-gray-50/60 border-b border-gray-100">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {CATEGORY_LABELS[cat]}
-                </span>
-              </div>
-              <div className="divide-y divide-gray-50">
+            <section key={cat} className="space-y-2">
+              <h2 className="eyebrow px-1 font-sans tracking-wider">{CATEGORY_LABELS[cat]}</h2>
+              <div className="card overflow-hidden divide-y divide-line-soft">
                 {catItems.map(item => (
                   <ShoppingItemRow
                     key={item.id}
@@ -320,10 +300,44 @@ export default function ShoppingPage() {
                   />
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
+
+      {/* Add item — sticks above the tab bar on mobile so it stays in thumb reach */}
+      <div className="sticky bottom-28 md:bottom-6 z-10">
+        <div className="bg-white rounded-full shadow-[0_8px_24px_rgba(21,23,26,0.10),0_0_0_1px_rgba(21,23,26,0.06)] p-1.5 pl-4 flex items-center gap-2">
+          <Plus className="w-[18px] h-[18px] text-ink-muted shrink-0" />
+          <input
+            type="text"
+            aria-label="Lägg till vara"
+            placeholder="Lägg till vara"
+            value={newItem}
+            onChange={e => setNewItem(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addManual()}
+            className="flex-1 min-w-0 h-10 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
+          />
+          <select
+            aria-label="Kategori"
+            value={newCat}
+            onChange={e => setNewCat(e.target.value as ShoppingCategory)}
+            className="h-10 max-w-[120px] rounded-full bg-canvas px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-300"
+          >
+            {CATEGORY_ORDER.map(c => (
+              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
+          <button
+            onClick={addManual}
+            disabled={!newItem.trim()}
+            aria-label="Lägg till"
+            className="w-10 h-10 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center shrink-0 disabled:opacity-40"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -338,7 +352,7 @@ function MergeSuggestionsPanel({
   const [open, setOpen] = useState(true)
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+    <div className="bg-amber-50 border border-amber-200 rounded-3xl overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-3 text-left"
@@ -410,7 +424,7 @@ function AiCleanupPanel({
 
   if (total === 0) {
     return (
-      <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+      <div className="bg-violet-50 border border-violet-200 rounded-3xl px-4 py-3 flex items-center justify-between">
         <span className="text-sm text-violet-800">AI hittade inget att städa. 🎉</span>
         <button onClick={onDismiss} className="text-violet-400 hover:text-violet-600 text-sm">✕</button>
       </div>
@@ -418,7 +432,7 @@ function AiCleanupPanel({
   }
 
   return (
-    <div className="bg-violet-50 border border-violet-200 rounded-2xl overflow-hidden">
+    <div className="bg-violet-50 border border-violet-200 rounded-3xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-sm font-semibold text-violet-800">AI-förslag ({total})</span>
         <div className="flex gap-2">
@@ -504,57 +518,65 @@ function ShoppingItemRow({
   const [editing, setEditing] = useState(false)
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 ${item.isPurchased ? 'opacity-50' : ''}`}>
+    <div className="flex items-center gap-1 pl-2 pr-1.5 min-h-[56px]">
       {/* Purchased checkbox */}
       <button
         onClick={onToggle}
-        className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors
-          ${item.isPurchased ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300'}`}
+        role="checkbox"
+        aria-checked={item.isPurchased}
+        aria-label={item.name}
+        className="w-11 h-11 shrink-0 flex items-center justify-center"
       >
-        {item.isPurchased && <span className="text-xs leading-none">✓</span>}
+        <span className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors
+          ${item.isPurchased ? 'bg-brand-600 text-white' : 'border-2 border-ink-faint/60'}`}>
+          {item.isPurchased && <Check className="w-4 h-4" strokeWidth={3} />}
+        </span>
       </button>
 
       {/* Name & amount */}
       {editing ? (
-        <div className="flex flex-1 gap-2 flex-wrap">
+        <div className="flex flex-1 gap-2 py-2 items-center min-w-0">
           <input
             autoFocus
+            aria-label="Namn"
             value={item.name}
             onChange={e => onUpdate({ name: e.target.value })}
-            className="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-sm"
+            className="cell flex-1 text-base"
           />
           <input
+            aria-label="Mängd"
             value={item.amount}
             onChange={e => onUpdate({ amount: e.target.value })}
             placeholder="Mängd"
-            className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+            className="cell w-16 text-base"
           />
           <input
+            aria-label="Enhet"
             value={item.unit}
             onChange={e => onUpdate({ unit: e.target.value })}
             placeholder="Enhet"
-            className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+            className="cell w-14 text-base"
           />
-          <button onClick={() => setEditing(false)} className="text-brand-600 text-sm font-medium">Klar</button>
+          <button onClick={() => setEditing(false)} className="h-10 px-3 rounded-full bg-ink text-white text-sm font-semibold shrink-0">Klar</button>
         </div>
       ) : (
-        <button onClick={() => setEditing(true)} className="flex-1 text-left">
-          <span className="block">
-            <span className={`text-sm ${item.isPurchased ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+        <button onClick={() => setEditing(true)} className="flex-1 min-w-0 text-left py-2">
+          <span className="flex items-baseline gap-2">
+            <span className={`text-[15px] font-medium truncate ${item.isPurchased ? 'line-through text-ink-faint' : 'text-ink'}`}>
               {item.name}
             </span>
             {(item.amount || item.unit) && (
-              <span className="text-xs text-gray-400 ml-2">
+              <span className={`text-[13px] whitespace-nowrap ${item.isPurchased ? 'text-ink-faint' : 'text-ink-muted'}`}>
                 {item.amount} {item.unit}
               </span>
             )}
           </span>
-          {recipeNames.length > 0 && (
+          {recipeNames.length > 0 && !item.isPurchased && (
             <span className="flex flex-wrap gap-1 mt-1">
               {recipeNames.map(name => (
                 <span
                   key={name}
-                  className="text-[10px] leading-tight bg-brand-50 text-brand-600 rounded-full px-1.5 py-0.5"
+                  className="text-[11px] leading-tight bg-mint text-mint-ink rounded-full px-2 py-0.5"
                 >
                   {name}
                 </span>
@@ -565,19 +587,26 @@ function ShoppingItemRow({
       )}
 
       {/* Actions */}
-      <div className="flex gap-1 shrink-0">
-        <button
-          onClick={onExclude}
-          title="Har hemma"
-          className="text-xs text-gray-300 hover:text-brand-400 px-1"
-        >
-          🏠
-        </button>
-        <button
-          onClick={onDelete}
-          className="text-gray-300 hover:text-red-400 text-sm px-1"
-        >✕</button>
-      </div>
+      {!editing && (
+        <div className="flex shrink-0">
+          <button
+            onClick={onExclude}
+            title="Har hemma"
+            aria-label={`${item.name}: har hemma`}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-ink-faint hover:text-brand-700 hover:bg-canvas"
+          >
+            <Home className="w-[18px] h-[18px]" />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Ta bort"
+            aria-label={`Ta bort ${item.name}`}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-ink-faint hover:text-red-700 hover:bg-red-50"
+          >
+            <X className="w-[18px] h-[18px]" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

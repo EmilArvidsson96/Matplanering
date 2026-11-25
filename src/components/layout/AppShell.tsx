@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
-import { Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2 } from 'lucide-react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2,
+  MoreHorizontal, LogOut, ChevronRight,
+} from 'lucide-react'
 import PlayerBar from '../game/PlayerBar'
 import type { LucideIcon } from 'lucide-react'
 import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
 import DebugPanel from './DebugPanel'
+import Modal from '../common/Modal'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 
 interface Props {
@@ -16,40 +20,83 @@ interface Props {
   onRetrySave: () => void
 }
 
-const NAV_ITEMS = [
-  { to: '/recept',    label: 'Recept',        Icon: UtensilsCrossed },
-  { to: '/',          label: 'Veckoplanen',   Icon: Calendar },
-  { to: '/bibliotek', label: 'Bibliotek',     Icon: BookOpen },
-  { to: '/inkop',     label: 'Inköp',         Icon: ShoppingCart },
-  { to: '/inst',      label: 'Inställningar', Icon: Settings },
-  { to: '/spel',      label: 'Spel',          Icon: Gamepad2 },
+interface NavDef { to: string; label: string; Icon: LucideIcon }
+
+const PRIMARY_NAV: NavDef[] = [
+  { to: '/',          label: 'Vecka',     Icon: Calendar },
+  { to: '/recept',    label: 'Recept',    Icon: UtensilsCrossed },
+  { to: '/bibliotek', label: 'Bibliotek', Icon: BookOpen },
+  { to: '/inkop',     label: 'Inköp',     Icon: ShoppingCart },
 ]
 
-function NavItem({ to, label, Icon }: { to: string; label: string; Icon: LucideIcon }) {
-  const isDesktop = useIsDesktop()
+const SECONDARY_NAV: NavDef[] = [
+  { to: '/spel', label: 'Spel',          Icon: Gamepad2 },
+  { to: '/inst', label: 'Inställningar', Icon: Settings },
+]
+
+/** Routes whose content depends on the active week → show the week navigator as page header. */
+const WEEK_ROUTES = new Set(['/', '/planera', '/inkop', '/recept'])
+
+/** Routes that manage their own full-height layout (split panes, own scroll areas). */
+const FULLBLEED_ROUTES = new Set(['/recept'])
+
+const PAGE_TITLES: Record<string, string> = {
+  '/bibliotek': 'Bibliotek',
+  '/inst':      'Inställningar',
+  '/spel':      'Spel',
+}
+
+function PageHeader({ size }: { size: 'md' | 'lg' }) {
+  const { pathname } = useLocation()
+  if (WEEK_ROUTES.has(pathname)) return <WeekNavigator size={size} />
+  return (
+    <h1 className={`font-display font-extrabold tracking-tight leading-none text-ink ${size === 'lg' ? 'text-[44px]' : 'text-[32px]'}`}>
+      {PAGE_TITLES[pathname] ?? 'Matplanering'}
+    </h1>
+  )
+}
+
+// ─── Desktop sidebar item ────────────────────────────────────────────────────
+
+function SideItem({ to, label, Icon }: NavDef) {
   return (
     <NavLink
       to={to}
       end={to === '/'}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors
-         ${isActive
-           ? 'bg-brand-100 text-brand-800'
-           : 'text-gray-700 hover:bg-gray-100'
-         }
-         ${isDesktop ? '' : 'flex-col gap-0.5 text-xs py-1.5'}
-        `
+        `h-11 px-3.5 rounded-full flex items-center gap-3 text-sm transition-colors
+         ${isActive ? 'bg-ink text-white font-semibold' : 'text-ink-soft font-medium hover:bg-white'}`
       }
     >
-      <Icon className={isDesktop ? 'w-4 h-4 shrink-0' : 'w-5 h-5 shrink-0'} />
+      <Icon className="w-[18px] h-[18px] shrink-0" />
       <span>{label}</span>
     </NavLink>
   )
 }
 
+// ─── Mobile floating tab bar item ────────────────────────────────────────────
+
+function TabItem({ label, Icon, active, onClick, to }: NavDef & { active: boolean; onClick?: () => void }) {
+  const cls = `h-12 rounded-full flex items-center justify-center gap-2 transition-all duration-200
+    ${active ? 'px-4 bg-ink text-white' : 'w-12 text-ink-muted hover:text-ink'}`
+  const inner = (
+    <>
+      <Icon className="w-[22px] h-[22px] shrink-0" />
+      {active && <span className="text-sm font-semibold whitespace-nowrap">{label}</span>}
+    </>
+  )
+  if (onClick) {
+    return <button onClick={onClick} className={cls} aria-label={label}>{inner}</button>
+  }
+  return <NavLink to={to} end={to === '/'} className={cls} aria-label={label}>{inner}</NavLink>
+}
+
 export default function AppShell({ logout, saveStatus, saveError, onRetrySave }: Props) {
   const isDesktop = useIsDesktop()
   const [debugOpen, setDebugOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   // Toggle debug panel with Ctrl+Shift+D
   useEffect(() => {
@@ -63,66 +110,128 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const debug = debugOpen && (
+    <DebugPanel onClose={() => setDebugOpen(false)} saveStatus={saveStatus} saveError={saveError} />
+  )
+
   if (isDesktop) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        {/* Sidebar */}
-        <aside className="w-56 bg-white border-r border-gray-200 flex flex-col py-6 px-3 gap-1 shrink-0">
-          <div className="px-3 mb-6">
-            <h1 className="text-base font-bold text-gray-900 tracking-tight">Matplanering</h1>
+      <div className="flex h-screen bg-canvas">
+        <aside className="w-60 flex flex-col py-7 px-4 gap-1 shrink-0">
+          <div className="flex items-center gap-2.5 px-3 pb-6">
+            <span className="w-8 h-8 rounded-[10px] bg-brand-600 text-white flex items-center justify-center">
+              <UtensilsCrossed className="w-[18px] h-[18px]" />
+            </span>
+            <span className="font-display text-lg font-extrabold tracking-tight">Matplanering</span>
           </div>
-          {NAV_ITEMS.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
-          <div className="mt-auto flex flex-col gap-2 px-3">
+          {PRIMARY_NAV.map(item => <SideItem key={item.to} {...item} />)}
+          <div className="h-px bg-line mx-3 my-3" />
+          {SECONDARY_NAV.map(item => <SideItem key={item.to} {...item} />)}
+          <div className="mt-auto flex flex-col gap-3 px-3.5">
             <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
-            <button
-              onClick={logout}
-              className="text-xs text-gray-500 hover:text-gray-700 text-left"
-            >
-              Logga ut
+            <button onClick={logout} className="text-xs text-ink-muted hover:text-ink text-left flex items-center gap-1.5">
+              <LogOut className="w-3.5 h-3.5" /> Logga ut
             </button>
           </div>
         </aside>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
-            <WeekNavigator />
-            <div className="ml-auto"><PlayerBar /></div>
-          </header>
-          <main className="flex-1 overflow-y-auto p-6">
-            <Outlet />
+        <div className="flex-1 flex flex-col overflow-hidden py-3 pr-3">
+          {FULLBLEED_ROUTES.has(pathname) ? (
+            <main className="flex-1 overflow-hidden rounded-4xl bg-white">
+              <Outlet />
+            </main>
+          ) : (
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-6xl px-5 pt-5 pb-12">
+              <header className="flex flex-wrap items-end gap-4 mb-7">
+                <div className="flex-1 min-w-[280px]"><PageHeader size="lg" /></div>
+                <PlayerBar />
+              </header>
+              <Outlet />
+            </div>
           </main>
+          )}
         </div>
-
-        {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} saveStatus={saveStatus} saveError={saveError} />}
+        {debug}
       </div>
     )
   }
 
-  // Mobile layout
+  // ── Mobile ──
+  const moreActive = SECONDARY_NAV.some(n => n.to === pathname)
+
   return (
-    <div className="flex flex-col h-dvh bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-2 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <WeekNavigator />
-          <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
-        </div>
-        <PlayerBar />
-      </header>
-
+    <div className="flex flex-col h-dvh bg-canvas">
+      {FULLBLEED_ROUTES.has(pathname) ? (
+        <main
+          className="flex-1 min-h-0 overflow-hidden flex flex-col"
+          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}
+        >
+          <Outlet />
+        </main>
+      ) : (
       <main className="flex-1 overflow-y-auto">
-        <Outlet />
+        <header
+          className="px-5 pb-4 flex flex-col gap-3"
+          style={{ paddingTop: 'max(20px, calc(env(safe-area-inset-top) + 12px))' }}
+        >
+          <PageHeader size="md" />
+          {saveStatus === 'error' && (
+            <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3">
+              <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+            </div>
+          )}
+          <PlayerBar />
+        </header>
+        <div className="px-4 pb-32">
+          <Outlet />
+        </div>
       </main>
+      )}
 
-      <nav className="bg-white border-t border-gray-200 px-2 py-1 flex justify-around pb-[env(safe-area-inset-bottom)]">
-        {NAV_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} />
-        ))}
+      {/* Floating tab bar */}
+      <nav
+        aria-label="Huvudmeny"
+        className="fixed left-0 right-0 bottom-0 z-40 px-4 pt-6 bg-gradient-to-b from-canvas/0 via-canvas/90 to-canvas pointer-events-none"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pointer-events-auto h-16 rounded-full bg-white shadow-[0_8px_24px_rgba(21,23,26,0.10),0_0_0_1px_rgba(21,23,26,0.05)] flex items-center justify-between px-2">
+          {PRIMARY_NAV.map(item => (
+            <TabItem
+              key={item.to}
+              {...item}
+              active={item.to === '/' ? pathname === '/' || pathname === '/planera' : pathname === item.to}
+            />
+          ))}
+          <TabItem to="" label="Mer" Icon={MoreHorizontal} active={moreActive} onClick={() => setMoreOpen(true)} />
+        </div>
       </nav>
 
-      {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} saveStatus={saveStatus} saveError={saveError} />}
+      {moreOpen && (
+        <Modal title="Mer" onClose={() => setMoreOpen(false)}>
+          <div className="card overflow-hidden">
+            {SECONDARY_NAV.map(({ to, label, Icon }, i) => (
+              <button
+                key={to}
+                onClick={() => { setMoreOpen(false); navigate(to) }}
+                className={`w-full min-h-[56px] px-4 flex items-center gap-3 text-left text-[15px] ${i > 0 ? 'border-t border-line-soft' : ''}`}
+              >
+                <Icon className="w-5 h-5 text-ink-muted" />
+                <span className="flex-1 font-medium">{label}</span>
+                <ChevronRight className="w-4 h-4 text-ink-faint" />
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-4 px-1">
+            <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+            <button onClick={logout} className="h-11 px-4 rounded-full text-sm font-semibold text-red-700 flex items-center gap-2">
+              <LogOut className="w-4 h-4" /> Logga ut
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {debug}
     </div>
   )
 }

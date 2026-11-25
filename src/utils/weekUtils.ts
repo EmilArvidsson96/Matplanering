@@ -42,6 +42,16 @@ export function formatWeekLabel(weekId: string): string {
   return `v.${week} · ${startStr} – ${endStr}`
 }
 
+/** Split label for large headings: { title: 'Vecka 48', range: '22 nov – 29 nov' } */
+export function formatWeekParts(weekId: string): { title: string; range: string } {
+  const start = parseISO(weekId)
+  const end = addDays(start, 7)
+  return {
+    title: `Vecka ${getISOWeek(start)}`,
+    range: `${format(start, 'd MMM', { locale: sv })} – ${format(end, 'd MMM', { locale: sv })}`,
+  }
+}
+
 export function formatDayLabel(date: string): string {
   return format(parseISO(date), 'EEEE d MMM', { locale: sv })
 }
