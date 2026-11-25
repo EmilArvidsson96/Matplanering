@@ -14,7 +14,7 @@ domän, `https://www.mathem.se/api/v1/…`.
 | Sök produkter | `GET /api/v1/search/mixed/?q=<text>` | Nej | `items[]` blandar `type: "category"` och `type: "product"`; filtrera på `product`. ~40 träffar/sida. |
 | Produktdetalj | `GET /api/v1/products/<id>/` | Nej | Samma fält som i söket. |
 | Läs korgen | `GET /api/v1/cart/` | Ja (cookie) | Rader ligger under `groups[]…items[]` med `product` + `quantity`. |
-| Lägg i korgen | `POST /api/v1/cart/items/` | Ja (cookie + CSRF) | Body `{"items":[{"product_id":2380,"quantity":2}]}`. Många rader i ett anrop går bra. `quantity` **läggs till** befintligt antal (delta). |
+| Lägg i korgen | `POST /api/v1/cart/items/` | Ja (cookie + CSRF) | Body `{"items":[{"product_id":2380,"quantity":2}]}`. Många rader i ett anrop går bra. `quantity` **läggs till** befintligt antal (delta). Negativt antal tar bort. |
 | Ordrar | `GET /api/v1/orders/` | Ja | Tom på kontot idag, så ingen köphistorik att lära av ännu. |
 
 Headers för POST: `content-type: application/json`, `x-csrftoken: <värdet i cookien csrftoken>`.
@@ -152,3 +152,12 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
   (dras från modalen till bokmärkesfältet; läser `#matplan=` och rensar den
   efteråt så att ett andra klick inte dubblar korgen) eller genom att klistra
   in prompten i Claude-appen med Chrome-kontroll.
+
+### Testat i Chrome (2026-11-25)
+
+- Bokmärkets kod kördes på `mathem.se/se/cart/#matplan=…` med 2 varor: båda
+  hamnade i korgen, `#matplan` rensades och sidan laddades om. Korgen
+  återställdes sedan med negativa antal.
+- "Öppna Mathem och fyll korgen" öppnar ingen flik vid ett skriptat klick
+  (Chrome blockerar popup-fönster), men gör det vid ett riktigt klick.
+- AI-matchningen med huvudreglerna är inte testad mot en riktig API-nyckel än.
