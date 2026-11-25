@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bug, Lightbulb, Loader2, MessageSquarePlus, Send } from 'lucide-react'
-import Modal from '../common/Modal'
+import Modal, { type ModalHandle } from '../common/Modal'
 import { useIsDesktop } from '../../hooks/useDevice'
 import { useWeekStore } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -37,6 +37,8 @@ export default function FeedbackWidget() {
   const libraryStore = useLibraryStore()
   const settingsStore = useSettingsStore()
   const gameStore = useGameStore()
+
+  const modalRef = useRef<ModalHandle>(null)
 
   function close() {
     setOpen(false)
@@ -80,7 +82,7 @@ export default function FeedbackWidget() {
         },
       })
       setState('sent')
-      setTimeout(close, 1500)
+      setTimeout(() => (modalRef.current ? modalRef.current.close() : close()), 1500)
     } catch (e) {
       setState('error')
       setError(e instanceof Error ? e.message : String(e))
@@ -108,7 +110,7 @@ export default function FeedbackWidget() {
       </div>
 
       {open && (
-        <Modal title="Skicka feedback" onClose={close}>
+        <Modal ref={modalRef} title="Skicka feedback" onClose={close}>
           {state === 'sent' ? (
             <div className="py-6 text-center text-brand-700 font-medium">
               Tack! Vi har tagit emot din feedback.

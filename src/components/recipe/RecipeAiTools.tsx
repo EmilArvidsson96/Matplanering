@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Wand, Lightbulb, Loader2, Check, RefreshCw } from 'lucide-react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { splitInstructions, splitInputHash, suggestRecipeImprovements } from '../../api/anthropic'
 import type { Dish, DishAiData, RecipeImprovement, RecipeStep } from '../../types'
-import SheetModal from '../common/Modal'
+import SheetModal, { type ModalHandle } from '../common/Modal'
 
 /** Merge AI results into the dish's saved `ai` data, using the latest store state. */
 function saveAiData(dishId: string, patch: Partial<DishAiData>) {
@@ -18,14 +18,15 @@ function saveAiData(dishId: string, patch: Partial<DishAiData>) {
 // ---------------------------------------------------------------------------
 // Modal shell
 // ---------------------------------------------------------------------------
-function Modal({ title, onClose, children }: {
+function Modal({ title, onClose, children, modalRef }: {
   title: string
   onClose: () => void
   children: React.ReactNode
+  modalRef?: React.Ref<ModalHandle>
 }) {
   // Shared sheet/dialog; the tools bring their own padding, so cancel the sheet's.
   return (
-    <SheetModal title={title} onClose={onClose}>
+    <SheetModal ref={modalRef} title={title} onClose={onClose}>
       <div className="-mx-4 md:-mx-7 -mb-6 bg-white rounded-t-3xl md:rounded-3xl md:mx-0 md:mb-0 overflow-hidden flex flex-col">
         {children}
       </div>
@@ -65,17 +66,19 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   // Kick off on first render (uses cached result if available)
   useEffect(() => { run() }, [])
 
+  const modalRef = useRef<ModalHandle>(null)
+
   function apply() {
     if (!steps) return
     const next: RecipeStep[] = steps.map(text => ({ id: uuid(), text }))
     updateDish(dish.id, { instructions: next })
-    onClose()
+    modalRef.current ? modalRef.current.close() : onClose()
   }
 
   const current = (dish.instructions ?? []).filter(s => s.text.trim())
 
   return (
-    <Modal title="Dela upp i tydligare steg" onClose={onClose}>
+    <Modal modalRef={modalRef} title="Dela upp i tydligare steg" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
@@ -168,6 +171,8 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     })
   }
 
+  const modalRef = useRef<ModalHandle>(null)
+
   function apply() {
     if (!items) return
     const chosen = items.filter((_, i) => selected.has(i))
@@ -181,11 +186,11 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       notes,
       ai: { ...latest?.ai, improvements: { items: marked, at: latest?.ai?.improvements?.at ?? new Date().toISOString() } },
     })
-    onClose()
+    modalRef.current ? modalRef.current.close() : onClose()
   }
 
   return (
-    <Modal title="Förbättringsförslag" onClose={onClose}>
+    <Modal modalRef={modalRef} title="Förbättringsförslag" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">

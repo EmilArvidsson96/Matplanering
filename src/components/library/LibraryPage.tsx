@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
@@ -6,7 +6,7 @@ import { useGameStore } from '../../store/gameStore'
 import { dishPopularity, dishLastCooked } from '../../utils/weekUtils'
 import { computeCompleteness } from '../../utils/recipeCompleteness'
 import DishEditor from './DishEditor'
-import Modal from '../common/Modal'
+import Modal, { type ModalHandle } from '../common/Modal'
 import { Search, Plus, SlidersHorizontal, ArrowUpDown, Download, Link2 } from 'lucide-react'
 import type { Dish, Protein, Carb, Cuisine, DishType, Tag, SortOrder } from '../../types'
 
@@ -47,6 +47,7 @@ export default function LibraryPage() {
   const [sort, setSort]       = useState<SortOrder>('alfabetisk')
   const [editing, setEditing] = useState<Dish | 'new' | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const filterModal = useRef<ModalHandle>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const gameMode = useGameStore(s => s.data.gameMode)
 
@@ -198,12 +199,13 @@ export default function LibraryPage() {
       {/* Filter sheet */}
       {showFilters && (
         <Modal
+          ref={filterModal}
           title="Filter"
           onClose={() => setShowFilters(false)}
           footer={
             <div className="flex gap-2.5">
               <button onClick={clearFilters} disabled={activeFilters === 0} className="btn-secondary flex-1 sm:flex-none">Rensa</button>
-              <button onClick={() => setShowFilters(false)} className="btn-primary flex-[2] sm:flex-none">
+              <button onClick={() => filterModal.current?.close()} className="btn-primary flex-[2] sm:flex-none">
                 Visa {filtered.length} rätter
               </button>
             </div>

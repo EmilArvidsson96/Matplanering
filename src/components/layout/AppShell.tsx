@@ -10,7 +10,7 @@ import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
 import DebugPanel from './DebugPanel'
-import Modal from '../common/Modal'
+import Modal, { type ModalHandle } from '../common/Modal'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 
 interface Props {
@@ -132,6 +132,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const mainRef = useRef<HTMLElement>(null)
+  const moreModal = useRef<ModalHandle>(null)
 
   // Toggle debug panel with Ctrl+Shift+D
   useEffect(() => {
@@ -245,12 +246,12 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
       </nav>
 
       {moreOpen && (
-        <Modal title="Mer" onClose={() => setMoreOpen(false)}>
+        <Modal ref={moreModal} title="Mer" onClose={() => setMoreOpen(false)}>
           <div className="card overflow-hidden">
             {SECONDARY_NAV.map(({ to, label, Icon }, i) => (
               <button
                 key={to}
-                onClick={() => { setMoreOpen(false); navigate(to) }}
+                onClick={() => { navigate(to); moreModal.current?.close() }}
                 className={`w-full min-h-[56px] px-4 flex items-center gap-3 text-left text-[15px] ${i > 0 ? 'border-t border-line-soft' : ''}`}
               >
                 <Icon className="w-5 h-5 text-ink-muted" />

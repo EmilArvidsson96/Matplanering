@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import SegmentedControl from '../common/SegmentedControl'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { computeBalances, slotKey, formatDayShort, mealTotalPortions, eatenMeals } from '../../utils/weekUtils'
-import Modal from '../common/Modal'
+import Modal, { type ModalHandle } from '../common/Modal'
 import type { ScheduleSlot, PlannedMeal, MealType, WeekPlan } from '../../types'
 
 export default function ScheduleStep() {
@@ -225,6 +225,7 @@ function MealAssignPicker({
   onAssign: (mealId: string, portions: number) => void
   onClose: () => void
 }) {
+  const modalRef = useRef<ModalHandle>(null)
   const inThisSlot = new Set((slot.assignments ?? []).map(a => a.mealId))
 
   function portionsElsewhere(mealId: string): number {
@@ -254,7 +255,7 @@ function MealAssignPicker({
   const assigned   = eatenMeals(week.meals).filter(m => inThisSlot.has(m.id))
 
   return (
-    <Modal title={`Tilldela matlagning – ${slot.type === 'lunch' ? 'Lunch' : 'Middag'} ${slot.date}`} onClose={onClose}>
+    <Modal ref={modalRef} title={`Tilldela matlagning – ${slot.type === 'lunch' ? 'Lunch' : 'Middag'} ${slot.date}`} onClose={onClose}>
       <div className="space-y-1">
         {unassigned.length === 0 && assigned.length === 0 && (
           <p className="text-sm text-ink-muted py-4 text-center">Inga planerade rätter.</p>
@@ -296,7 +297,7 @@ function MealAssignPicker({
 
               <button
                 disabled={full}
-                onClick={() => onAssign(meal.id, count)}
+                onClick={() => modalRef.current ? modalRef.current.close(() => onAssign(meal.id, count)) : onAssign(meal.id, count)}
                 className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-colors
                   ${full
                     ? 'bg-line-soft text-ink-faint cursor-not-allowed'

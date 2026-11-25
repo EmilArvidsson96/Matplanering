@@ -6,7 +6,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
-import Modal from '../common/Modal'
+import Modal, { type ModalHandle } from '../common/Modal'
 import SegmentedControl from '../common/SegmentedControl'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
@@ -127,6 +127,11 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [tab, setTab] = useState<EditorTab>('grund')
+  // Sheets close through these so Spara/Klar/Avbryt get the same slide-out as the X
+  const editorModal = useRef<ModalHandle>(null)
+  const ingModal = useRef<ModalHandle>(null)
+  const confirmModal = useRef<ModalHandle>(null)
+  const closeEditor = () => (editorModal.current ? editorModal.current.close() : onClose())
   const [editingIngId, setEditingIngId] = useState<string | null>(null)
   const isDesktop = useIsDesktop()
   const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string; info?: string }>({ state: 'idle', error: '' })
@@ -148,7 +153,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
       updateDish(dish.id, form)
       onSaved?.(dish.id)
     }
-    onClose()
+    closeEditor()
   }
 
   // ── Ingredients ──────────────────────────────────────────────────────────────
@@ -634,7 +639,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         </button>
       ) : <span />}
       <div className="flex gap-2.5">
-        <button type="button" onClick={onClose} className="btn-secondary">Avbryt</button>
+        <button type="button" onClick={closeEditor} className="btn-secondary">Avbryt</button>
         <button type="button" onClick={save} disabled={!form.name.trim()} className="btn-primary px-7">
           {isNew ? 'Lägg till' : 'Spara'}
         </button>
@@ -649,6 +654,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   return (
     <>
       <Modal
+        ref={editorModal}
         title={form.name.trim() || (isNew ? 'Ny rätt' : 'Namnlös rätt')}
         subtitle={isNew ? 'Ny rätt' : 'Redigera rätt'}
         onClose={onClose}
@@ -686,18 +692,18 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
       {/* Mobile: edit one ingredient in its own half sheet */}
       {editingIng && !isDesktop && (
-        <Modal title="Ingrediens" onClose={() => setEditingIngId(null)}
+        <Modal ref={ingModal} title="Ingrediens" onClose={() => setEditingIngId(null)}
           footer={
             <div className="flex gap-2.5">
               <button
                 type="button"
-                onClick={() => { removeIngredient(editingIng.id); setEditingIngId(null) }}
+                onClick={() => { const id = editingIng.id; ingModal.current?.close(() => removeIngredient(id)) }}
                 aria-label="Ta bort ingrediens"
                 className="w-14 h-14 rounded-full bg-red-50 text-red-700 flex items-center justify-center shrink-0"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
-              <button type="button" onClick={() => setEditingIngId(null)} className="btn-primary flex-1 h-14 text-base">Klar</button>
+              <button type="button" onClick={() => ingModal.current?.close()} className="btn-primary flex-1 h-14 text-base">Klar</button>
             </div>
           }
         >
@@ -757,13 +763,13 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
       {/* Confirm delete */}
       {confirmDelete && dish && (
-        <Modal title={`Ta bort ${dish.name}?`} onClose={() => setConfirmDelete(false)}
+        <Modal ref={confirmModal} title={`Ta bort ${dish.name}?`} onClose={() => setConfirmDelete(false)}
           footer={
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
-              <button type="button" onClick={() => setConfirmDelete(false)} className="btn-secondary h-14 sm:h-12">Avbryt</button>
+              <button type="button" onClick={() => confirmModal.current?.close()} className="btn-secondary h-14 sm:h-12">Avbryt</button>
               <button
                 type="button"
-                onClick={() => { deleteDish(dish.id); setConfirmDelete(false); onClose() }}
+                onClick={() => confirmModal.current?.close(() => { deleteDish(dish.id); closeEditor() })}
                 className="h-14 sm:h-12 px-6 rounded-full bg-red-700 hover:bg-red-800 text-white font-semibold text-[15px]"
               >
                 Ta bort

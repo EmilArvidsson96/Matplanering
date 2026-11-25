@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { useIsDesktop } from '../../hooks/useDevice'
 
@@ -20,6 +20,12 @@ interface Props {
   toolbar?: React.ReactNode
 }
 
+/** Imperative handle: close the sheet with its exit animation from code (Spara, Klar, a pick …). */
+export interface ModalHandle {
+  /** Animate out, then run `after` (if given) and finally `onClose`. */
+  close: (after?: () => void) => void
+}
+
 /** Open modals, innermost last — Escape only closes the topmost one. */
 const openStack: symbol[] = []
 
@@ -27,9 +33,9 @@ const openStack: symbol[] = []
  * Bottom sheet on mobile, centered dialog on desktop.
  * Close with Escape, backdrop tap, the X button, or (mobile) by dragging the handle down.
  */
-export default function Modal({
+const Modal = forwardRef<ModalHandle, Props>(function Modal({
   title, onClose, children, wide, subtitle, footer, headerAction, fullHeight, toolbar,
-}: Props) {
+}, ref) {
   const isDesktop = useIsDesktop()
   const idRef = useRef(Symbol('modal'))
   const onCloseRef = useRef(onClose)
@@ -40,14 +46,18 @@ export default function Modal({
   const [closing, setClosing] = useState(false)
 
   /** Play the exit animation, then tell the parent to unmount us. */
-  const requestClose = useRef(() => {})
-  requestClose.current = () => {
-    if (closing) return
+  const closingRef = useRef(false)
+  const requestClose = useRef((_after?: () => void) => {})
+  requestClose.current = (after?: () => void) => {
+    if (closingRef.current) return
+    closingRef.current = true
+    const finish = () => { after?.(); onCloseRef.current() }
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce) { onClose(); return }
+    if (reduce) { finish(); return }
     setClosing(true)
-    window.setTimeout(() => onCloseRef.current(), 200)
+    window.setTimeout(finish, 200)
   }
+  useImperativeHandle(ref, () => ({ close: (after) => requestClose.current(after) }), [])
 
 
   useEffect(() => {
@@ -177,4 +187,6 @@ export default function Modal({
       )}
     </div>
   )
-}
+})
+
+export default Modal
