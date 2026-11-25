@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { AppSettings, UnitConversion } from '../types'
+import type { AppSettings, RecipeSiteRule, UnitConversion } from '../types'
 
 interface SettingsStore {
   settings: AppSettings
@@ -15,6 +15,7 @@ interface SettingsStore {
   applyCostOverrides: (patch: Record<string, number>) => void
   removeCostOverride: (name: string) => void
   clearCostOverrides: () => void
+  setRecipeSiteRule: (host: string, rule: RecipeSiteRule | null) => void
   markClean: (sha: string | undefined) => void
 }
 
@@ -100,6 +101,14 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       settings: { ...s.settings, costOverrides: {} },
       isDirty: true,
     })),
+
+  setRecipeSiteRule: (host, rule) =>
+    set((s) => {
+      const next = { ...(s.settings.recipeSiteRules ?? {}) }
+      if (rule) next[host] = rule
+      else delete next[host]
+      return { settings: { ...s.settings, recipeSiteRules: next }, isDirty: true }
+    }),
 
   markClean: (sha) => set({ isDirty: false, sha }),
 }))

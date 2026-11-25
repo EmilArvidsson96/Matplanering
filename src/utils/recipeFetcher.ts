@@ -1,47 +1,15 @@
 import { v4 as uuid } from 'uuid'
-import type { Ingredient, RecipeStep, ShoppingCategory } from '../types'
+import type { Ingredient, RecipeSiteRule, RecipeStep, ShoppingCategory } from '../types'
+import { extractRecipeWithAi } from '../api/anthropic'
+import { useSettingsStore } from '../store/settingsStore'
 
-// ── Whitelist ─────────────────────────────────────────────────────────────────
-// Only these hostnames are allowed. Add more as needed.
-
-export const ALLOWED_HOSTS: string[] = [
-  // Swedish sites (custom parsers)
-  'www.landleyskok.se',
-  'landleyskok.se',
-  'zeinaskitchen.se',
-  'www.mykitchenstories.se',
-  'mykitchenstories.se',
-  'vivavinomat.se',
-  'www.vivavinomat.se',
-  'www.kronfagel.se',
-  'kronfagel.se',
-  // Sites with schema.org/Recipe JSON-LD
-  'www.ica.se',
-  'ica.se',
-  'mykoreankitchen.com',
-  'www.mykoreankitchen.com',
-  'www.coop.se',
-  'coop.se',
-  'www.arla.se',
-  'arla.se',
-  'www.tasteline.com',
-  'tasteline.com',
-  'www.recept.nu',
-  'recept.nu',
-  'www.koket.se',
-  'koket.se',
-  'www.allrecipes.se',
-  'allrecipes.se',
-  'www.allrecipes.com',
-  'allrecipes.com',
-  'www.bbcgoodfood.com',
-  'bbcgoodfood.com',
-  'www.food.com',
-  'food.com',
-]
-
-// URL paths that strongly suggest a recipe page — used to allow unknown hosts.
-const RECIPE_PATH_RE = /\/(recipe|recipes|recept|recepten)\//i
+// Any https page can be fetched. Parsing is tried in this order:
+//   1. hand-written parsers for a few Swedish sites
+//   2. schema.org/Recipe JSON-LD or microdata
+//   3. CSS selectors previously learned for this host (via AI, stored in settings)
+//   4. common recipe-plugin markup and an "Ingredienser"-heading heuristic
+//   5. AI extraction — which also returns selectors that are verified and saved
+//      as a learned rule, so the next recipe from that site needs no AI call.
 
 const CORS_PROXY = 'https://matplanering-recipe-proxy.emil-arvidsson.workers.dev/?url='
 
@@ -177,13 +145,27 @@ function extractJsonLdItems(html: string): unknown[] {
   return items
 }
 
-function findRecipeNode(items: unknown[]): Record<string, unknown> | null {
+function findRecipeNode(items: unknown[], depth = 0): Record<string, unknown> | null {
+  if (depth > 5) return null
   for (const item of items) {
     if (!item || typeof item !== 'object') continue
+    if (Array.isArray(item)) {
+      const found = findRecipeNode(item, depth + 1)
+      if (found) return found
+      continue
+    }
     const node = item as Record<string, unknown>
     const t = node['@type']
     if (t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))) {
       return node
+    }
+    // Recipe nested inside e.g. WebPage.mainEntity or @graph
+    const nested = ['@graph', 'mainEntity', 'mainEntityOfPage', 'itemListElement', 'item']
+      .map(k => node[k])
+      .filter(v => v && typeof v === 'object')
+    if (nested.length) {
+      const found = findRecipeNode(nested, depth + 1)
+      if (found) return found
     }
   }
   return null
@@ -420,58 +402,294 @@ function extractInstructions(raw: unknown): RecipeStep[] {
   return texts.map(text => ({ id: uuid(), text }))
 }
 
+// ── Generic DOM helpers ───────────────────────────────────────────────────────
+
+const BLOCK_TAGS = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TR', 'SECTION', 'ARTICLE', 'BLOCKQUOTE', 'DT', 'DD'])
+
+/** Text of an element split into visual lines (on <br> and block elements). */
+function elementLines(el: Element): string[] {
+  let out = ''
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) { out += node.textContent ?? ''; return }
+    if (node.nodeType !== Node.ELEMENT_NODE) return
+    const e = node as Element
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'BUTTON', 'svg'].includes(e.tagName)) return
+    if (e.tagName === 'BR') { out += '\n'; return }
+    const block = BLOCK_TAGS.has(e.tagName)
+    if (block) out += '\n'
+    e.childNodes.forEach(walk)
+    if (block) out += '\n'
+  }
+  walk(el)
+  return out
+    .split('\n')
+    .map(l => l.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
+function safeQueryAll(root: ParentNode, selector: string | undefined): Element[] {
+  if (!selector) return []
+  try {
+    return [...root.querySelectorAll(selector)]
+  } catch {
+    return []  // invalid selector
+  }
+}
+
+/** Lines from all elements matching selector; nested matches are de-duplicated. */
+function linesBySelector(doc: Document, selector: string | undefined): string[] {
+  const els = safeQueryAll(doc, selector)
+  const outer = els.filter(e => !els.some(o => o !== e && o.contains(e)))
+  return outer.flatMap(elementLines)
+}
+
+function textBySelector(doc: Document, selector: string | undefined): string | undefined {
+  const el = safeQueryAll(doc, selector)[0]
+  const t = el?.textContent?.replace(/\s+/g, ' ').trim()
+  return t || undefined
+}
+
+function servingsFromText(text: string | undefined): number | undefined {
+  if (!text) return undefined
+  const m = text.match(/(\d+)\s*(portioner|portion|pers|personer|servings|serves|st)?/i)
+  const n = m ? parseInt(m[1]) : NaN
+  return n > 0 && n < 100 ? n : undefined
+}
+
+function toSteps(texts: string[]): RecipeStep[] | undefined {
+  const steps = texts.map(t => t.trim()).filter(Boolean).map(text => ({ id: uuid(), text }))
+  return steps.length ? steps : undefined
+}
+
+function hostKey(hostname: string): string {
+  return hostname.toLowerCase().replace(/^www\./, '')
+}
+
+// ── Generic parsers (no AI) ───────────────────────────────────────────────────
+
+interface Extracted {
+  ingredientStrings: string[]
+  portionsBase: number
+  title?: string
+  instructions?: RecipeStep[]
+}
+
+function fromJsonLd(html: string): Extracted | null {
+  const recipe = findRecipeNode(extractJsonLdItems(html))
+  if (!recipe) return null
+  const raw = recipe.recipeIngredient ?? recipe.ingredients
+  const ingredientStrings = (Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split('\n') : [])
+    .filter((x): x is string => typeof x === 'string')
+    .map(decodeEntities)
+  if (ingredientStrings.length === 0) return null
+  const instr = extractInstructions(recipe.recipeInstructions).map(s => ({ ...s, text: decodeEntities(s.text) }))
+  return {
+    ingredientStrings,
+    portionsBase: parseServings(recipe.recipeYield),
+    title: typeof recipe.name === 'string' ? decodeEntities(recipe.name) : undefined,
+    instructions: instr.length ? instr : undefined,
+  }
+}
+
+function decodeEntities(s: string): string {
+  if (!/[&<]/.test(s)) return s.trim()
+  const d = new DOMParser().parseFromString(`<body>${s}</body>`, 'text/html')
+  return (d.body.textContent ?? s).replace(/\s+/g, ' ').trim()
+}
+
+function fromRule(doc: Document, rule: RecipeSiteRule): Extracted | null {
+  const ingredientStrings = linesBySelector(doc, rule.ingredientSelector)
+  if (ingredientStrings.length < 2) return null
+  return {
+    ingredientStrings,
+    portionsBase: servingsFromText(textBySelector(doc, rule.servingsSelector))
+      ?? portionsFromText(doc.body.textContent ?? ''),
+    title: textBySelector(doc, rule.titleSelector) ?? docTitle(doc),
+    instructions: toSteps(linesBySelector(doc, rule.instructionSelector)),
+  }
+}
+
+// Markup used by popular recipe plugins / schema.org microdata.
+const KNOWN_MARKUP: RecipeSiteRule[] = [
+  { ingredientSelector: '[itemprop="recipeIngredient"], [itemprop="ingredients"]', instructionSelector: '[itemprop="recipeInstructions"]', servingsSelector: '[itemprop="recipeYield"]', learnedAt: '' },
+  { ingredientSelector: '.wprm-recipe-ingredient', instructionSelector: '.wprm-recipe-instruction-text', titleSelector: '.wprm-recipe-name', servingsSelector: '.wprm-recipe-servings', learnedAt: '' },
+  { ingredientSelector: '.tasty-recipes-ingredients li', instructionSelector: '.tasty-recipes-instructions li', titleSelector: '.tasty-recipes-title', servingsSelector: '.tasty-recipes-yield', learnedAt: '' },
+  { ingredientSelector: '.mv-create-ingredients li', instructionSelector: '.mv-create-instructions li', titleSelector: '.mv-create-title', learnedAt: '' },
+  { ingredientSelector: '.ingredients li, .recipe-ingredients li, .ingredient-list li', instructionSelector: '.instructions li, .recipe-instructions li, .recipe-steps li', learnedAt: '' },
+]
+
+const INGREDIENT_HEADING = /^(ingredienser|ingredients?|ingredienten|zutaten|ingrédients|ingredientes|ingredienti|du behöver|det här behöver du)\s*:?$/i
+const INSTRUCTION_HEADING = /^(gör så här|så gör du|instruktioner|tillagning|tillvägagångssätt|gör såhär|instructions|method|directions|preparation|steps|zubereitung|préparation)\s*:?$/i
+
+/** Finds the first list (or line-broken block) following a heading matching `re`. */
+function linesAfterHeading(doc: Document, re: RegExp): string[] {
+  const headings = [...doc.querySelectorAll('h1,h2,h3,h4,h5,h6,strong,b,p,span,div,dt,th')]
+    .filter(el => re.test(el.textContent?.replace(/\s+/g, ' ').trim() ?? ''))
+  for (const heading of headings) {
+    // Walk forward through following elements (siblings, then ancestors' siblings)
+    let node: Element | null = heading
+    for (let hops = 0; node && hops < 6; hops++) {
+      let sib: Element | null = node.nextElementSibling
+      for (let i = 0; sib && i < 4; i++, sib = sib.nextElementSibling) {
+        const list = sib.matches('ul,ol') ? sib : sib.querySelector('ul,ol')
+        if (list) {
+          const lines = [...list.querySelectorAll(':scope > li')].map(li => elementLines(li).join(' ')).filter(Boolean)
+          if (lines.length >= 2) return lines
+        }
+        const lines = elementLines(sib)
+        if (lines.length >= 2 && lines.every(l => l.length < 200)) return lines
+      }
+      node = node.parentElement
+    }
+  }
+  return []
+}
+
+function fromHeuristics(doc: Document): Extracted | null {
+  for (const rule of KNOWN_MARKUP) {
+    const r = fromRule(doc, rule)
+    if (r) return r
+  }
+  const ingredientStrings = linesAfterHeading(doc, INGREDIENT_HEADING)
+  if (ingredientStrings.length < 2) return null
+  return {
+    ingredientStrings,
+    portionsBase: portionsFromText(doc.body.textContent ?? ''),
+    title: docTitle(doc),
+    instructions: toSteps(linesAfterHeading(doc, INSTRUCTION_HEADING)),
+  }
+}
+
+// ── Learning from AI ──────────────────────────────────────────────────────────
+
+const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+
+/** True if the selector reproduces (most of) what the AI read off the page. */
+function selectorMatches(doc: Document, selector: string | undefined, expected: string[]): boolean {
+  if (!selector || expected.length === 0) return false
+  const got = linesBySelector(doc, selector).map(norm).filter(Boolean)
+  if (got.length === 0 || got.length > expected.length * 1.5 + 3) return false
+  const gotJoined = got.join('|')
+  const hits = expected.filter(e => {
+    const n = norm(e)
+    return n && (got.includes(n) || gotJoined.includes(n))
+  }).length
+  return hits / expected.length >= 0.7
+}
+
+function learnRule(host: string, doc: Document, ai: Awaited<ReturnType<typeof extractRecipeWithAi>>): boolean {
+  if (!selectorMatches(doc, ai.ingredientSelector, ai.ingredients)) return false
+  const rule: RecipeSiteRule = {
+    ingredientSelector: ai.ingredientSelector!,
+    learnedAt: new Date().toISOString().slice(0, 10),
+  }
+  if (selectorMatches(doc, ai.instructionSelector, ai.instructions)) rule.instructionSelector = ai.instructionSelector
+  if (ai.title && textBySelector(doc, ai.titleSelector) && norm(textBySelector(doc, ai.titleSelector)!) === norm(ai.title)) {
+    rule.titleSelector = ai.titleSelector
+  }
+  if (ai.servings && servingsFromText(textBySelector(doc, ai.servingsSelector)) === ai.servings) {
+    rule.servingsSelector = ai.servingsSelector
+  }
+  useSettingsStore.getState().setRecipeSiteRule(host, rule)
+  return true
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
+
+export type RecipeSource = 'site-parser' | 'json-ld' | 'learned' | 'heuristic' | 'ai'
 
 export interface RecipeFetchResult {
   ingredients: Ingredient[]
   portionsBase: number
   title?: string
   instructions?: RecipeStep[]
+  source: RecipeSource
+  /** Set when AI was used: whether a reusable rule for the site was saved. */
+  learned?: boolean
+}
+
+function finish(e: Extracted, source: RecipeSource): RecipeFetchResult | null {
+  const ingredients = buildIngredients(e.ingredientStrings, e.portionsBase)
+  if (ingredients.length === 0) return null
+  return { ingredients, portionsBase: e.portionsBase, title: e.title, instructions: e.instructions, source }
 }
 
 export async function fetchRecipeFromUrl(url: string): Promise<RecipeFetchResult> {
-  let hostname: string
+  let parsedUrl: URL
   try {
-    hostname = new URL(url).hostname
+    parsedUrl = new URL(url)
   } catch {
     throw new Error('Ogiltig URL.')
   }
-
-  const isKnownHost = ALLOWED_HOSTS.includes(hostname)
-  const isRecipePath = RECIPE_PATH_RE.test(new URL(url).pathname)
-
-  if (!isKnownHost && !isRecipePath) {
-    const supported = [...new Set(ALLOWED_HOSTS.map(h => h.replace(/^www\./, '')))]
-    throw new Error(
-      `Den här sidan stöds inte.\n\nSidor som stöds: ${supported.join(', ')}.\n\nSidor med "/recipe/" eller "/recept/" i adressen provas automatiskt.`
-    )
-  }
+  if (parsedUrl.protocol === 'http:') parsedUrl.protocol = 'https:'
+  if (parsedUrl.protocol !== 'https:') throw new Error('Ogiltig URL.')
+  url = parsedUrl.toString()
+  const hostname = parsedUrl.hostname
+  const host = hostKey(hostname)
 
   const res = await fetch(proxiedUrl(url))
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) throw new Error(`Kunde inte hämta sidan (HTTP ${res.status}).`)
   const html = await res.text()
+  const doc = parseDoc(html)
 
-  // Try site-specific parser first
-  const siteParser = getSiteParser(hostname)
-  if (siteParser) {
-    const { ingredientStrings, portionsBase, title } = siteParser(html)
-    const ingredients = buildIngredients(ingredientStrings, portionsBase)
-    if (ingredients.length === 0) throw new Error('Hittade inga ingredienser på sidan.')
-    return { ingredients, portionsBase, title }
+  const settings = useSettingsStore.getState().settings
+  const learnedRule = settings.recipeSiteRules?.[host]
+
+  // Instructions are sometimes missing from an otherwise good parse — fill in
+  // from the learned rule or heuristics in that case.
+  const withInstructions = (r: RecipeFetchResult): RecipeFetchResult => {
+    if (r.instructions?.length) return r
+    const instr = (learnedRule && toSteps(linesBySelector(doc, learnedRule.instructionSelector)))
+      ?? toSteps(linesAfterHeading(doc, INSTRUCTION_HEADING))
+    return instr ? { ...r, instructions: instr } : r
   }
 
-  // Fall back to generic schema.org/Recipe JSON-LD
-  const items = extractJsonLdItems(html)
-  const recipe = findRecipeNode(items)
-  if (!recipe) throw new Error('Hittade inget receptformat (schema.org/Recipe) på sidan.')
+  // 1. Hand-written site parsers
+  const siteParser = getSiteParser(hostname)
+  if (siteParser) {
+    try {
+      const r = finish(siteParser(html), 'site-parser')
+      if (r) {
+        const instr = learnedRule && toSteps(linesBySelector(doc, learnedRule.instructionSelector))
+        return instr ? { ...r, instructions: instr } : r
+      }
+    } catch { /* fall through to generic parsing */ }
+  }
 
-  const rawIngredients = (recipe.recipeIngredient as string[] | undefined) ?? []
-  const portionsBase = parseServings(recipe.recipeYield)
-  const title = typeof recipe.name === 'string' ? recipe.name : undefined
-  const ingredients = buildIngredients(rawIngredients, portionsBase)
-  const instructionsArr = extractInstructions(recipe.recipeInstructions)
-  const instructions = instructionsArr.length > 0 ? instructionsArr : undefined
+  // 2. schema.org/Recipe JSON-LD
+  const ld = fromJsonLd(html)
+  const ldResult = ld && finish(ld, 'json-ld')
+  if (ldResult) return withInstructions(ldResult)
 
-  if (ingredients.length === 0) throw new Error('Receptet hittades men innehåller inga ingredienser.')
-  return { ingredients, portionsBase, title, instructions }
+  // 3. Learned rule for this site
+  if (learnedRule) {
+    const r = fromRule(doc, learnedRule)
+    const result = r && finish(r, 'learned')
+    if (result) return withInstructions(result)
+    // Rule no longer works (site redesign?) — fall through and let AI re-learn.
+  }
+
+  // 4. Generic heuristics
+  const h = fromHeuristics(doc)
+  const hResult = h && finish(h, 'heuristic')
+  if (hResult) return hResult
+
+  // 5. AI — and learn selectors for next time
+  const ai = await extractRecipeWithAi(url, html, settings)
+  const portionsBase = ai.servings ?? 4
+  const ingredients = buildIngredients(ai.ingredients, portionsBase)
+  if (ingredients.length === 0) throw new Error('Hittade inga ingredienser på sidan.')
+  let learned = false
+  try {
+    learned = learnRule(host, doc, ai)
+    if (!learned && learnedRule) useSettingsStore.getState().setRecipeSiteRule(host, null)
+  } catch { /* learning is best-effort */ }
+  return {
+    ingredients,
+    portionsBase,
+    title: ai.title,
+    instructions: toSteps(ai.instructions),
+    source: 'ai',
+    learned,
+  }
 }

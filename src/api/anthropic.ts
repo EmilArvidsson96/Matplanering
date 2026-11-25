@@ -597,3 +597,151 @@ export async function suggestRecipeImprovements(
   writeCache(cacheKey, hash, improvements)
   return improvements
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// Recipe extraction from arbitrary web pages (fallback when no parser works)
+// ════════════════════════════════════════════════════════════════════════
+
+export interface AiRecipeExtraction {
+  title?: string
+  servings?: number
+  ingredients: string[]
+  instructions: string[]
+  ingredientSelector?: string
+  instructionSelector?: string
+  titleSelector?: string
+  servingsSelector?: string
+}
+
+const RECIPE_EXTRACT_TOOL = {
+  name: 'submit_recipe',
+  description: 'Lämna in receptet som hittades på sidan samt CSS-selektorer för att hitta det igen.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      found: { type: 'boolean', description: 'false om sidan inte innehåller något recept.' },
+      title: { type: 'string', description: 'Receptets namn, exakt som på sidan.' },
+      servings: { type: 'integer', description: 'Antal portioner receptet är skrivet för (gissa 4 om det inte anges).' },
+      ingredients: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Varje ingrediensrad ordagrant som den står på sidan, med mängd och enhet (t.ex. "2 dl grädde"). Ta inte med rubriker.',
+      },
+      instructions: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Tillagningsstegen ordagrant från sidan, ett steg per element.',
+      },
+      ingredientSelector: {
+        type: 'string',
+        description: 'CSS-selektor för document.querySelectorAll där VARJE träff är exakt en ingrediensrad (t.ex. ".recipe-ingredients li"). Om alla ingredienser ligger i ett och samma element åtskilda av <br>, välj det elementet.',
+      },
+      instructionSelector: {
+        type: 'string',
+        description: 'CSS-selektor där varje träff är ett tillagningssteg (eller ett element som innehåller alla steg som stycken).',
+      },
+      titleSelector: { type: 'string', description: 'CSS-selektor för receptets rubrik.' },
+      servingsSelector: { type: 'string', description: 'CSS-selektor för elementet som anger antal portioner, om sådant finns.' },
+    },
+    required: ['found', 'ingredients', 'instructions', 'ingredientSelector'],
+  },
+} as const
+
+const RECIPE_EXTRACT_SYSTEM = `Du extraherar recept från HTML för en svensk matplaneringsapp. Du får förenklad HTML (skript och stilar borttagna, bara attributen class, id och itemprop kvar).
+
+1. Hitta receptet på sidan: titel, antal portioner, ingredienser och tillagningssteg. Skriv av texten ordagrant – översätt eller ändra inget.
+2. Ange också CSS-selektorer som appen kan använda för att hämta samma delar från andra recept på SAMMA webbplats utan din hjälp. Selektorerna ska därför vara generella för sajtens mall:
+   - Använd stabila klassnamn, id:n eller itemprop som beskriver innehållet (t.ex. "ingredient", "instructions", "recipe").
+   - Undvik :nth-child, autogenererade hash-klasser (t.ex. "css-1x2y3z", "sc-abc123") och id:n som innehåller receptets namn eller nummer.
+   - Ingrediensselektorn måste matcha ingrediensraderna och inget annat (inga rubriker, inga knappar).
+3. Om sidan inte innehåller något recept, sätt found=false och lämna tomma listor.`
+
+/** Strips a page down to the markup that matters for finding a recipe. */
+function simplifyHtmlForAi(html: string, maxChars = 90_000): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, style, noscript, svg, iframe, link, meta, img, picture, video, source, form, button, input, select, textarea, template')
+    .forEach(el => el.remove())
+  doc.querySelectorAll('*').forEach(el => {
+    for (const attr of [...el.attributes]) {
+      if (!['class', 'id', 'itemprop'].includes(attr.name)) el.removeAttribute(attr.name)
+    }
+  })
+  // Drop HTML comments
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT)
+  const comments: Node[] = []
+  while (walker.nextNode()) comments.push(walker.currentNode)
+  comments.forEach(c => c.parentNode?.removeChild(c))
+
+  const compact = (s: string) => s.replace(/\s+/g, ' ').replace(/> </g, '><').trim()
+  let out = compact(doc.body.innerHTML)
+  if (out.length > maxChars) {
+    // Prefer the main content area if the page is huge
+    const main = doc.querySelector('main, article, [role="main"]')
+    if (main) out = compact(main.outerHTML)
+  }
+  if (out.length > maxChars) {
+    // Centre the window on the ingredient section if we can find it
+    const idx = out.search(/ingrediens|ingredient|zutaten|ingrédients/i)
+    const start = idx > maxChars / 3 ? idx - Math.floor(maxChars / 3) : 0
+    out = out.slice(start, start + maxChars)
+  }
+  return out
+}
+
+export async function extractRecipeWithAi(
+  url: string,
+  html: string,
+  settings: AppSettings,
+): Promise<AiRecipeExtraction> {
+  const apiKey = settings.anthropicApiKey?.trim()
+  if (!apiKey) {
+    throw new Error('Kunde inte tolka receptet på sidan. Lägg till en Anthropic API-nyckel under Inställningar så kan AI tolka okända sajter.')
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: ANTHROPIC_HEADERS(apiKey),
+    body: JSON.stringify({
+      model: MODEL_IDS[settings.aiModel ?? 'haiku'],
+      max_tokens: 8192,
+      system: RECIPE_EXTRACT_SYSTEM,
+      tools: [RECIPE_EXTRACT_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_recipe' },
+      messages: [
+        {
+          role: 'user',
+          content: `URL: ${url}\n\nHTML:\n${simplifyHtmlForAi(html)}`,
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) await throwApiError(res)
+
+  const data = await res.json() as {
+    content: Array<{ type: string; name?: string; input?: unknown }>
+  }
+  const toolUse = data.content.find(c => c.type === 'tool_use' && c.name === 'submit_recipe')
+  if (!toolUse?.input) throw new Error('AI returnerade inget giltigt svar.')
+
+  const r = toolUse.input as Partial<AiRecipeExtraction> & { found?: boolean }
+  const strList = (v: unknown) =>
+    Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string' && s.trim() !== '').map(s => s.trim()) : []
+  const optStr = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
+
+  const ingredients = strList(r.ingredients)
+  if (r.found === false || ingredients.length === 0) {
+    throw new Error('Hittade inget recept på sidan (inte ens med AI).')
+  }
+
+  return {
+    title: optStr(r.title),
+    servings: typeof r.servings === 'number' && r.servings > 0 ? Math.round(r.servings) : undefined,
+    ingredients,
+    instructions: strList(r.instructions),
+    ingredientSelector: optStr(r.ingredientSelector),
+    instructionSelector: optStr(r.instructionSelector),
+    titleSelector: optStr(r.titleSelector),
+    servingsSelector: optStr(r.servingsSelector),
+  }
+}

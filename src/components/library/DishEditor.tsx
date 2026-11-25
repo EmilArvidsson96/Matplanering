@@ -86,7 +86,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
       : { ...blank(), name: initialName ?? '' }
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string }>({ state: 'idle', error: '' })
+  const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string; info?: string }>({ state: 'idle', error: '' })
   const fetchCacheRef = useRef<{ url: string; promise: Promise<RecipeFetchResult> } | null>(null)
 
   const historyMonth = dish ? dishMostCommonMonth(dish.id, weeks) : null
@@ -178,6 +178,11 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     setFetchStatus({ state: 'loading', error: '' })
     try {
       const data = await getRecipeData()
+      const info = data.source === 'ai'
+        ? data.learned
+          ? 'Okänd sajt – tolkad med AI. Appen har lärt sig sajten och hämtar utan AI nästa gång.'
+          : 'Okänd sajt – tolkad med AI. Kontrollera resultatet.'
+        : undefined
       if (field === 'ingredients') {
         if (data.ingredients.length === 0) {
           setFetchStatus({ state: 'error', error: 'Hittade inga ingredienser i receptet.' })
@@ -187,14 +192,14 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
             ingredients: data.ingredients,
             ...(f.name === '' && data.title ? { name: data.title } : {}),
           }))
-          setFetchStatus({ state: 'idle', error: '' })
+          setFetchStatus({ state: 'idle', error: '', info })
         }
       } else {
         if (!data.instructions?.length) {
           setFetchStatus({ state: 'error', error: 'Hittade inga instruktioner i receptet.' })
         } else {
           setForm(f => ({ ...f, instructions: data.instructions! }))
-          setFetchStatus({ state: 'idle', error: '' })
+          setFetchStatus({ state: 'idle', error: '', info })
         }
       }
     } catch (e) {
@@ -301,7 +306,10 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
             </button>
           )}
           {fetchStatus.error && (
-            <p className="text-xs text-red-500 mt-1">{fetchStatus.error}</p>
+            <p className="text-xs text-red-500 mt-1 whitespace-pre-line">{fetchStatus.error}</p>
+          )}
+          {!fetchStatus.error && fetchStatus.info && (
+            <p className="text-xs text-brand-600 mt-1">{fetchStatus.info}</p>
           )}
         </div>
 

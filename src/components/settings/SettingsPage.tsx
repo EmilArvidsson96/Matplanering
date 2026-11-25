@@ -5,7 +5,8 @@ import type { AiModel } from '../../types'
 import ReceiptCalibration from './ReceiptCalibration'
 
 export default function SettingsPage() {
-  const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion } = useSettingsStore()
+  const { settings, update, addPantryItem, removePantryItem, addUnitConversion, removeUnitConversion, setRecipeSiteRule } = useSettingsStore()
+  const learnedSites = Object.entries(settings.recipeSiteRules ?? {}).sort(([a], [b]) => a.localeCompare(b))
   const [newPantry, setNewPantry] = useState('')
   const [newUnit, setNewUnit] = useState('')
   const [newHint, setNewHint] = useState('')
@@ -211,7 +212,8 @@ export default function SettingsPage() {
       <section className="bg-white rounded-2xl p-5 shadow-sm">
         <h2 className="font-semibold text-gray-700 mb-1">AI-assistent</h2>
         <p className="text-xs text-gray-400 mb-4">
-          Används för att städa inköpslistan: slå ihop varor, kategorisera "Övrigt" och översätta engelska namn.
+          Används för att städa inköpslistan: slå ihop varor, kategorisera "Övrigt" och översätta engelska namn,
+          samt för att tolka recept från okända sajter.
         </p>
         <div className="space-y-3">
           <div className="flex flex-col gap-1">
@@ -237,6 +239,38 @@ export default function SettingsPage() {
             </select>
           </div>
         </div>
+      </section>
+
+      {/* Recipe sites learned via AI */}
+      <section className="bg-white rounded-2xl p-5 shadow-sm">
+        <h2 className="font-semibold text-gray-700 mb-1">Inlärda receptsajter</h2>
+        <p className="text-xs text-gray-400 mb-3">
+          När ett recept från en okänd sajt tolkas med AI sparar appen hur sajten är uppbyggd,
+          så att nästa recept därifrån hämtas utan AI. Ta bort en sajt om hämtningen börjat ge fel resultat.
+        </p>
+        {learnedSites.length === 0 ? (
+          <p className="text-sm text-gray-400">Inga sajter inlärda än.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {learnedSites.map(([host, rule]) => (
+              <li key={host} className="flex items-center gap-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-gray-700 truncate">{host}</div>
+                  <div className="text-xs text-gray-400 truncate" title={rule.ingredientSelector}>
+                    Inlärd {rule.learnedAt}{rule.instructionSelector ? ' · ingredienser + instruktioner' : ' · ingredienser'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRecipeSiteRule(host, null)}
+                  className="text-xs text-gray-400 hover:text-red-500"
+                >
+                  Ta bort
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Receipt-based price calibration */}

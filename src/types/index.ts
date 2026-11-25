@@ -150,6 +150,16 @@ export interface AppSettings {
   aiModel?: AiModel
   calibrationModel?: AiModel
   costOverrides?: Record<string, number>  // lexicon canonical name → calibrated SEK/kg
+  recipeSiteRules?: Record<string, RecipeSiteRule>  // hostname (no www.) → learned scraping rule
+}
+
+/** CSS selectors learned (via AI) for scraping recipes from a site without AI next time. */
+export interface RecipeSiteRule {
+  ingredientSelector: string
+  instructionSelector?: string
+  titleSelector?: string
+  servingsSelector?: string
+  learnedAt: string   // ISO date
 }
 
 export interface LibraryData {
