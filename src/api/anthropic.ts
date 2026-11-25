@@ -755,3 +755,136 @@ export async function extractRecipeWithAi(
     servingsSelector: optStr(r.servingsSelector),
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// Store product matching (Mathem)
+// ════════════════════════════════════════════════════════════════════════
+
+export interface ProductMatchInput {
+  itemId: string
+  name: string
+  amount: string
+  unit: string
+  /** Product the household picked last time, if any. */
+  current?: number
+  candidates: Array<{ id: number; name: string; packSize: string; price: number; onSale: boolean; tags: string[] }>
+}
+
+export interface ProductMatch {
+  itemId: string
+  /** null = don't buy (basic pantry item, not a product, or no fitting candidate). */
+  productId: number | null
+  quantity: number
+  /** An extrapris candidate that would be an acceptable swap (the user confirms it). */
+  saleAlternativeId: number | null
+  reason?: string
+}
+
+const MATCH_TOOL = {
+  name: 'submit_matches',
+  description: 'Lämna in vald produkt och antal förpackningar för varje vara.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      matches: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            itemId: { type: 'string' },
+            productId: {
+              type: ['integer', 'null'],
+              description: 'id för vald kandidat, eller null om varan inte ska köpas.',
+            },
+            quantity: { type: 'integer', minimum: 0, description: 'Antal förpackningar.' },
+            saleAlternativeId: {
+              type: ['integer', 'null'],
+              description: 'id för en kandidat på extrapris som är ett godtagbart byte mot productId, annars null.',
+            },
+            reason: { type: 'string', description: 'Kort motivering när productId är null, när du bytt bort current, eller för ett extraprisbyte.' },
+          },
+          required: ['itemId', 'productId', 'quantity', 'saleAlternativeId'],
+        },
+      },
+    },
+    required: ['matches'],
+  },
+} as const
+
+function rulesText(settings: AppSettings): string {
+  const r = settings.shoppingRules
+  const lines: string[] = []
+  if (r?.lactoseFree) lines.push('- Allt ska vara laktosfritt när en laktosfri variant finns bland kandidaterna (mejeri: mjölk, grädde, crème fraiche, smör, ost, yoghurt m.m.).')
+  if (r?.preferSwedish) lines.push('- Välj svenskt ursprung (t.ex. "Sverige", "Svensk", taggen "Från Sverige") när det finns ett rimligt svenskt alternativ. Undantag: varor som i praktiken inte finns svenska eller där det svenska är orimligt dyrt.')
+  if (r?.organicFor?.trim()) lines.push(`- Välj alltid ekologiskt (EKO/KRAV) för: ${r.organicFor.trim()}. Om ingen ekologisk kandidat finns, välj bästa andra och säg det i reason.`)
+  if (settings.productRules?.trim()) lines.push(...settings.productRules.trim().split('\n').map(l => `- ${l.replace(/^[-*•]\s*/, '')}`))
+  return lines.join('\n')
+}
+
+const MATCH_SYSTEM = `Du hjälper ett svenskt hushåll att handla mat online på Mathem. För varje vara på inköpslistan får du mängd, enhet och produktkandidater från butikens sök (id, namn, förpackningsstorlek, pris, om den är på extrapris, och butikens etiketter som "Lactose free", "Från Sverige", "Ekologisk").
+
+Välj den kandidat som bäst motsvarar varan och räkna ut hur många förpackningar som behövs för att täcka mängden (minst 1). Tänk på:
+- Välj rätt sorts produkt, inte bara det som rankas högst (t.ex. "gul lök" ska vara lök, inte läsk; "fryst majs" ska vara fryst).
+- Föredra vanliga basprodukter i lagom förpackning.
+- Mängder som "0 st" eller små mängder kryddor (msk, tsk, krm) betyder en förpackning.
+- Antal styck (t.ex. "4.8 st" lök) räknas om till lämplig förpackning (en 1 kg-påse gul lök räcker till ca 7 lökar).
+- Om varan har "current" (hushållets tidigare val) ska du behålla det som productId, utom när det bryter mot en huvudregel nedan. Då väljer du en kandidat som följer regeln och förklarar kort i reason.
+- Huvudreglerna nedan går före pris och sökrankning.
+
+Sätt productId till null (och quantity 0) om varan är salt, peppar, vatten, matolja, vetemjöl eller liknande basvara som nästan alla har hemma, om raden inte är en vara, eller om ingen kandidat passar. Skriv då en kort reason.`
+
+const OFFERS_TEXT = `
+
+Extrapriser: om productId inte är på extrapris men en annan kandidat är det, och den är ett godtagbart byte (samma sorts vara, följer huvudreglerna, rimlig förpackningsstorlek), sätt saleAlternativeId till den kandidaten och förklara kort i reason. Användaren får själv godkänna bytet. Annars null.`
+
+/** One AI call per chunk of items; returns a match for every input item it answered. */
+export async function matchProductsWithAi(
+  items: ProductMatchInput[],
+  settings: AppSettings,
+): Promise<ProductMatch[]> {
+  const apiKey = settings.anthropicApiKey?.trim()
+  if (!apiKey) throw new Error('Ingen API-nyckel angiven. Lägg till den under Inställningar.')
+  if (items.length === 0) return []
+
+  const rules = rulesText(settings)
+  const system = MATCH_SYSTEM
+    + (rules ? `\n\nHushållets huvudregler:\n${rules}` : '')
+    + (settings.shoppingRules?.preferOffers ? OFFERS_TEXT : '\n\nSätt alltid saleAlternativeId till null.')
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: ANTHROPIC_HEADERS(apiKey),
+    body: JSON.stringify({
+      model: MODEL_IDS[settings.aiModel ?? 'haiku'],
+      max_tokens: 8192,
+      system,
+      tools: [MATCH_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_matches' },
+      messages: [{ role: 'user', content: `Inköpslista med kandidater:\n${JSON.stringify(items)}` }],
+    }),
+  })
+  if (!res.ok) await throwApiError(res)
+
+  const data = await res.json() as { content: Array<{ type: string; name?: string; input?: unknown }> }
+  const toolUse = data.content.find(c => c.type === 'tool_use' && c.name === 'submit_matches')
+  const raw = (toolUse?.input as { matches?: ProductMatch[] } | undefined)?.matches ?? []
+
+  const byId = new Map(items.map(i => [i.itemId, i]))
+  return raw.flatMap(m => {
+    const input = byId.get(m.itemId)
+    if (!input) return []
+    const isCandidate = (id: number | null | undefined) => id != null && input.candidates.some(c => c.id === id)
+    const valid = isCandidate(m.productId)
+    const alt = settings.shoppingRules?.preferOffers && isCandidate(m.saleAlternativeId)
+      && m.saleAlternativeId !== m.productId
+      && input.candidates.find(c => c.id === m.saleAlternativeId)?.onSale
+      ? m.saleAlternativeId : null
+    return [{
+      itemId: m.itemId,
+      productId: valid ? m.productId : null,
+      quantity: valid ? Math.max(1, Math.round(m.quantity) || 1) : 0,
+      saleAlternativeId: valid ? alt : null,
+      reason: m.reason,
+    }]
+  })
+}

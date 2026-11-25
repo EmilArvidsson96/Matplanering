@@ -9,6 +9,7 @@ import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
 import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
+import MathemCartModal from './MathemCartModal'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -31,6 +32,7 @@ export default function ShoppingPage() {
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
+  const [showMathem, setShowMathem] = useState(false)
 
   const items = week.shoppingList
   const dismissed = week.dismissedMergePairs ?? []
@@ -223,6 +225,14 @@ export default function ShoppingPage() {
         </button>
         {unpurchasedCount > 0 && (
           <button
+            onClick={() => setShowMathem(true)}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-xl text-sm font-medium"
+          >
+            🛒 Handla på Mathem
+          </button>
+        )}
+        {unpurchasedCount > 0 && (
+          <button
             onClick={markAllPurchased}
             className="border border-brand-200 text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-xl text-sm font-medium"
           >
@@ -239,6 +249,13 @@ export default function ShoppingPage() {
           Visa handlade
         </label>
       </div>
+
+      {showMathem && (
+        <MathemCartModal
+          items={items.filter(i => !i.isPurchased && !i.isExcluded)}
+          onClose={() => setShowMathem(false)}
+        />
+      )}
 
       {/* AI cleanup */}
       {aiError && (
