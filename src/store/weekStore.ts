@@ -43,6 +43,8 @@ interface WeekStore {
   addShoppingItem: (item: Omit<ShoppingItem, 'id'>) => void
   updateShoppingItem: (id: string, patch: Partial<ShoppingItem>) => void
   deleteShoppingItem: (id: string) => void
+  /** Patch several rows of a given week at once (used by background jobs). */
+  patchShoppingItems: (weekId: string, patches: Record<string, Partial<ShoppingItem>>) => void
   rebuildShoppingFromIngredients: (items: ShoppingItem[]) => void
   dismissMergeSuggestion: (key: string) => void
 }
@@ -218,6 +220,22 @@ export const useWeekStore = create<WeekStore>((set, get) => {
         ...p,
         shoppingList: p.shoppingList.filter((it) => it.id !== id),
       })),
+
+    patchShoppingItems: (weekId, patches) =>
+      set((s) => {
+        const plan = s.weeks[weekId]
+        if (!plan || Object.keys(patches).length === 0) return s
+        return {
+          weeks: {
+            ...s.weeks,
+            [weekId]: {
+              ...plan,
+              shoppingList: plan.shoppingList.map((it) => patches[it.id] ? { ...it, ...patches[it.id] } : it),
+            },
+          },
+          dirtyWeeks: new Set([...s.dirtyWeeks, weekId]),
+        }
+      }),
 
     rebuildShoppingFromIngredients: (items) =>
       mutateActive((p) => {

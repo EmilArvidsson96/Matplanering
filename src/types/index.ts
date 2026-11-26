@@ -136,6 +136,33 @@ export interface ShoppingItem {
   dishIds: string[]   // dishes this item came from (multiple if merged)
   isPurchased: boolean
   isExcluded: boolean
+  /** Suggested Mathem product (fetched on demand, saved with the week). */
+  mathem?: MathemSuggestion
+}
+
+/** What we keep about a Mathem product on a shopping row (price = last seen). */
+export interface MathemSnapshot {
+  productId: number
+  name: string
+  packSize: string
+  imageUrl?: string
+  price: number
+  onSale: boolean
+}
+
+export interface MathemSuggestion {
+  product: MathemSnapshot | null
+  quantity: number
+  /** Put in the cart. False = skip (not a product, not found, or the user said no). */
+  include: boolean
+  source?: 'preference' | 'ai' | 'search' | 'manual'
+  /** Search query whose (locally cached) hits are the alternatives. */
+  query: string
+  note?: string
+  /** Extrapris swap the user hasn't answered yet. */
+  saleAlt?: MathemSnapshot
+  saleReason?: string
+  matchedAt: string
 }
 
 export interface UnitConversion {

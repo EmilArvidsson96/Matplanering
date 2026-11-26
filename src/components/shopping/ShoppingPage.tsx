@@ -10,7 +10,10 @@ import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
 import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
-import MathemCartModal from './MathemCartModal'
+import MathemCartBar from './MathemCartBar'
+import MathemSuggestionLine from './MathemSuggestionLine'
+import { useMathemJob, packsFor } from '../../store/mathemStore'
+import { ingredientKey } from '../../utils/productMatch'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -33,7 +36,7 @@ export default function ShoppingPage() {
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
-  const [showMathem, setShowMathem] = useState(false)
+  const mathemJob = useMathemJob()
 
   const items = week.shoppingList
   const dismissed = week.dismissedMergePairs ?? []
@@ -71,9 +74,16 @@ export default function ShoppingPage() {
       }
     }
 
-    store.rebuildShoppingFromIngredients(
-      mergeExactDuplicates(raw, settings.unitConversions)
+    // Keep Mathem suggestions for ingredients that are still on the list.
+    const previous = new Map(
+      items.filter(i => i.isAutoAdded && i.mathem).map(i => [ingredientKey(i.name), i.mathem!]),
     )
+    const rebuilt = mergeExactDuplicates(raw, settings.unitConversions).map(item => {
+      const m = previous.get(ingredientKey(item.name))
+      if (!m) return item
+      return { ...item, mathem: m.product ? { ...m, quantity: packsFor(item, m.product.packSize, m.quantity) } : m }
+    })
+    store.rebuildShoppingFromIngredients(rebuilt)
   }
 
   function addManual() {
@@ -205,6 +215,8 @@ export default function ShoppingPage() {
     [dishes]
   )
 
+  const mathemRunning = mathemJob.running && mathemJob.weekId === week.id
+
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
   const activeItems = items.filter(i => !i.isExcluded)
@@ -244,9 +256,12 @@ export default function ShoppingPage() {
         >
           <Sparkles className="w-4 h-4" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
-        {unpurchasedCount > 0 && (
-          <button onClick={() => setShowMathem(true)} className="chip shrink-0 bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700">
-            <ShoppingCart className="w-4 h-4" /> Handla på Mathem
+        {unpurchasedCount > 0 && !items.some(i => i.mathem) && !mathemRunning && (
+          <button
+            onClick={() => mathemJob.start(week.id, items)}
+            className="chip shrink-0 bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700"
+          >
+            <ShoppingCart className="w-4 h-4" /> Hämta Mathem-förslag
           </button>
         )}
         {unpurchasedCount > 0 && (
@@ -256,12 +271,7 @@ export default function ShoppingPage() {
         )}
       </div>
 
-      {showMathem && (
-        <MathemCartModal
-          items={items.filter(i => !i.isPurchased && !i.isExcluded)}
-          onClose={() => setShowMathem(false)}
-        />
-      )}
+      <MathemCartBar weekId={week.id} items={items} />
 
       {/* AI cleanup */}
       {aiError && (
@@ -308,6 +318,7 @@ export default function ShoppingPage() {
                     key={item.id}
                     item={item}
                     recipeNames={(item.dishIds ?? []).map(id => dishNameById.get(id)).filter((n): n is string => !!n)}
+                    mathemPending={mathemRunning && mathemJob.pending.has(item.id)}
                     onToggle={() => store.updateShoppingItem(item.id, { isPurchased: !item.isPurchased })}
                     onExclude={() => store.updateShoppingItem(item.id, { isExcluded: !item.isExcluded })}
                     onDelete={() => store.deleteShoppingItem(item.id)}
@@ -521,10 +532,11 @@ function AiCleanupPanel({
 }
 
 function ShoppingItemRow({
-  item, recipeNames, onToggle, onExclude, onDelete, onUpdate,
+  item, recipeNames, mathemPending, onToggle, onExclude, onDelete, onUpdate,
 }: {
   item: ShoppingItem
   recipeNames: string[]
+  mathemPending: boolean
   onToggle: () => void
   onExclude: () => void
   onDelete: () => void
@@ -533,6 +545,7 @@ function ShoppingItemRow({
   const [editing, setEditing] = useState(false)
 
   return (
+    <div>
     <div className="flex items-center gap-1 pl-2 pr-1.5 min-h-[56px]">
       {/* Purchased checkbox */}
       <button
@@ -622,6 +635,12 @@ function ShoppingItemRow({
           </button>
         </div>
       )}
+    </div>
+    {!editing && !item.isPurchased && (
+      item.mathem
+        ? <MathemSuggestionLine item={item} onUpdate={onUpdate} />
+        : mathemPending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">Söker på Mathem…</p>
+    )}
     </div>
   )
 }

@@ -132,7 +132,7 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
 
 ## Implementerat (v1)
 
-- **Inköp → "🛒 Handla på Mathem"** öppnar `MathemCartModal`. Den söker varje rad
+- *(Ersatt av v2 nedan.)* **Inköp → "🛒 Handla på Mathem"** öppnade `MathemCartModal`. Den söker varje rad
   (via `recipe-proxy`-Workern i produktion, Vite-proxyn `/mathem-api` lokalt),
   utgår från tidigare val (`productPreferences`, annars `src/data/mathemSeed.json`)
   och skickar sedan allt till AI:n (`matchProductsWithAi`). AI:n följer
@@ -152,6 +152,29 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
   (dras från modalen till bokmärkesfältet; läser `#matplan=` och rensar den
   efteråt så att ett andra klick inte dubblar korgen) eller genom att klistra
   in prompten i Claude-appen med Chrome-kontroll.
+
+### v2: förslag direkt i inköpslistan (2026-11-26)
+
+- Modalen är borta. **"Hämta Mathem-förslag"** på Inköp startar ett bakgrundsjobb
+  (`src/store/mathemStore.ts`, utanför React) som fortsätter när man går
+  runt i appen. Resultatet sparas på raden som `ShoppingItem.mathem`
+  (produkt-snapshot med namn, förpackning, bild och senast sedda pris, antal,
+  källa och extraprisförslag). Det sparas alltså med veckan i GitHub-repot och
+  finns kvar efter omladdning och på andra enheter.
+- Varje rad visar produkten under namnet. Tryck på den för att byta produkt
+  (sökträffar med bild, jämförpris och märkning), ändra antal, hoppa över
+  eller "Har alltid hemma". Byten sparas direkt som inlärt val.
+- Kortet "Mathem" överst summerar och har "Fyll korgen på Mathem", "Kopiera
+  till Claude", "Hämta för N nya" och "Hämta om alla".
+- **Lokal cache** i `localStorage` (`matplan.mathem.products.v2` och
+  `…searches.v2`): produkter per id (namn, förpackning, bild, märkning, pris)
+  och sökningar som id-listor i 24 h. Alternativen i redigeringsvyn hämtas
+  därför inte om. Tidigare val slås upp via `/api/v1/products/<id>/`
+  i stället för att söka på namnet.
+- "Uppdatera från recept" behåller förslaget för ingredienser som finns kvar
+  och räknar om antalet förpackningar.
+- Extrapris = `discount.is_discounted` eller kampanjen "Extrapris".
+  "Prismatch" räknas inte.
 
 ### Testat i Chrome (2026-11-25)
 
