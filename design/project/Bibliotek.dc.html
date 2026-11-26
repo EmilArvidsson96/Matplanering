@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Bibliotek</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button,select{font-family:inherit;cursor:pointer}
+.card:hover{box-shadow:0 6px 20px rgba(21,23,26,0.08)}
+.strip::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1400px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased">
+  <header style="padding: 20px 20px 16px">
+    <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Bibliotek</h1>
+  </header>
+
+  <main style="padding: 0 16px 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; gap: 8px; align-items: center">
+      <label style="position: relative; flex: 1; display: block">
+        <span style="position: absolute; left: 16px; top: 15px; color: #5C6066"><dc-import name="Icon" icon="search" size="18" hint-size="18px,18px"></dc-import></span>
+        <input aria-label="Sök rätt…" placeholder="Sök rätt…" style="width: 100%; box-sizing: border-box; height: 48px; border-radius: 999px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 16px 0 44px; font-size: 16px; font-family: inherit">
+      </label>
+      <a href="RattEditor.dc.html" style="height: 48px; padding: 0 16px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap"><dc-import name="Icon" icon="plus" size="16" sw="2.5" hint-size="16px,16px"></dc-import>Ny rätt</a>
+    </div>
+
+    <div class="strip" style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scrollbar-width: none">
+      <a href="Filter.dc.html" style="flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; border: 1px solid {{fBorder}}; background: {{fBg}}; color: {{fFg}}"><dc-import name="Icon" icon="sliders" size="16" hint-size="16px,16px"></dc-import>{{filterLabel}}</a>
+      <label style="flex-shrink: 0; height: 40px; padding: 0 8px 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #E2E0D8; background: #FFFFFF">
+        <dc-import name="Icon" icon="sort" size="16" hint-size="16px,16px"></dc-import>
+        <select aria-label="Sortering" style="border: 0; background: transparent; font-size: 14px; font-weight: 500; appearance: none; -webkit-appearance: none; padding-right: 4px"><option>A–Ö</option><option>Populärast</option><option>Säsong</option></select>
+      </label>
+      <span style="flex-shrink: 0; width: 1px; background: #E2E0D8; margin: 8px 0"></span>
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+        <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="flex-shrink: 0; height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font-weight: {{c.w}}">{{c.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="font-size: 13px; color: #5C6066; padding: 0 4px">{{countLabel}}</div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{dishes}}" as="d" hint-placeholder-count="10">
+        <a class="card" href="RattEditor.dc.html" style="background: #FFFFFF; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow .2s">
+          <div style="height: 80px; position: relative; display: flex; align-items: center; justify-content: center; background: {{d.bg}}; color: {{d.fg}}">
+            <span style="font-family: Manrope, Inter, sans-serif; font-size: 30px; font-weight: 800; opacity: 0.85">{{d.letter}}</span>
+            <sc-if value="{{d.cooked}}" hint-placeholder-val="{{false}}"><span title="Lagad {{d.times}} gånger" style="position: absolute; top: 8px; right: 8px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.7); border-radius: 999px; padding: 2px 6px">×{{d.times}}</span></sc-if>
+            <sc-if value="{{d.url}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 8px; left: 8px; opacity: 0.6"><dc-import name="Icon" icon="link" size="14" hint-size="14px,14px"></dc-import></span></sc-if>
+          </div>
+          <div style="padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px">
+            <h3 style="margin: 0; font-family: Inter, sans-serif; font-size: 14px; font-weight: 600; line-height: 1.35">{{d.name}}</h3>
+            <div style="font-size: 12px; color: #5C6066">{{d.meta}}</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px">
+              <sc-for list="{{d.tags}}" as="t" hint-placeholder-count="1"><span style="font-size: 11px; background: #F5F4EF; color: #3D4046; padding: 2px 6px; border-radius: 999px">{{t}}</span></sc-for>
+            </div>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; justify-content: center; padding-top: 8px">
+      <button style="height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; font-size: 13px; font-weight: 500; color: #5C6066; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="download" size="14" hint-size="14px,14px"></dc-import>Exportera bibliotek</button>
+    </div>
+  </main>
+
+  <div style="position: sticky; bottom: 0; margin-top: auto; z-index: 5">
+    <dc-import name="TabBar" active="bibliotek" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { prot: {} }; }
+  renderVals() {
+    const C = {
+      vegetarisk: ['#DDF3E4', '#0F4A2E'], vegan: ['#E2EDD3', '#2F4A12'], fisk: ['#DCE8F5', '#173A63'],
+      skaldjur: ['#D9EEF0', '#114B52'], kyckling: ['#F6E0C8', '#6B3A0B'], nöt: ['#FCE3D6', '#7A2E12'],
+      fläsk: ['#FBE1E4', '#7A1F2B'], lamm: ['#EEE3F5', '#4B2463'], vilt: ['#EAE4D8', '#4A3B1E']
+    };
+    const all = [
+      { name: 'Biff Rydberg', p: 'nöt', meta: 'Svensk · lagad 2026-05', times: 2, tags: ['Festlig'] },
+      { name: 'Boeuf Bourguignon', p: 'nöt', meta: 'Gryta · lagad 2026-01', times: 1, tags: ['Festlig'], url: true },
+      { name: 'Butter chicken', p: 'kyckling', meta: 'Gryta · lagad 2026-11', times: 6, tags: [], url: true },
+      { name: 'Carbonara', p: 'fläsk', meta: 'Italiensk · lagad 2026-10', times: 7, tags: [] },
+      { name: 'Falafel med hummus och ris', p: 'vegan', meta: 'Mellanöstern', tags: [] },
+      { name: 'Fiskpinnar med potatismos', p: 'fisk', meta: 'Svensk · lagad 2026-11', times: 4, tags: ['Barnvänlig', 'Snabb'] },
+      { name: 'Glasnudelsallad med räkor', p: 'skaldjur', meta: 'Sallad', tags: ['Snabb'] },
+      { name: 'Grön curry', p: 'kyckling', meta: 'Gryta · lagad 2026-11', times: 5, tags: ['Stark'], url: true },
+      { name: 'Köttfärssås med spagetti', p: 'nöt', meta: 'Italiensk · lagad 2026-11', times: 9, tags: ['Barnvänlig'] },
+      { name: 'Renskavsgryta', p: 'vilt', meta: 'Gryta · lagad 2025-12', times: 1, tags: ['Festlig'] },
+      { name: 'Shakshuka', p: 'vegetarisk', meta: 'Mellanöstern · lagad 2026-11', times: 4, tags: ['Snabb'] },
+      { name: 'Ugnsfalukorv', p: 'fläsk', meta: 'Svensk', tags: ['Snabb', 'Barnvänlig'] }
+    ];
+    const prot = this.state.prot;
+    const active = Object.keys(prot).filter(k => prot[k]);
+    const labels = [['Vegetarisk', 'vegetarisk'], ['Fisk', 'fisk'], ['Kyckling', 'kyckling'], ['Nöt', 'nöt'], ['Fläsk', 'fläsk']];
+    const chips = labels.map(([label, key]) => {
+      const on = !!prot[key];
+      return { label, on, bg: on ? '#15171A' : '#FFFFFF', fg: on ? '#FFFFFF' : '#15171A', border: on ? '#15171A' : '#E2E0D8', w: on ? 600 : 400, pick: () => this.setState({ prot: { ...prot, [key]: !on } }) };
+    });
+    const dishes = all.filter(d => !active.length || active.includes(d.p)).map(d => ({
+      ...d, letter: d.name[0].toUpperCase(), bg: C[d.p][0], fg: C[d.p][1],
+      cooked: !!d.times, times: d.times || 0, url: !!d.url
+    }));
+    const n = active.length;
+    return {
+      chips, dishes,
+      countLabel: n ? dishes.length + ' av 164 rätter' : '164 rätter',
+      filterLabel: n ? 'Filter · ' + n : 'Filter',
+      fBg: n ? '#15171A' : '#FFFFFF', fFg: n ? '#FFFFFF' : '#15171A', fBorder: n ? '#15171A' : '#E2E0D8'
+    };
+  }
+}
+</script>
+</body>
+</html>

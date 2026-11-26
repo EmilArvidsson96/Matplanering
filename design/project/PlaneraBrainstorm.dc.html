@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Planera – Brainstorm</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+.step:hover{color:#15171A}
+.nm:hover{color:#1F6B45}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1900px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased">
+
+  <header style="padding: 20px 20px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 13px; font-weight: 500; color: #5C6066">21 nov – 28 nov</div>
+      <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Vecka 47</h1>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <button aria-label="Föregående vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-left" size="20" hint-size="20px,20px"></dc-import></button>
+      <button aria-label="Nästa vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-right" size="20" hint-size="20px,20px"></dc-import></button>
+    </div>
+  </header>
+
+  <main style="padding: 0 16px 24px; display: flex; flex-direction: column; gap: 20px">
+    <nav aria-label="Planeringssteg" style="height: 48px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+      <a class="step" href="PlaneraPortioner.dc.html" style="border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; color: #5C6066"><span style="width: 20px; height: 20px; border-radius: 999px; background: #E2E0D8; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span>Portioner</a>
+      <a href="PlaneraBrainstorm.dc.html" aria-current="page" style="border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600"><span style="width: 20px; height: 20px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span>Brainstorm</a>
+      <a class="step" href="PlaneraSchema.dc.html" style="border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; color: #5C6066"><span style="width: 20px; height: 20px; border-radius: 999px; background: #E2E0D8; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>Schema</a>
+    </nav>
+
+    <section aria-label="Portionsräknare" style="border-radius: 24px; padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; background: #EEF7F1; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+      <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">18</div><div style="font-size: 12px; color: #5C6066">Behövs</div></div>
+      <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">16</div><div style="font-size: 12px; color: #5C6066">Planerat</div></div>
+      <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">2</div><div style="font-size: 12px; color: #5C6066">Rester</div></div>
+      <div style="text-align: center; border-left: 1px solid #E2E0D8; padding-left: 16px"><div style="font-size: 24px; font-weight: 700; color: #2F8A5A">0</div><div style="font-size: 12px; color: #5C6066">Över</div></div>
+    </section>
+
+    <section aria-label="Planerade rätter" style="display: flex; flex-direction: column; gap: 8px">
+      <sc-for list="{{meals}}" as="m" hint-placeholder-count="8">
+        <div style="background: #FFFFFF; border-radius: 12px; border: 1px solid {{m.border}}">
+          <div style="display: flex; align-items: flex-start; gap: 8px; padding: 12px">
+            <button aria-label="{{m.restTitle}}" title="{{m.restTitle}}" style="border: 0; background: transparent; padding: 2px 0 0; color: {{m.restColor}}"><dc-import name="Icon" icon="rotate" size="16" hint-size="16px,16px"></dc-import></button>
+            <div style="flex: 1; min-width: 0">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+                <a class="nm" href="RattEditor.dc.html" style="font-weight: 500; font-size: 14px">{{m.name}}</a>
+                <sc-if value="{{m.noIng}}" hint-placeholder-val="{{false}}"><a href="RattEditor.dc.html" style="font-size: 12px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; padding: 2px 8px; border-radius: 999px">inga ingredienser</a></sc-if>
+                <sc-if value="{{m.freeze}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; background: #F0F9FF; color: #0369A1; border: 1px solid #E0F2FE; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px"><dc-import name="Icon" icon="snowflake" size="12" hint-size="12px,12px"></dc-import>+{{m.freezeN}}</span></sc-if>
+              </div>
+              <sc-if value="{{m.combo}}" hint-placeholder-val="{{false}}">
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px">
+                  <sc-for list="{{m.comps}}" as="c" hint-placeholder-count="2">
+                    <a href="RattEditor.dc.html" style="font-size: 12px; background: #EEEDE7; color: #5C6066; border-radius: 999px; padding: 4px 10px"><b style="font-weight: 500">{{c.name}}</b> <span style="color: {{c.pColor}}">· {{c.p}}p</span></a>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px">
+              <button aria-label="Färre portioner" style="width: 36px; height: 36px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; color: #15171A">−</button>
+              <span style="width: 24px; text-align: center; font-size: 14px; font-weight: 600">{{m.p}}</span>
+              <button aria-label="Fler portioner" style="width: 36px; height: 36px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; color: #15171A">+</button>
+              <span style="font-size: 12px; color: #5C6066">port.</span>
+              <button onClick="{{m.toggle}}" aria-label="{{m.openLabel}}" title="{{m.openLabel}}" style="border: 0; background: transparent; padding: 8px 4px; color: #8A8E94; transform: {{m.rot}}"><dc-import name="Icon" icon="chevron-down" size="16" hint-size="16px,16px"></dc-import></button>
+            </div>
+          </div>
+          <sc-if value="{{m.open}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 8px 12px 12px; border-top: 1px solid #EEEDE7; display: flex; flex-direction: column; gap: 12px">
+              <input aria-label="Namn på kombinationen" placeholder="Namn på kombinationen…" value="{{m.name}}" style="border: 1px solid #E2E0D8; border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 500; font-family: inherit">
+              <div style="font-size: 12px; font-weight: 500; color: #5C6066">Kombinationer</div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; align-items: center; gap: 8px; background: #F5F4EF; border-radius: 8px; padding: 6px 8px">
+                  <span style="flex: 1; font-size: 14px; font-weight: 500">Grön curry</span>
+                  <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #E2E0D8; background: #EEEDE7; color: #5C6066">egna</span>
+                  <button aria-label="Färre" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8">−</button><span style="width: 20px; text-align: center; font-size: 14px; font-weight: 600">3</span><button aria-label="Fler" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8">+</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; background: #F5F4EF; border-radius: 8px; padding: 6px 8px">
+                  <span style="flex: 1; font-size: 14px; font-weight: 500">Jasminris</span>
+                  <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #BFDBFE; background: #EFF6FF; color: #1D4ED8">= 3</span>
+                  <button aria-label="Ta bort" style="border: 0; background: transparent; color: #8A8E94">✕</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; background: #F5F4EF; border-radius: 8px; padding: 6px 8px">
+                  <span style="flex: 1; font-size: 14px; font-weight: 500">Gurkraita <span style="font-size: 12px; color: #8A8E94; font-weight: 400">(fritext)</span></span>
+                  <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #BFDBFE; background: #EFF6FF; color: #1D4ED8">= 3</span>
+                  <button aria-label="Ta bort" style="border: 0; background: transparent; color: #8A8E94">✕</button>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <a href="ValjRatt.dc.html" style="font-size: 12px; color: #1F6B45; border: 1px solid #BFE3CC; padding: 4px 10px; border-radius: 8px">+ Kombinera med bibliotek</a>
+                <button style="font-size: 12px; color: #5C6066; border: 1px solid #E2E0D8; background: transparent; padding: 4px 10px; border-radius: 8px">+ Kombinera fritext</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; background: #F0F9FF; border-radius: 8px; padding: 6px 8px">
+                <span style="color: #0EA5E9"><dc-import name="Icon" icon="snowflake" size="14" hint-size="14px,14px"></dc-import></span>
+                <span style="flex: 1; font-size: 12px; color: #075985">Laga extra till frysen</span>
+                <button aria-label="Färre" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #BAE6FD">−</button><span style="width: 20px; text-align: center; font-size: 14px; font-weight: 600">0</span><button aria-label="Fler" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #BAE6FD">+</button>
+                <span style="font-size: 12px; color: #0369A1">port.</span>
+              </div>
+              <input aria-label="Notering" placeholder="Notering…" style="border: 1px solid #E2E0D8; border-radius: 8px; padding: 6px 12px; font-size: 14px; font-family: inherit">
+              <input aria-label="Ingredienser hemifrån" placeholder="Ingredienser jag använder hemifrån…" style="border: 1px solid #E2E0D8; border-radius: 8px; padding: 6px 12px; font-size: 14px; font-family: inherit">
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <span style="font-size: 12px; font-weight: 500; color: #5C6066">Tillfälliga ingredienser (för den här veckan)</span>
+                <button style="border: 0; background: transparent; font-size: 12px; color: #1F6B45">+ Lägg till</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <a href="ValjRatt.dc.html" style="height: 48px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import>Välj från biblioteket</a>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <button style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px"><dc-import name="Icon" icon="pencil" size="16" hint-size="16px,16px"></dc-import>Skriv fritt</button>
+        <button title="Lägg till rester från förra veckan" style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #92400E; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px"><dc-import name="Icon" icon="rotate" size="16" hint-size="16px,16px"></dc-import>Rester</button>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <div>
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; font-family: Inter, sans-serif">Bak &amp; matlagning till frysen</h3>
+        <p style="margin: 2px 0 0; font-size: 12px; color: #5C6066">Räknas inte in i veckans portioner, men ingredienserna hamnar på inköpslistan.</p>
+      </div>
+      <div><span style="font-size: 12px; background: #F0F9FF; color: #0369A1; border: 1px solid #E0F2FE; border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px"><dc-import name="Icon" icon="snowflake" size="12" hint-size="12px,12px"></dc-import>Köttfärssås · +2 port.</span></div>
+      <div style="border-radius: 12px; border: 1px solid #FCE7F3; background: rgba(253,242,248,0.4); padding: 12px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <button title="Bak – klicka för att byta" aria-label="Bak – klicka för att byta" style="border: 0; background: transparent; padding: 0; color: #EC4899"><dc-import name="Icon" icon="cake" size="16" hint-size="16px,16px"></dc-import></button>
+          <a class="nm" href="RattEditor.dc.html" style="flex: 1; font-size: 14px; font-weight: 500">Kanelbullar</a>
+          <button aria-label="Ta bort" style="border: 0; background: transparent; color: #8A8E94"><dc-import name="Icon" icon="x" size="14" hint-size="14px,14px"></dc-import></button>
+        </div>
+        <div style="padding-left: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <button aria-label="Färre" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8">−</button>
+          <input aria-label="Antal" value="24" style="width: 48px; text-align: center; border: 1px solid #E2E0D8; border-radius: 8px; font-size: 14px; font-weight: 600; height: 32px; font-family: inherit">
+          <button aria-label="Fler" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8">+</button>
+          <span style="font-size: 12px; color: #5C6066">bullar</span>
+          <select aria-label="Dag" style="border: 1px solid #E2E0D8; border-radius: 8px; padding: 4px 8px; font-size: 12px; background: #FFFFFF; font-family: inherit"><option>lör 28/11</option><option>Ingen dag vald</option></select>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <a href="ValjRatt.dc.html" style="border: 1px solid #BAE6FD; color: #0369A1; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="snowflake" size="14" hint-size="14px,14px"></dc-import>Laga till frysen</a>
+        <a href="ValjRatt.dc.html" style="border: 1px solid #FBCFE8; color: #BE185D; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="cake" size="14" hint-size="14px,14px"></dc-import>Baka</a>
+        <button style="border: 1px solid #E2E0D8; background: transparent; color: #5C6066; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 500">+ Skriv fritt</button>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <span style="font-size: 14px; color: #16503A; font-weight: 500">Portioner täcker veckan ✓</span>
+      <a href="PlaneraSchema.dc.html" style="padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #1F6B45; color: #FFFFFF; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap">Klar – gå till schema <dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></a>
+    </section>
+  </main>
+
+  <div style="position: sticky; bottom: 0; margin-top: auto; z-index: 5">
+    <dc-import name="TabBar" active="vecka" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { open: 'curry' }; }
+  renderVals() {
+    const raw = [
+      { id: 'tacos', name: 'Tacos', p: 4 },
+      { id: 'rester', name: 'Rester', p: 2, rest: true },
+      { id: 'butter', name: 'Butter chicken', p: 2 },
+      { id: 'fisk', name: 'Fiskpinnar med potatismos', p: 2 },
+      { id: 'kfs', name: 'Köttfärssås med spagetti', p: 2, freeze: 2 },
+      { id: 'shak', name: 'Shakshuka', p: 2, noIng: true },
+      { id: 'curry', name: 'Grön curry med ris', p: 3, comps: [{ name: 'Jasminris', p: 3, follow: true }, { name: 'Gurkraita', p: 3, follow: true }] },
+      { id: 'lasagne', name: 'Lasagne', p: 3 }
+    ];
+    const meals = raw.map(m => {
+      const open = this.state.open === m.id;
+      return {
+        ...m,
+        noIng: !!m.noIng,
+        freeze: !!m.freeze, freezeN: m.freeze || 0,
+        combo: !!m.comps,
+        comps: (m.comps || []).map(c => ({ ...c, pColor: c.follow ? '#60A5FA' : '#8A8E94' })),
+        border: m.rest ? '#FDE68A' : '#E2E0D8',
+        restColor: m.rest ? '#F59E0B' : '#8A8E94',
+        restTitle: m.rest ? 'Markerat som rester' : 'Markera som rester',
+        open,
+        rot: open ? 'rotate(180deg)' : 'none',
+        openLabel: open ? 'Dölj detaljer' : 'Visa detaljer',
+        toggle: () => this.setState({ open: open ? null : m.id })
+      };
+    });
+    return { meals };
+  }
+}
+</script>
+</body>
+</html>

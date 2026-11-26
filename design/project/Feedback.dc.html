@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Skicka feedback</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder,textarea::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #8B8A86; font-family: Inter, system-ui, sans-serif; color: #15171A; -webkit-font-smoothing: antialiased">
+  <a href="Main.dc.html" aria-label="Stäng" style="position: absolute; inset: 0"></a>
+  <div role="dialog" aria-label="Skicka feedback" style="position: absolute; left: 0; right: 0; bottom: 0; background: #F5F4EF; border-radius: 28px 28px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.18)">
+    <div style="padding: 8px 20px 12px">
+      <div style="display: flex; justify-content: center; padding-bottom: 8px"><span style="width: 40px; height: 5px; border-radius: 999px; background: #E2E0D8"></span></div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <h2 style="flex: 1; margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.02em">Skicka feedback</h2>
+        <a href="Main.dc.html" aria-label="Stäng" style="width: 40px; height: 40px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="x" size="18" hint-size="18px,18px"></dc-import></a>
+      </div>
+    </div>
+    <div style="padding: 0 16px 28px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; gap: 8px">
+        <button onClick="{{pickBug}}" aria-pressed="{{bug}}" style="flex: 1; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; border: 1px solid {{b.border}}; background: {{b.bg}}; color: {{b.fg}}; display: inline-flex; align-items: center; justify-content: center; gap: 6px"><dc-import name="Icon" icon="bug" size="16" hint-size="16px,16px"></dc-import>Bugg</button>
+        <button onClick="{{pickIdea}}" aria-pressed="{{idea}}" style="flex: 1; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 500; border: 1px solid {{i.border}}; background: {{i.bg}}; color: {{i.fg}}; display: inline-flex; align-items: center; justify-content: center; gap: 6px"><dc-import name="Icon" icon="bulb" size="16" hint-size="16px,16px"></dc-import>Förslag</button>
+      </div>
+      <label style="font-size: 12px; font-weight: 500; color: #5C6066">Titel<input placeholder="{{titlePh}}" style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; height: 48px; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 16px; font-size: 16px; font-family: inherit"></label>
+      <label style="font-size: 12px; font-weight: 500; color: #5C6066">Beskrivning (valfritt)<textarea rows="4" placeholder="Fler detaljer, t.ex. vad du gjorde när det hände." style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 12px 16px; font-size: 16px; font-family: inherit; resize: none"></textarea></label>
+      <p style="margin: 0; font-size: 12px; color: #8A8E94">Sidan, enheten och lite teknisk info skickas med automatiskt för att göra det lättare att förstå.</p>
+      <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px">
+        <a href="Main.dc.html" style="padding: 8px 12px; font-size: 14px; color: #5C6066">Avbryt</a>
+        <a href="Main.dc.html" style="padding: 8px 16px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="send" size="14" hint-size="14px,14px"></dc-import>Skicka</a>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { kind: 'bug' }; }
+  renderVals() {
+    const bug = this.state.kind === 'bug';
+    const off = { border: '#E2E0D8', bg: 'transparent', fg: '#5C6066' };
+    return {
+      bug, idea: !bug,
+      b: bug ? { border: '#FCA5A5', bg: '#FEF2F2', fg: '#B91C1C' } : off,
+      i: bug ? off : { border: '#FCD34D', bg: '#FFFBEB', fg: '#B45309' },
+      titlePh: bug ? 'Vad gick fel?' : 'Vad vill du kunna göra?',
+      pickBug: () => this.setState({ kind: 'bug' }), pickIdea: () => this.setState({ kind: 'idea' })
+    };
+  }
+}
+</script>
+</body>
+</html>

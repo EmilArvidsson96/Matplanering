@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Recept – Butter chicken</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.ib{width:40px;height:40px;border-radius:999px;border:0;background:transparent;color:#5C6066;display:flex;align-items:center;justify-content:center}
+.ib:hover{background:#FFFFFF}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1240px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased">
+  <header style="padding: 12px 16px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 4px">
+      <a href="Recept.dc.html" aria-label="Tillbaka" style="width: 40px; height: 40px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; display: flex; align-items: center; justify-content: center; margin-left: -4px; margin-right: 4px"><dc-import name="Icon" icon="arrow-left" size="20" hint-size="20px,20px"></dc-import></a>
+      <span style="flex: 1"></span>
+      <a class="ib" href="#" aria-label="Öppna originalkälla" title="Öppna originalkälla"><dc-import name="Icon" icon="external" size="18" hint-size="18px,18px"></dc-import></a>
+      <button class="ib" onClick="{{toggleWake}}" aria-label="Håll skärmen tänd" aria-pressed="{{wake}}" title="Håll skärmen tänd" style="background: {{wakeBg}}; color: {{wakeFg}}"><dc-import name="Icon" icon="sunrise" size="18" hint-size="18px,18px"></dc-import></button>
+      <a class="ib" href="ReceptAI.dc.html" aria-label="Dela upp i steg med AI" title="Dela upp i tydligare steg, översätt till svenska och rätta stavning (AI)"><dc-import name="Icon" icon="wand" size="18" hint-size="18px,18px"></dc-import></a>
+      <a class="ib" href="ReceptAI.dc.html" aria-label="Förbättringsförslag med AI" title="Få förbättringsförslag för receptet (AI)"><dc-import name="Icon" icon="bulb" size="18" hint-size="18px,18px"></dc-import></a>
+      <button class="ib" aria-label="Redigera instruktioner" title="Redigera instruktioner"><dc-import name="Icon" icon="pencil" size="18" hint-size="18px,18px"></dc-import></button>
+      <button class="ib" aria-label="Exportera instruktioner" title="Exportera instruktioner"><dc-import name="Icon" icon="download" size="18" hint-size="18px,18px"></dc-import></button>
+      <button class="ib" aria-label="Importera instruktioner" title="Importera instruktioner"><dc-import name="Icon" icon="upload" size="18" hint-size="18px,18px"></dc-import></button>
+    </div>
+    <h2 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1">Butter chicken</h2>
+  </header>
+
+  <div style="padding: 0 16px 12px">
+    <div style="background: #FFFFFF; border-radius: 24px; padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 8px">
+      <div style="flex: 1">
+        <div style="font-size: 15px; font-weight: 600">Portioner</div>
+        <sc-if value="{{changed}}" hint-placeholder-val="{{false}}"><button onClick="{{reset}}" style="border: 0; background: transparent; padding: 0; font-size: 12px; font-weight: 600; color: #16503A">Återställ till 2</button></sc-if>
+        <sc-if value="{{same}}" hint-placeholder-val="{{true}}"><div style="font-size: 12px; color: #5C6066">Påverkar inte veckoplanen</div></sc-if>
+      </div>
+      <button onClick="{{dec}}" aria-label="Färre portioner" style="width: 44px; height: 44px; border-radius: 999px; background: #F5F4EF; border: 0; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="minus" size="18" hint-size="18px,18px"></dc-import></button>
+      <span style="width: 36px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums">{{portions}}</span>
+      <button onClick="{{inc}}" aria-label="Fler portioner" style="width: 44px; height: 44px; border-radius: 999px; background: #15171A; border: 0; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import></button>
+    </div>
+  </div>
+
+  <div style="padding: 0 16px 12px">
+    <div role="tablist" style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); box-sizing: border-box">
+      <button role="tab" onClick="{{showSteps}}" aria-selected="{{steps}}" style="border: 0; border-radius: 999px; font-size: 14px; background: {{tabA.bg}}; color: {{tabA.fg}}; font-weight: {{tabA.w}}; box-shadow: {{tabA.sh}}">Gör så här</button>
+      <button role="tab" onClick="{{showIng}}" aria-selected="{{ing}}" style="border: 0; border-radius: 999px; font-size: 14px; background: {{tabB.bg}}; color: {{tabB.fg}}; font-weight: {{tabB.w}}; box-shadow: {{tabB.sh}}">Ingredienser</button>
+    </div>
+  </div>
+
+  <main style="padding: 0 16px 24px">
+    <sc-if value="{{steps}}" hint-placeholder-val="{{true}}">
+      <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{stepList}}" as="s" hint-placeholder-count="5">
+          <li style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; gap: 14px; align-items: flex-start">
+            <span style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{s.n}}</span>
+            <p style="margin: 0; flex: 1; font-size: 16px; line-height: 1.625; padding-top: 2px">{{s.a}}<sc-if value="{{s.hasX}}" hint-placeholder-val="{{false}}"><b style="color: #16503A; font-weight: 600">{{s.x}}</b></sc-if>{{s.b}}<sc-if value="{{s.hasY}}" hint-placeholder-val="{{false}}"><b style="color: #16503A; font-weight: 600">{{s.y}}</b></sc-if>{{s.c}}<sc-if value="{{s.hasZ}}" hint-placeholder-val="{{false}}"><b style="color: #16503A; font-weight: 600">{{s.z}}</b></sc-if>{{s.d}}</p>
+          </li>
+        </sc-for>
+      </ol>
+    </sc-if>
+    <sc-if value="{{ing}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <ul style="list-style: none; margin: 0; padding: 0; background: #FFFFFF; border-radius: 24px; overflow: hidden">
+          <sc-for list="{{ingList}}" as="i" hint-placeholder-count="8">
+            <li style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; min-height: 52px; box-sizing: border-box; border-top: {{i.border}}">
+              <span><span style="display: block; font-size: 15px">{{i.name}}</span><span style="display: block; font-size: 11px; color: #5C6066; font-variant-numeric: tabular-nums">{{i.sub}}</span></span>
+              <span style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap">{{i.amt}}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="background: #FFFFFF; border-radius: 24px; padding: 14px; display: flex; align-items: center; gap: 12px">
+          <div title="Klimatbetyg per portion" style="width: 44px; height: 44px; border-radius: 12px; background: #EAB308; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center">C</div>
+          <div>
+            <div style="font-size: 12px; color: #5C6066">Uppskattning för {{portions}} port.</div>
+            <div style="font-size: 15px; font-weight: 600">{{costTotal}} kr · {{co2Total}} kg CO₂e</div>
+            <div style="font-size: 12px; color: #5C6066">per portion: 37 kr · 1.6 kg</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <div style="position: sticky; bottom: 0; margin-top: auto; z-index: 5">
+    <dc-import name="TabBar" active="recept" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { portions: 2, tab: 'steps', wake: false }; }
+  renderVals() {
+    const p = this.state.portions, k = p / 4;
+    const fmt = (n) => { const r = Math.round(n * 10) / 10; return String(r).replace('.', ','); };
+    const ing = [
+      { name: 'Kycklingfilé', a: 600, u: 'g', kr: 89 },
+      { name: 'Gul lök', a: 1, u: 'st', kr: 3 },
+      { name: 'Vitlök', a: 3, u: 'klyftor', kr: 4 },
+      { name: 'Krossade tomater', a: 400, u: 'g', kr: 14 },
+      { name: 'Grädde', a: 2, u: 'dl', kr: 12 },
+      { name: 'Smör', a: 30, u: 'g', kr: 4 },
+      { name: 'Garam masala', a: 2, u: 'tsk', kr: 3 },
+      { name: 'Basmatiris', a: 3, u: 'dl', kr: 9 }
+    ];
+    const amt = (i) => fmt(i.a * k) + ' ' + i.u;
+    const ingList = ing.map((i, idx) => ({ name: i.name, amt: amt(i), sub: '~' + Math.round(i.kr * k) + ' kr', border: idx ? '1px solid #EEEDE7' : '0' }));
+    const A = (name) => '(' + amt(ing.find(i => i.name === name)) + ')';
+    const S = (n, a, x, b, y, c, z, d) => ({ n, a, x: x || '', b: b || '', y: y || '', c: c || '', z: z || '', d: d || '', hasX: !!x, hasY: !!y, hasZ: !!z });
+    const stepList = [
+      S(1, 'Skär kycklingfilé ', A('Kycklingfilé'), ' i bitar och marinera med garam masala ', A('Garam masala'), ' i minst 15 min.'),
+      S(2, 'Fräs gul lök ', A('Gul lök'), ' och vitlök ', A('Vitlök'), ' i smör ', A('Smör'), ' tills mjuka.'),
+      S(3, 'Tillsätt krossade tomater ', A('Krossade tomater'), ' och grädde ', A('Grädde'), ', låt puttra 15 min.'),
+      S(4, 'Lägg i kycklingen och sjud tills den är genomstekt.'),
+      S(5, 'Koka basmatiris ', A('Basmatiris'), ' enligt förpackningen och servera.')
+    ];
+    const on = { bg: '#FFFFFF', fg: '#15171A', w: 600, sh: '0 1px 2px rgba(0,0,0,0.06)' };
+    const off = { bg: 'transparent', fg: '#5C6066', w: 500, sh: 'none' };
+    const steps = this.state.tab === 'steps';
+    const wake = this.state.wake;
+    return {
+      portions: p, changed: p !== 2, same: p === 2,
+      dec: () => this.setState({ portions: Math.max(1, p - 1) }),
+      inc: () => this.setState({ portions: p + 1 }),
+      reset: () => this.setState({ portions: 2 }),
+      steps, ing: !steps, tabA: steps ? on : off, tabB: steps ? off : on,
+      showSteps: () => this.setState({ tab: 'steps' }), showIng: () => this.setState({ tab: 'ing' }),
+      stepList, ingList,
+      costTotal: Math.round(148 * k), co2Total: fmt(6.4 * k),
+      wake, wakeBg: wake ? '#FEF3C7' : 'transparent', wakeFg: wake ? '#92400E' : '#5C6066',
+      toggleWake: () => this.setState({ wake: !wake })
+    };
+  }
+}
+</script>
+</body>
+</html>
