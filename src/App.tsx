@@ -1,3 +1,4 @@
+import StockPage from './components/shopping/StockPage'
 import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { usePinAuth } from './hooks/usePinAuth'
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="inkop"     element={<ShoppingPage />} />
             <Route path="inst"      element={<SettingsPage />} />
             <Route path="spel"      element={<GamePanel />} />
+            <Route path="forrad"    element={<StockPage />} />
           </Route>
         </Routes>
         <FeedbackWidget />

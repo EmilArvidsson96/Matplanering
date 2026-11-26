@@ -1,6 +1,8 @@
 import { create } from 'zustand'
+import { record } from './undoStore'
 import { v4 as uuid } from 'uuid'
-import type { AppSettings, ProductPreference, RecipeSiteRule, UnitConversion } from '../types'
+import type { AppSettings, ProductPreference, RecipeSiteRule, ShopId, ShoppingCategory, UnitConversion } from '../types'
+import { categoryKey } from '../data/categories'
 
 interface SettingsStore {
   settings: AppSettings
@@ -17,7 +19,9 @@ interface SettingsStore {
   clearCostOverrides: () => void
   setRecipeSiteRule: (host: string, rule: RecipeSiteRule | null) => void
   /** Merge in product choices (null removes that key). */
-  setProductPreferences: (patch: Record<string, ProductPreference | null>) => void
+  setProductPreferences: (patch: Record<string, ProductPreference | null>, shop?: ShopId) => void
+  /** Remember a category the household picked by hand for this ingredient name. */
+  setCategoryOverride: (name: string, category: ShoppingCategory) => void
   markClean: (sha: string | undefined) => void
 }
 
@@ -32,16 +36,21 @@ const DEFAULT: AppSettings = {
   costOverrides: {},
 }
 
+let loading = false
+
 export const useSettingsStore = create<SettingsStore>((set) => ({
   settings: DEFAULT,
   sha: undefined,
   isDirty: false,
 
-  load: (settings, sha) => set({
-    settings: { ...DEFAULT, ...settings },
-    sha,
-    isDirty: false,
-  }),
+  load: (settings, sha) => {
+    loading = true
+    try {
+      set({ settings: { ...DEFAULT, ...settings }, sha, isDirty: false })
+    } finally {
+      loading = false
+    }
+  },
 
   update: (patch) =>
     set((s) => ({ settings: { ...s.settings, ...patch }, isDirty: true })),
@@ -112,15 +121,39 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       return { settings: { ...s.settings, recipeSiteRules: next }, isDirty: true }
     }),
 
-  setProductPreferences: (patch) =>
+  setProductPreferences: (patch, shop = 'mathem') =>
     set((s) => {
-      const next = { ...(s.settings.productPreferences ?? {}) }
+      const field = shop === 'ica' ? 'icaProductPreferences' : 'productPreferences'
+      const next = { ...(s.settings[field] ?? {}) }
       for (const [key, pref] of Object.entries(patch)) {
         if (pref) next[key] = pref
         else delete next[key]
       }
-      return { settings: { ...s.settings, productPreferences: next }, isDirty: true }
+      return { settings: { ...s.settings, [field]: next }, isDirty: true }
+    }),
+
+  setCategoryOverride: (name, category) =>
+    set((s) => {
+      const key = categoryKey(name)
+      if (!key || s.settings.categoryOverrides?.[key] === category) return s
+      return {
+        settings: { ...s.settings, categoryOverrides: { ...s.settings.categoryOverrides, [key]: category } },
+        isDirty: true,
+      }
     }),
 
   markClean: (sha) => set({ isDirty: false, sha }),
 }))
+
+// Every settings change by the user is undoable (⌘Z). Quick successive
+// changes (typing in a field) merge into one step.
+useSettingsStore.subscribe((state, prev) => {
+  if (loading || state.settings === prev.settings) return
+  const before = prev.settings
+  const after = state.settings
+  record(
+    () => useSettingsStore.setState({ settings: before, isDirty: true }),
+    () => useSettingsStore.setState({ settings: after, isDirty: true }),
+    'settings',
+  )
+})
