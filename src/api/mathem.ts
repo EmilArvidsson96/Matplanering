@@ -178,22 +178,6 @@ export function cartHandoffUrl(lines: CartLine[]): string {
   return `${MATHEM}/se/cart/#matplan=${btoa(JSON.stringify(compact))}`
 }
 
-/**
- * Bookmarklet run on mathem.se: reads #matplan=…, POSTs it to the cart with
- * the page's own session + CSRF token, clears the hash so a second click
- * can't add everything twice, and reloads the cart.
- */
-export const MATHEM_BOOKMARKLET = 'javascript:' + encodeURIComponent(`(async()=>{
-const m=location.hash.match(/matplan=([^&]+)/);
-if(!m){alert('Ingen inköpslista hittades. Öppna Mathem via knappen i Matplanering först.');return}
-let plan;try{plan=JSON.parse(atob(decodeURIComponent(m[1])))}catch(e){alert('Kunde inte läsa listan.');return}
-const c=document.cookie.match(/csrftoken=([^;]+)/);
-const r=await fetch('/api/v1/cart/items/',{method:'POST',credentials:'include',headers:{'content-type':'application/json',accept:'application/json','x-csrftoken':c?c[1]:''},body:JSON.stringify({items:plan.map(p=>({product_id:p[0],quantity:p[1]}))})});
-history.replaceState(null,'',location.pathname+location.search);
-if(r.ok){alert('Klart! '+plan.length+' produkter lades i korgen.');location.reload()}
-else alert('Mathem svarade '+r.status+'. Är du inloggad på mathem.se?')
-})()`)
-
 /** Instructions + plan for Claude (desktop app with Chrome control). */
 export function claudeCartPrompt(lines: Array<CartLine & { label: string }>): string {
   return [

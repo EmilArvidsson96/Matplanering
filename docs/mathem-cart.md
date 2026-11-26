@@ -176,11 +176,33 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
 - Extrapris = `discount.is_discounted` eller kampanjen "Extrapris".
   "Prismatch" räknas inte.
 
+### v3: alla butiker jämförs direkt (2026-11-26)
+
+- Ingen knapp behövs längre: Mathem-jobbet och ICA-jobbet (`src/store/icaJob.ts`)
+  startar av sig själva för rader som saknar förslag. Varje rad provas en gång
+  per session; jämförelsekortet har "Försök igen för N".
+- ICA-förslaget sparas som `ShoppingItem.ica` (samma form som `mathem`, plus
+  butiksnummer). Se [ica.md](ica.md).
+- Kortet "Jämför butiker" (`StoreCompare.tsx`) ersätter Mathem-kortet. Det
+  visar totalen per butik för de varor som finns i båda, vilken som är
+  billigast och skillnaden per vara. Man väljer butik genom att trycka på dess
+  ruta; billigast är förvalt tills hushållet valt. Korgen och "Fyll korgen"
+  gäller vald butik.
+- Raderna visar vald butiks produkt och den andra butikens pris i liten text.
+- Inga popup-fönster: produktval sker på raden (mobil) eller i sidokolumnen
+  (bred skärm), ICA-listan är en sektion på sidan.
+
 ### Testat i Chrome (2026-11-25)
 
 - Bokmärkets kod kördes på `mathem.se/se/cart/#matplan=…` med 2 varor: båda
   hamnade i korgen, `#matplan` rensades och sidan laddades om. Korgen
   återställdes sedan med negativa antal.
+- 2026-11-26: bokmärket visar inte längre `alert()`-rutor. Status och resultat
+  visas i en rad överst på Mathem-sidan; "Visa korgen" laddar om korgen.
+  `#matplan` rensas bara när anropet lyckades, så man kan logga in och klicka
+  igen. Gamla bokmärken måste dras in på nytt.
+- "Fyll korgen på Mathem" är nu en vanlig länk (`<a target="_blank">`) i
+  stället för `window.open`.
 - "Öppna Mathem och fyll korgen" öppnar ingen flik vid ett skriptat klick
   (Chrome blockerar popup-fönster), men gör det vid ett riktigt klick.
 - AI-matchningen med huvudreglerna är inte testad mot en riktig API-nyckel än.

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Bug, Lightbulb, Loader2, MessageSquarePlus, Send } from 'lucide-react'
-import Modal, { type ModalHandle } from '../common/Modal'
+import SubPage, { type SubPageHandle, useSubPageOpen } from '../common/SubPage'
 import { useIsDesktop } from '../../hooks/useDevice'
 import { useWeekStore } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -38,7 +38,8 @@ export default function FeedbackWidget() {
   const settingsStore = useSettingsStore()
   const gameStore = useGameStore()
 
-  const modalRef = useRef<ModalHandle>(null)
+  const pageRef = useRef<SubPageHandle>(null)
+  const subPageOpen = useSubPageOpen()
 
   function close() {
     setOpen(false)
@@ -82,7 +83,7 @@ export default function FeedbackWidget() {
         },
       })
       setState('sent')
-      setTimeout(() => (modalRef.current ? modalRef.current.close() : close()), 1500)
+      setTimeout(() => (pageRef.current ? pageRef.current.close() : close()), 1500)
     } catch (e) {
       setState('error')
       setError(e instanceof Error ? e.message : String(e))
@@ -96,7 +97,7 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      <div
+      {!subPageOpen && <div
         className="fixed right-4 md:right-auto md:left-7 z-40"
         style={{ top: `calc(100dvh - ${bottomOffset + buttonSize}px)` }}
       >
@@ -107,10 +108,10 @@ export default function FeedbackWidget() {
         >
           <MessageSquarePlus className="w-5 h-5" />
         </button>
-      </div>
+      </div>}
 
       {open && (
-        <Modal ref={modalRef} title="Skicka feedback" onClose={close}>
+        <SubPage ref={pageRef} title="Skicka feedback" onClose={close}>
           {state === 'sent' ? (
             <div className="py-6 text-center text-brand-700 font-medium">
               Tack! Vi har tagit emot din feedback.
@@ -183,7 +184,7 @@ export default function FeedbackWidget() {
               </div>
             </div>
           )}
-        </Modal>
+        </SubPage>
       )}
     </>
   )

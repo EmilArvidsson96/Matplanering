@@ -31,26 +31,70 @@ function base(): string {
   return import.meta.env.DEV ? '/ica-api' : PROD_WORKER
 }
 
+/** ICA asked us to slow down (its firewall answered 202). */
+export class IcaRateLimited extends Error {
+  constructor() { super('ICA ber oss vänta en stund innan fler sökningar') }
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(base() + path, { headers: { accept: 'application/json' } })
-  const data = await res.json().catch(() => ({})) as T & { error?: string }
+  const data = await res.json().catch(() => ({})) as T & { error?: string; rateLimited?: boolean }
+  if (res.status === 429 || data.rateLimited) throw new IcaRateLimited()
   if (!res.ok) throw new Error(`ICA svarade inte (${res.status}${data.error ? `: ${data.error}` : ''})`)
   return data
 }
 
-const searchCache = new Map<string, Promise<IcaProduct[]>>()
+// ── Local cache: every answer is kept for a few days, so a query reaches ICA
+// at most once per store and period, however often the cart is opened. ──
 
-/** Products for a query in one store, with that store's prices. Cached per session. */
-export function searchIca(store: string, query: string, limit = 8): Promise<IcaProduct[]> {
-  const key = `${store}|${query.trim().toLowerCase()}`
-  const cached = searchCache.get(key)
-  if (cached) return cached.then(list => list.slice(0, limit))
-  const p = getJson<{ products: IcaProduct[] }>(
-    `/search?store=${store}&limit=${Math.max(limit, 8)}&q=${encodeURIComponent(query.trim())}`,
-  ).then(d => (d.products ?? []).filter(x => x.available))
-  searchCache.set(key, p)
-  p.catch(() => searchCache.delete(key))
-  return p.then(list => list.slice(0, limit))
+const CACHE_KEY = 'matplanering-ica-search-v1'
+const CACHE_DAYS = 3
+type CacheEntry = { at: number; products: IcaProduct[] }
+let memo: Record<string, CacheEntry> | null = null
+
+function cache(): Record<string, CacheEntry> {
+  if (memo) return memo
+  try { memo = JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') } catch { memo = {} }
+  const cutoff = Date.now() - CACHE_DAYS * 864e5
+  for (const [k, v] of Object.entries(memo!)) if (v.at < cutoff) delete memo![k]
+  return memo!
+}
+
+function remember(key: string, products: IcaProduct[]) {
+  cache()[key] = { at: Date.now(), products }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(memo)) } catch { /* full or blocked: memory only */ }
+}
+
+const keyFor = (store: string, query: string) => `${store}|${query.trim().toLowerCase()}`
+
+/** Cached products for a query, or undefined if ICA hasn't been asked yet. */
+export function cachedIca(store: string, query: string): IcaProduct[] | undefined {
+  return cache()[keyFor(store, query)]?.products
+}
+
+/**
+ * Ask ICA about up to 10 queries in one call (they share one price lookup).
+ * Answers are cached. Throws IcaRateLimited if ICA wants us to wait; queries
+ * answered before that are still cached.
+ */
+export async function icaBatch(store: string, queries: string[]): Promise<void> {
+  const qs = queries.filter(q => !cachedIca(store, q)).slice(0, 10)
+  if (!qs.length) return
+  const d = await getJson<{ results: Array<{ q: string; products?: IcaProduct[]; error?: string; rateLimited?: boolean }> }>(
+    `/batch?store=${store}&limit=8&${qs.map(q => `q=${encodeURIComponent(q.trim())}`).join('&')}`,
+  )
+  let limited = false
+  for (const r of d.results ?? []) {
+    if (r.products) remember(keyFor(store, r.q), r.products)
+    else if (r.rateLimited) limited = true
+  }
+  if (limited) throw new IcaRateLimited()
+}
+
+/** Products for a query in one store, with that store's prices (cache first). */
+export async function searchIca(store: string, query: string, limit = 8): Promise<IcaProduct[]> {
+  if (!cachedIca(store, query)) await icaBatch(store, [query])
+  return (cachedIca(store, query) ?? []).filter(x => x.available).slice(0, limit)
 }
 
 /** Specific products (e.g. earlier choices) in one store. */

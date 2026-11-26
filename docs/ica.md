@@ -28,10 +28,13 @@ butikens adress på ica.se.
   `unitPrice`, `countryOfOrigin`, `available`, `promotions[].description`
   ("3 för 56 kr"), `image.src`, `retailerProductId`.
 - Korgsidan är `/stores/{nr}/basket`. Minsta order är 400 kr.
-- **Bot-skydd (AWS WAF):** anrop från en annan webbplats i webbläsaren får alltid
-  `202` med tom body. Från en hemma-IP räcker 2–3 snabba sökningar för att bli
-  spärrad i flera minuter. Via Cloudflare-Workern gick 12 sökningar i rad bra.
-  Workern försöker igen med paus vid `202`.
+- **Bot-skydd (AWS WAF):** ICA svarar `202` med tom body när det kommer för
+  många automatiska anrop, även via Cloudflare-Workern. Spärren kan sitta kvar
+  i flera minuter. Appen respekterar den: Workern skickar få anrop (upp till 10
+  sökningar delar ett prisanrop via `/ica/batch`), cachar svar i 12 h och
+  slutar direkt vid `202`. Appen hämtar priserna i bakgrunden i lugn takt så
+  fort inköpslistan finns, sparar dem lokalt i 3 dagar och pausar 5 minuter när
+  ICA ber om det. Vi försöker inte ta oss förbi spärren.
 
 ## ICA-inköpslistan (ICA-appen)
 
@@ -60,10 +63,17 @@ stoppar serveranrop till `www.ica.se`).
   `GET /ica/products?store=&ids=`. Den håller en anonym ICA Handla-session
   per butik i 10 min. I dev kör Vite samma kod under `/ica-api`
   (`vite.config.ts`).
-- **Granskning:** `StoreCartModal` matchar raderna per butik (tidigare val →
-  sök → AI med huvudreglerna) och visar totalsumman för varje butik i flikarna.
-  Val sparas i `settings.icaProductPreferences` (Mathem: `productPreferences`).
-- **Fylla korg/lista:** appen öppnar butikens sida med planen efter `#`
+- **Förslag per rad:** `src/store/icaJob.ts` matchar varje rad mot ICA:s
+  cachade sökträffar (tidigare val → AI för nya ingredienser om det finns en
+  nyckel → bästa träff enligt huvudreglerna) och sparar resultatet på raden
+  som `ShoppingItem.ica` med butiksnumret. Jobbet startar av sig självt när
+  listan har rader utan förslag och tar raderna i takt med att priserna kommer
+  in. Val sparas i `settings.icaProductPreferences` (Mathem: `productPreferences`).
+- **Jämförelse:** kortet överst på Inköp (`StoreCompare.tsx`) räknar ihop
+  ICA och Mathem för de varor som finns i båda och visar vilken som är
+  billigast. Leveransavgift ingår inte.
+- **Fylla korg/lista:** "Fyll korgen" i jämförelsekortet och sektionen
+  "Handla i butik med ICA-appen" öppnar butikens sida med planen efter `#`
   (`#matplan=` eller `#matplanlista=`, base64 av UTF-8-JSON). Bokmärket
   "Matplanering: fyll" (`STORE_BOOKMARKLET` i `src/api/shops.ts`) känner igen
   Mathem, ICA Handla och ica.se och gör anropen ovan med användarens egen

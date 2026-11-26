@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
@@ -6,7 +6,6 @@ import { useGameStore } from '../../store/gameStore'
 import { dishPopularity, dishLastCooked } from '../../utils/weekUtils'
 import { computeCompleteness } from '../../utils/recipeCompleteness'
 import DishEditor from './DishEditor'
-import Modal, { type ModalHandle } from '../common/Modal'
 import DishImage from '../common/DishImage'
 import { Search, Plus, SlidersHorizontal, ArrowUpDown, Download, Link2 } from 'lucide-react'
 import type { Dish, Protein, Carb, Cuisine, DishType, Tag, SortOrder } from '../../types'
@@ -48,7 +47,6 @@ export default function LibraryPage() {
   const [sort, setSort]       = useState<SortOrder>('alfabetisk')
   const [editing, setEditing] = useState<Dish | 'new' | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const filterModal = useRef<ModalHandle>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const gameMode = useGameStore(s => s.data.gameMode)
 
@@ -129,7 +127,8 @@ export default function LibraryPage() {
       {/* Quick filters */}
       <div className="flex gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap pb-0.5 [scrollbar-width:none]">
         <button
-          onClick={() => setShowFilters(true)}
+          onClick={() => setShowFilters(v => !v)}
+          aria-expanded={showFilters}
           className={`chip shrink-0 font-medium ${activeFilters > 0 ? 'chip-on' : 'chip-off'}`}
         >
           <SlidersHorizontal className="w-4 h-4" /> Filter{activeFilters > 0 && ` · ${activeFilters}`}
@@ -159,6 +158,21 @@ export default function LibraryPage() {
           </button>
         ))}
       </div>
+
+      {/* Filters: expand inline under the chips (no popup) */}
+      {showFilters && (
+        <section aria-label="Filter" className="card p-4 md:p-5 space-y-5 motion-safe:animate-fade-up">
+          <FilterRow label="Protein" items={PROTEIN_LABELS} active={proteins} onToggle={p => setProteins(toggle(proteins, p as Protein))} />
+          <FilterRow label="Kolhydrat" items={CARB_LABELS} active={carbs} onToggle={c => setCarbs(toggle(carbs, c as Carb))} />
+          <FilterRow label="Kök" items={CUISINE_LABELS} active={cuisines} onToggle={c => setCuisines(toggle(cuisines, c as Cuisine))} />
+          <FilterRow label="Typ" items={TYPE_LABELS} active={types} onToggle={t => setTypes(toggle(types, t as DishType))} />
+          <FilterRow label="Taggar" items={TAG_LABELS} active={tags} onToggle={t => setTags(toggle(tags, t as Tag))} />
+          <div className="flex gap-2.5 pt-1">
+            <button onClick={clearFilters} disabled={activeFilters === 0} className="btn-secondary flex-1 sm:flex-none">Rensa</button>
+            <button onClick={() => setShowFilters(false)} className="btn-primary flex-[2] sm:flex-none">Dölj filter</button>
+          </div>
+        </section>
+      )}
 
       {/* Count */}
       <p className="text-[13px] text-ink-muted px-1">
@@ -196,31 +210,6 @@ export default function LibraryPage() {
           <Download className="w-4 h-4" /> Exportera bibliotek
         </button>
       </div>
-
-      {/* Filter sheet */}
-      {showFilters && (
-        <Modal
-          ref={filterModal}
-          title="Filter"
-          onClose={() => setShowFilters(false)}
-          footer={
-            <div className="flex gap-2.5">
-              <button onClick={clearFilters} disabled={activeFilters === 0} className="btn-secondary flex-1 sm:flex-none">Rensa</button>
-              <button onClick={() => filterModal.current?.close()} className="btn-primary flex-[2] sm:flex-none">
-                Visa {filtered.length} rätter
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-6 pt-1">
-            <FilterRow label="Protein" items={PROTEIN_LABELS} active={proteins} onToggle={p => setProteins(toggle(proteins, p as Protein))} />
-            <FilterRow label="Kolhydrat" items={CARB_LABELS} active={carbs} onToggle={c => setCarbs(toggle(carbs, c as Carb))} />
-            <FilterRow label="Kök" items={CUISINE_LABELS} active={cuisines} onToggle={c => setCuisines(toggle(cuisines, c as Cuisine))} />
-            <FilterRow label="Typ" items={TYPE_LABELS} active={types} onToggle={t => setTypes(toggle(types, t as DishType))} />
-            <FilterRow label="Taggar" items={TAG_LABELS} active={tags} onToggle={t => setTags(toggle(tags, t as Tag))} />
-          </div>
-        </Modal>
-      )}
 
       {editing && (
         <DishEditor
