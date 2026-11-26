@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Inställningar – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+input::placeholder,textarea::placeholder{color:#8A8E94}
+button,select{font-family:inherit;cursor:pointer}
+h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.01em}
+.desc{margin:4px 0 16px;font-size:12px;color:#8A8E94;line-height:1.5}
+.f{height:44px;border-radius:16px;border:1px solid #E2E0D8;background:#FFFFFF;padding:0 14px;font-size:16px;font-family:inherit;color:#15171A;box-sizing:border-box}
+.add{background:#1F6B45;color:#FFFFFF;padding:0 16px;height:40px;border-radius:999px;font-size:14px;font-weight:500;border:0}
+.card{background:#FFFFFF;border-radius:24px;padding:20px}
+</style>
+</helmet>
+<div style="min-height: 1900px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px"><dc-import name="SideNav" active="inst" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0">
+    <main style="max-width: 1152px; padding: 20px 20px 48px; box-sizing: border-box">
+      <header style="margin-bottom: 28px"><h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Inställningar</h1></header>
+      <div style="max-width: 672px; display: flex; flex-direction: column; gap: 24px">
+        <section class="card">
+          <h2 style="margin-bottom: 16px">Hushåll</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+            <span style="font-size: 14px; color: #5C6066">Standard antal portioner per måltid</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <button onClick="{{dec}}" aria-label="Minska" style="width: 40px; height: 40px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; font-size: 18px; color: #15171A">−</button>
+              <span style="width: 24px; text-align: center; font-weight: 600">{{n}}</span>
+              <button onClick="{{inc}}" aria-label="Öka" style="width: 40px; height: 40px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; font-size: 18px; color: #15171A">+</button>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom: 16px">Budget</h2>
+          <label style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: #5C6066">Estimerad kostnad per portion (kr)<input class="f" type="number" value="60" style="width: 96px; text-align: center"></label>
+        </section>
+        <section class="card">
+          <h2>Skafferi (alltid hemma)</h2>
+          <p class="desc">Ingredienser som alltid finns hemma och aldrig läggs till i inköpslistan automatiskt.</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px"><input class="f" aria-label="Ny skafferivara" placeholder="T.ex. salt, olivolja…" style="flex: 1; min-width: 0"><button class="add">Lägg till</button></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{pantry}}" as="p" hint-placeholder-count="5"><span style="background: #EEEDE7; color: #3D4046; font-size: 14px; padding: 4px 12px; border-radius: 999px">{{p}} <button aria-label="Ta bort {{p}}" style="border: 0; background: transparent; font-size: 12px; color: #8A8E94; padding: 0 0 0 4px">✕</button></span></sc-for></div>
+        </section>
+        <section class="card">
+          <h2>Enhetsomvandlare</h2>
+          <p class="desc">Används för att slå ihop ingredienser med olika enheter i inköpslistan. Lägg till egna regler som gäller specifika ingredienser, t.ex. hur mycket ett dl mjöl väger.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 12px">
+            <label style="font-size: 12px; color: #5C6066">Enhet<input class="f" placeholder="t.ex. dl" style="display: block; width: 96px; margin-top: 4px"></label>
+            <label style="font-size: 12px; color: #5C6066">Ingrediens (valfritt)<input class="f" placeholder="t.ex. mjöl" style="display: block; width: 128px; margin-top: 4px"></label>
+            <label style="font-size: 12px; color: #5C6066">Gram per enhet<input class="f" type="number" placeholder="t.ex. 60" style="display: block; width: 112px; margin-top: 4px"></label>
+            <button class="add">Lägg till</button>
+          </div>
+          <div style="background: #F5F4EF; border-radius: 12px; padding: 8px 12px; font-size: 14px; display: flex; justify-content: space-between">1 dl (mjöl) = 60 g <button aria-label="Ta bort regel" style="border: 0; background: transparent; color: #8A8E94">✕</button></div>
+          <button style="margin-top: 10px; border: 0; background: transparent; padding: 0; font-size: 12px; color: #8A8E94; text-decoration: underline">Visa inbyggda omvandlingsregler</button>
+        </section>
+        <section class="card">
+          <h2>AI-assistent</h2>
+          <p class="desc">Används för att städa inköpslistan: slå ihop varor, kategorisera "Övrigt" och översätta engelska namn, samt för att tolka recept från okända sajter.</p>
+          <label style="display: block; font-size: 13px; font-weight: 600; color: #5C6066; margin-bottom: 12px">Anthropic API-nyckel<input class="f" type="password" placeholder="sk-ant-…" style="display: block; width: 100%; margin-top: 6px"></label>
+          <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #5C6066">Modell<select class="f" style="width: 220px"><option>Sonnet (balanserad)</option><option>Haiku (snabb, billig)</option><option>Opus (mest kapabel)</option></select></label>
+        </section>
+        <section class="card">
+          <h2>Handla online (Mathem)</h2>
+          <p class="desc">Huvudregler som AI:n följer när den väljer produkter. De gäller före pris och tidigare val. Kräver API-nyckel under AI-assistent.</p>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <sc-for list="{{rules}}" as="r" hint-placeholder-count="3">
+              <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer"><input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" style="accent-color: #1F6B45; margin-top: 3px; width: 16px; height: 16px"><span><span style="display: block; font-size: 14px; color: #3D4046">{{r.label}}</span><span style="display: block; font-size: 12px; color: #8A8E94">{{r.hint}}</span></span></label>
+            </sc-for>
+            <label style="font-size: 13px; font-weight: 600; color: #5C6066">Alltid ekologiskt för<input class="f" placeholder="t.ex. spannmål och spannmålsprodukter (pasta, mjöl, havregryn, ris, bröd)" style="display: block; width: 100%; margin-top: 6px"></label>
+            <label style="font-size: 13px; font-weight: 600; color: #5C6066">Övriga regler<textarea rows="3" placeholder="En regel per rad, t.ex.&#10;Garant hellre än dyrare märken&#10;Svensk kyckling, aldrig importerad" style="display: block; width: 100%; box-sizing: border-box; margin-top: 6px; border-radius: 16px; border: 1px solid #E2E0D8; padding: 10px 14px; font-size: 16px; font-family: inherit; resize: none"></textarea></label>
+            <button style="border: 0; border-top: 1px solid #EEEDE7; background: transparent; padding: 12px 0 0; font-size: 14px; color: #5C6066; text-align: left">▼ Inlärda produktval (12)</button>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Inlärda receptsajter</h2>
+          <p class="desc">När ett recept från en okänd sajt tolkas med AI sparar appen hur sajten är uppbyggd, så att nästa recept därifrån hämtas utan AI. Ta bort en sajt om hämtningen börjat ge fel resultat.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0"><span><span style="display: block; font-size: 14px">www.ica.se</span><span style="display: block; font-size: 12px; color: #8A8E94">Inlärd 2026-10-12 · ingredienser + instruktioner</span></span><button style="border: 0; background: transparent; font-size: 12px; color: #8A8E94">Ta bort</button></div>
+        </section>
+        <section class="card">
+          <h2>Priskalibrering med kvitto</h2>
+          <p class="desc">Ladda upp foton på matkvitton så läser AI:n av priserna och justerar kostnadsuppskattningarna. Närliggande ingredienser kalibreras relativt (t.ex. oxbuljong följer kycklingbuljong, flankstek följer entrecôte).</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+            <button style="height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: #EEEDE7; font-size: 14px; color: #15171A; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="camera" size="16" hint-size="16px,16px"></dc-import>Välj filer</button>
+            <button class="add" style="opacity: 0.4">Analysera kvitto</button>
+          </div>
+          <h3 style="margin: 16px 0 6px; font-size: 14px; font-weight: 500; color: #5C6066; font-family: Inter, sans-serif">Kalibrerade priser</h3>
+          <p style="margin: 0; font-size: 12px; color: #8A8E94">Inga kalibrerade priser än — standardvärden används.</p>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom: 12px">Om appen</h2>
+          <p style="margin: 0 0 6px; font-size: 14px; color: #5C6066">Data sparas i GitHub-repot <code style="background: #EEEDE7; padding: 0 4px; border-radius: 4px">matplanering-data</code>.</p>
+          <p style="margin: 0; font-size: 14px; color: #5C6066">Automatisk sparning sker 5 sekunder efter senaste ändring.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { n: 2, rules: { 0: true, 1: true, 2: false } }; }
+  renderVals() {
+    const n = this.state.n, rs = this.state.rules;
+    const rules = [['Allt laktosfritt', 'Väljer laktosfri variant när den finns.'], ['Alltid svenskt', 'Svenskt ursprung om det finns ett rimligt alternativ.'], ['Prioritera extrapriser', 'Föreslår byte till extrapris. Du godkänner varje byte.']].map(([label, hint], i) => ({ label, hint, on: !!rs[i], toggle: () => this.setState({ rules: { ...rs, [i]: !rs[i] } }) }));
+    return { n, rules, pantry: ['Salt', 'Svartpeppar', 'Vatten', 'Socker', 'Vetemjöl'], dec: () => this.setState({ n: Math.max(1, n - 1) }), inc: () => this.setState({ n: n + 1 }) };
+  }
+}
+</script>
+</body>
+</html>

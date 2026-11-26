@@ -1,6 +1,8 @@
 # Design – klickbar prototyp av appen
 
-Hela appen (mobil, 390 px) ritad i Claude Design som en klickbar prototyp.
+Hela appen ritad i Claude Design som en klickbar prototyp, på två sidor i
+canvasen: **Mobil** (390 px) och **Desktop** (1440 px, flytande layout med
+sidomeny).
 Det här är **utgångspunkten för alla designdiskussioner**: ändra här först,
 bygg sedan i `src/`.
 
@@ -33,6 +35,25 @@ bygg sedan i `src/`.
 | `Feedback` (modal) | Skicka feedback | `feedback/FeedbackWidget.tsx` |
 | `TabBar` (komponent) | Flytande flikmeny | `layout/AppShell.tsx` |
 | `Icon` (komponent) | Lucide-ikoner som används | – |
+
+### Desktop (sidan "Desktop", filer med prefix `D`)
+
+| Artboard | Motsvarar |
+|---|---|
+| `DVecka` | `/` – två kolumner, Idag/Kostnad/Klimat i sidokolumn |
+| `DPlanera` | `/planera` – alla tre stegen i en artboard (flikarna byter steg) |
+| `DRecept` | `/recept` – delad vy, instruktioner och ingredienser sida vid sida (≥1180 px) |
+| `DBibliotek` | `/bibliotek` – kortrutnät |
+| `DRattEditor` | Redigera rätt som bred dialog med flikmeny och ingredienstabell |
+| `DValjRatt` | Välj rätt som bred dialog |
+| `DInkop` | `/inkop` – lista + sidokolumn med Mathem, produktredigerare och Borttagna |
+| `DForrad` | `/forrad` – lista + sidokolumn med förslag och Alltid hemma |
+| `DSpel` | `/spel` |
+| `DInstallningar` | `/inst` |
+| `SideNav` (komponent) | Vänstermenyn i `layout/AppShell.tsx` |
+
+Filter-, Tilldela-, AI- och Feedback-dialogerna finns bara i mobilversion;
+på desktop har de samma innehåll men visas centrerade.
 
 Alla länkar fungerar i Play-läget: flikmenyn, kort, knappar, stegväljaren och
 modalernas stäng-knappar går till rätt artboard. Interaktiva detaljer (bocka av

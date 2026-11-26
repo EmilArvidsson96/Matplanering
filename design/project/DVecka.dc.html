@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Vecka – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+a.u:hover{text-decoration:underline}
+input::placeholder{color:#8A8E94}
+.dark input::placeholder{color:rgba(255,255,255,0.5)}
+button{font-family:inherit;cursor:pointer}
+.ib:hover{background:#F5F4EF}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px"><dc-import name="SideNav" active="vecka" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0">
+    <main style="max-width: 1152px; padding: 20px 20px 48px; box-sizing: border-box">
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="font-size: 13px; font-weight: 500; color: #5C6066">21 nov – 28 nov</div>
+          <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Vecka 47</h1>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button class="ib" aria-label="Föregående vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-left" size="20" hint-size="20px,20px"></dc-import></button>
+          <button class="ib" aria-label="Nästa vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-right" size="20" hint-size="20px,20px"></dc-import></button>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <section aria-label="Planeringsstatus" style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+            <a href="DPlanera.dc.html" style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 999px; background: #1F6B45"></span><span class="u" style="font-size: 12px; font-weight: 600; color: #16503A">Portioner ✓</span></a>
+            <a href="DPlanera.dc.html" style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 999px; background: #1F6B45"></span><span class="u" style="font-size: 12px; font-weight: 600; color: #16503A">Brainstorm ✓</span></a>
+            <a href="DPlanera.dc.html" style="display: flex; flex-direction: column; gap: 6px"><span style="height: 4px; border-radius: 999px; background: #1F6B45"></span><span class="u" style="font-size: 12px; font-weight: 600; color: #16503A">Schema ✓</span></a>
+          </div>
+          <div style="border-radius: 24px; background: #DDF3E4; padding: 12px 12px 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+            <span style="font-size: 14px; font-weight: 600; color: #0F4A2E">Veckan är fullt planerad</span>
+            <a href="DPlanera.dc.html" style="height: 40px; padding: 0 16px; border-radius: 999px; background: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="pencil" size="14" hint-size="14px,14px"></dc-import>Redigera</a>
+          </div>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap-reverse; gap: 20px; align-items: flex-start">
+          <div style="flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+            <section aria-label="Resten av veckan" style="display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px">
+                <h2 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 700">Resten av veckan</h2>
+                <a class="u" href="DPlanera.dc.html" style="font-size: 14px; font-weight: 600; color: #16503A">Planera</a>
+              </div>
+              <div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+                <sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+                  <div style="padding: 14px 16px; display: flex; gap: 12px; border-top: {{day.border}}; opacity: {{day.opacity}}">
+                    <div style="width: 40px; text-align: center; flex-shrink: 0">
+                      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #5C6066">{{day.wd}}</div>
+                      <div style="font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 800; line-height: 1.2">{{day.num}}</div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0">
+                      <sc-for list="{{day.slots}}" as="s" hint-placeholder-count="1">
+                        <div style="display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap">
+                          <span style="font-size: 12px; font-weight: 500; color: #5C6066; width: 48px; flex-shrink: 0">{{s.type}}</span>
+                          <sc-if value="{{s.rest}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; background: #FEF3C7; color: #92400E; padding: 2px 8px; border-radius: 999px; font-weight: 600">Rester</span></sc-if>
+                          <a class="u" href="DRecept.dc.html" style="font-size: 15px; font-weight: 600; color: {{s.color}}">{{s.name}}</a>
+                          <span style="flex: 1; min-width: 120px; font-size: 13px; color: {{s.noteColor}}">{{s.note}}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+            <section aria-label="Bak och till frysen" style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5C6066">Bak &amp; till frysen</div>
+              <div style="display: flex; align-items: center; gap: 8px"><span style="color: #EC4899"><dc-import name="Icon" icon="cake" size="16" hint-size="16px,16px"></dc-import></span><a class="u" href="DRecept.dc.html" style="font-size: 14px; font-weight: 500; flex: 1">Kanelbullar <span style="font-size: 12px; color: #5C6066; font-weight: 400">· 24 bullar</span></a><span style="font-size: 12px; color: #5C6066">lör 28/11</span></div>
+              <div style="display: flex; align-items: center; gap: 8px"><span style="color: #0EA5E9"><dc-import name="Icon" icon="snowflake" size="16" hint-size="16px,16px"></dc-import></span><span style="font-size: 14px; color: #3D4046">Laga <b style="font-weight: 500">4 port.</b> extra av Köttfärssås</span></div>
+            </section>
+          </div>
+
+          <div style="flex: 1 1 340px; max-width: 100%; display: flex; flex-direction: column; gap: 16px">
+            <section class="dark" aria-label="Idag" style="background: #15171A; color: #FFFFFF; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+              <div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #B5F0C9">Idag</span><span style="font-size: 12px; color: rgba(255,255,255,0.7)">Torsdag 26 nov</span></div>
+              <div>
+                <div style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 4px">Middag</div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                  <a class="u" href="DRecept.dc.html" style="font-family: Manrope, Inter, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.2">Grön curry</a>
+                  <a href="#" aria-label="Öppna originalrecept" style="color: #B5F0C9"><dc-import name="Icon" icon="external" size="14" hint-size="14px,14px"></dc-import></a>
+                  <button onClick="{{toggleToday}}" aria-label="{{todayLabel}}" style="width: 32px; height: 32px; border-radius: 999px; border: 0; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center; transform: {{todayRot}}; transition: transform .2s"><dc-import name="Icon" icon="chevron-down" size="18" hint-size="18px,18px"></dc-import></button>
+                </div>
+                <sc-if value="{{todayOpen}}" hint-placeholder-val="{{false}}">
+                  <ul style="list-style: none; margin: 8px 0 0; padding: 0 0 0 12px; border-left: 2px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: rgba(255,255,255,0.85)">
+                    <li><b>600 g</b> kycklingfilé</li><li><b>4 dl</b> kokosmjölk</li><li><b>2 msk</b> grön currypasta</li><li><b>3 dl</b> jasminris</li>
+                  </ul>
+                </sc-if>
+                <input aria-label="Notering" placeholder="Notering…" style="margin-top: 12px; width: 100%; box-sizing: border-box; height: 40px; font-size: 14px; background: rgba(255,255,255,0.1); border: 0; border-radius: 12px; padding: 0 12px; color: #FFFFFF; font-family: inherit">
+              </div>
+            </section>
+            <section aria-label="Kostnad" style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5C6066">Kostnad</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end">
+                <div><div style="font-family: Manrope, Inter, sans-serif; font-size: 26px; font-weight: 800">1080 kr</div><div style="font-size: 12px; color: #5C6066">Estimerat · 18 port. × 60 kr</div></div>
+                <div><div style="font-family: Manrope, Inter, sans-serif; font-size: 26px; font-weight: 800; color: #16503A">1150 kr</div><div style="font-size: 12px; color: #5C6066">Faktisk kostnad <span style="color: #B91C1C; font-weight: 600">+70 kr</span></div></div>
+              </div>
+              <input aria-label="Faktisk kostnad" value="1150" style="height: 48px; border-radius: 16px; border: 1px solid transparent; background: #F5F4EF; padding: 0 16px; font-size: 16px; font-family: inherit">
+            </section>
+            <section aria-label="Klimat och uppskattad kostnad" style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5C6066">Klimat &amp; uppskattad kostnad</div>
+              <div style="display: flex; gap: 16px; align-items: center">
+                <div style="width: 56px; height: 56px; border-radius: 24px; background: #EAB308; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0">C</div>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; flex: 1">
+                  <div><div style="font-size: 12px; color: #5C6066">Klimat / portion</div><div style="font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 800">820 g CO₂e</div></div>
+                  <div><div style="font-size: 12px; color: #5C6066">Kostnad / portion</div><div style="font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 800">38 kr</div></div>
+                  <div><div style="font-size: 12px; color: #5C6066">Vecka totalt</div><div style="font-size: 14px; font-weight: 600">14.8 kg · 684 kr</div></div>
+                  <div><div style="font-size: 12px; color: #5C6066">Portioner</div><div style="font-size: 14px; font-weight: 600">18</div></div>
+                </div>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #5C6066">Uppskattat från ingredienslexikonet. Se <a class="u" href="DSpel.dc.html" style="font-weight: 600">Spel</a> för detaljer och hur det påverkar dina poäng.</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { todayOpen: false }; }
+  renderVals() {
+    const raw = [
+      { wd: 'lör', num: '21', past: true, slots: [{ type: 'Middag', name: 'Tacos', note: 'Farmor äter med' }] },
+      { wd: 'sön', num: '22', past: true, slots: [{ type: 'Lunch', name: 'Tacos', rest: true }, { type: 'Middag', name: 'Butter chicken' }] },
+      { wd: 'mån', num: '23', past: true, slots: [{ type: 'Middag', name: 'Fiskpinnar med potatismos' }] },
+      { wd: 'tis', num: '24', past: true, slots: [{ type: 'Middag', name: 'Köttfärssås med spagetti' }] },
+      { wd: 'ons', num: '25', past: true, slots: [{ type: 'Middag', name: 'Shakshuka' }] },
+      { wd: 'fre', num: '27', slots: [{ type: 'Lunch', name: 'Grön curry', rest: true }, { type: 'Middag', name: 'Lasagne', note: 'Fotbollsträning 18' }] },
+      { wd: 'lör', num: '28', slots: [{ type: 'Lunch', name: 'Lasagne', rest: true }] }
+    ];
+    const days = raw.map((d, i) => ({
+      ...d, border: i ? '1px solid #EEEDE7' : '0', opacity: d.past ? 0.5 : 1,
+      slots: d.slots.map(s => ({ ...s, rest: !!s.rest, color: s.rest ? '#92400E' : '#15171A', note: s.note || 'Notering…', noteColor: s.note ? '#5C6066' : 'rgba(138,142,148,0.7)' }))
+    }));
+    const open = this.state.todayOpen;
+    return { days, todayOpen: open, todayRot: open ? 'rotate(180deg)' : 'none', todayLabel: open ? 'Dölj ingredienser' : 'Visa ingredienser', toggleToday: () => this.setState({ todayOpen: !open }) };
+  }
+}
+</script>
+</body>
+</html>

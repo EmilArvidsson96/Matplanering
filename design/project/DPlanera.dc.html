@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Planera – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button,select{font-family:inherit;cursor:pointer}
+.nm:hover{color:#1F6B45}
+.add:hover{background:#DDF3E4}
+h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.01em}
+.st{width:36px;height:36px;border-radius:999px;background:#EEEDE7;border:0;font-weight:700;color:#15171A}
+.dt{display:block;margin-top:6px;width:100%;box-sizing:border-box;height:48px;border-radius:16px;border:1px solid #E2E0D8;background:#FFFFFF;padding:0 12px;font-size:16px;font-family:inherit;color:#15171A}
+</style>
+</helmet>
+<div style="min-height: 1500px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px"><dc-import name="SideNav" active="vecka" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0">
+    <main style="max-width: 1152px; padding: 20px 20px 48px; box-sizing: border-box">
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="font-size: 13px; font-weight: 500; color: #5C6066">21 nov – 28 nov</div>
+          <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Vecka 47</h1>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button aria-label="Föregående vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-left" size="20" hint-size="20px,20px"></dc-import></button>
+          <button aria-label="Nästa vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-right" size="20" hint-size="20px,20px"></dc-import></button>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <div role="tablist" aria-label="Planeringssteg" style="height: 48px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); box-sizing: border-box">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+            <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="border: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; background: {{t.bg}}; color: {{t.fg}}; font-weight: {{t.w}}; box-shadow: {{t.sh}}"><span style="width: 20px; height: 20px; border-radius: 999px; background: {{t.badgeBg}}; color: {{t.badgeFg}}; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{t.n}}</span>{{t.label}}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{portioner}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 24px">
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+              <h2 style="margin-bottom: 16px">Antal i hushållet (standard)</h2>
+              <div style="display: flex; align-items: center; gap: 12px">
+                <button class="st" style="width: 44px; height: 44px; font-size: 18px" aria-label="Minska">−</button>
+                <span style="width: 32px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800">2</span>
+                <button class="st" style="width: 44px; height: 44px; font-size: 18px" aria-label="Öka">+</button>
+                <span style="font-size: 14px; color: #5C6066">portioner per måltid som standard</span>
+              </div>
+            </section>
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+              <h2>Planeringsfönster</h2>
+              <div style="font-size: 12px; color: #5C6066; margin: 4px 0 16px">8 dagar · 15 måltider</div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px">
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label style="font-size: 13px; font-weight: 600; color: #5C6066">Från<input class="dt" type="date" value="2026-11-21"></label>
+                  <div style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); box-sizing: border-box"><button style="border: 0; border-radius: 999px; background: transparent; font-size: 14px; color: #5C6066">Lunch</button><button style="border: 0; border-radius: 999px; background: #FFFFFF; font-size: 14px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06)">Middag</button></div>
+                </div>
+                <span style="font-size: 20px; color: #8A8E94; padding-top: 40px">→</span>
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label style="font-size: 13px; font-weight: 600; color: #5C6066">Till<input class="dt" type="date" value="2026-11-28"></label>
+                  <div style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); box-sizing: border-box"><button style="border: 0; border-radius: 999px; background: #FFFFFF; font-size: 14px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06)">Lunch</button><button style="border: 0; border-radius: 999px; background: transparent; font-size: 14px; color: #5C6066">Middag</button></div>
+                </div>
+              </div>
+            </section>
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+              <h2 style="margin-bottom: 16px">Portioner per dag</h2>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px">
+                <sc-for list="{{pdays}}" as="day" hint-placeholder-count="8">
+                  <div style="border: 1px solid #EEEDE7; border-radius: 12px">
+                    <div style="padding: 12px 12px 4px; font-size: 14px; font-weight: 500; color: #3D4046">{{day.label}}</div>
+                    <sc-for list="{{day.slots}}" as="s" hint-placeholder-count="2">
+                      <div style="border-top: 1px solid #EEEDE7; padding: 8px 12px; display: flex; align-items: center; gap: 12px">
+                        <span style="font-size: 12px; color: #5C6066; width: 48px">{{s.type}}</span>
+                        <button class="st" aria-label="Minska">−</button><span style="width: 24px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 15px; font-weight: 800">{{s.n}}</span><button class="st" aria-label="Öka">+</button>
+                        <input aria-label="Notering" placeholder="Notering…" value="{{s.note}}" style="flex: 1; min-width: 60px; border: 0; background: transparent; font-size: 12px; font-style: italic; color: #5C6066; font-family: inherit">
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+            <div style="display: flex; justify-content: flex-end"><button onClick="{{goBrain}}" style="background: #1F6B45; color: #FFFFFF; font-weight: 600; padding: 10px 20px; border-radius: 999px; font-size: 14px; border: 0; display: inline-flex; align-items: center; gap: 4px">Uppdaterat – gå till brainstorm <dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></button></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{brainstorm}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column; gap: 20px">
+            <section style="border-radius: 24px; padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; background: #EEF7F1; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">
+              <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">18</div><div style="font-size: 12px; color: #5C6066">Behövs</div></div>
+              <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">16</div><div style="font-size: 12px; color: #5C6066">Planerat</div></div>
+              <div style="text-align: center"><div style="font-size: 24px; font-weight: 700">2</div><div style="font-size: 12px; color: #5C6066">Rester</div></div>
+              <div style="text-align: center; border-left: 1px solid #E2E0D8; padding-left: 16px"><div style="font-size: 24px; font-weight: 700; color: #2F8A5A">0</div><div style="font-size: 12px; color: #5C6066">Över</div></div>
+            </section>
+            <section style="display: flex; flex-direction: column; gap: 8px">
+              <sc-for list="{{meals}}" as="m" hint-placeholder-count="8">
+                <div style="background: #FFFFFF; border-radius: 12px; border: 1px solid {{m.border}}; display: flex; align-items: center; gap: 8px; padding: 12px">
+                  <span style="color: {{m.restColor}}"><dc-import name="Icon" icon="rotate" size="16" hint-size="16px,16px"></dc-import></span>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+                    <a class="nm" href="DRattEditor.dc.html" style="font-weight: 500; font-size: 14px">{{m.name}}</a>
+                    <sc-if value="{{m.noIng}}" hint-placeholder-val="{{false}}"><a href="DRattEditor.dc.html" style="font-size: 12px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; padding: 2px 8px; border-radius: 999px">inga ingredienser</a></sc-if>
+                    <sc-if value="{{m.freeze}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; background: #F0F9FF; color: #0369A1; border: 1px solid #E0F2FE; padding: 2px 8px; border-radius: 999px">❄ +2</span></sc-if>
+                    <sc-for list="{{m.comps}}" as="c" hint-placeholder-count="0"><span style="font-size: 12px; background: #EEEDE7; color: #5C6066; border-radius: 999px; padding: 4px 10px"><b style="font-weight: 500">{{c}}</b> <span style="color: #60A5FA">· 3p</span></span></sc-for>
+                  </div>
+                  <button class="st" aria-label="Färre portioner">−</button><span style="width: 24px; text-align: center; font-size: 14px; font-weight: 600">{{m.p}}</span><button class="st" aria-label="Fler portioner">+</button>
+                  <span style="font-size: 12px; color: #5C6066">port.</span>
+                  <button aria-label="Visa detaljer" style="border: 0; background: transparent; padding: 8px 4px; color: #8A8E94"><dc-import name="Icon" icon="chevron-down" size="16" hint-size="16px,16px"></dc-import></button>
+                  <button aria-label="Ta bort" style="border: 0; background: transparent; padding: 4px; color: #8A8E94"><dc-import name="Icon" icon="x" size="14" hint-size="14px,14px"></dc-import></button>
+                </div>
+              </sc-for>
+            </section>
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+              <a href="DValjRatt.dc.html" style="height: 48px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import>Välj från biblioteket</a>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+                <button style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #15171A"><dc-import name="Icon" icon="pencil" size="16" hint-size="16px,16px"></dc-import>Skriv fritt</button>
+                <button style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #92400E; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px"><dc-import name="Icon" icon="rotate" size="16" hint-size="16px,16px"></dc-import>Rester</button>
+              </div>
+            </section>
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span style="font-size: 14px; color: #16503A; font-weight: 500">Portioner täcker veckan ✓</span>
+              <button onClick="{{goSchema}}" style="padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #1F6B45; color: #FFFFFF; border: 0; display: inline-flex; align-items: center; gap: 4px">Klar – gå till schema <dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></button>
+            </section>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{schema}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <div style="padding: 0 4px; display: flex; flex-wrap: wrap; column-gap: 16px; font-size: 12px; color: #5C6066">
+              <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 999px; background: #5AAE7E"></span>Portioner räcker</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 999px; background: #FBBF24"></span>Knappt</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 999px; background: #F87171"></span>Portioner saknas</span>
+            </div>
+            <sc-for list="{{sdays}}" as="day" hint-placeholder-count="8">
+              <section style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+                <div style="padding: 14px 16px 4px; font-family: Manrope, Inter, sans-serif; font-weight: 700; font-size: 15px">{{day.label}}</div>
+                <sc-for list="{{day.slots}}" as="s" hint-placeholder-count="1">
+                  <div style="padding: 12px 16px; border-top: {{s.border}}; display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: {{s.dot}}"></span>
+                    <span style="font-size: 15px; font-weight: 600; width: 64px">{{s.type}}</span>
+                    <div style="flex: 1; min-width: 240px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center">
+                      <sc-for list="{{s.meals}}" as="m" hint-placeholder-count="1"><span style="font-size: 13px; padding: 0 4px 0 12px; height: 32px; border-radius: 999px; border: 1px solid {{m.border}}; background: {{m.bg}}; color: {{m.fg}}; display: inline-flex; align-items: center; gap: 4px">{{m.name}}<button aria-label="Ta bort tilldelning" style="width: 24px; height: 24px; border-radius: 999px; border: 0; background: transparent; color: inherit">✕</button></span></sc-for>
+                      <a class="add" href="Tilldela.dc.html" style="height: 32px; padding: 0 12px; border-radius: 999px; border: 1px dashed rgba(138,142,148,0.6); font-size: 13px; font-weight: 600; color: #16503A; display: inline-flex; align-items: center">+ Lägg till matlagning</a>
+                    </div>
+                    <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid {{s.pillBorder}}; background: {{s.pillBg}}; color: {{s.pillFg}}">{{s.bal}}</span>
+                    <button class="st" aria-label="Färre portioner">−</button><span style="width: 24px; text-align: center; font-family: Manrope, Inter, sans-serif; font-weight: 800">{{s.need}}</span><button class="st" aria-label="Fler portioner">+</button>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-for>
+            <section style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span style="font-size: 14px; color: #16503A; font-weight: 500; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="check-circle" size="16" hint-size="16px,16px"></dc-import>Alla måltider är tilldelade</span>
+              <a href="DVecka.dc.html" style="padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #1F6B45; color: #FFFFFF; display: inline-flex; align-items: center; gap: 4px">Klar – tillbaka till sammanfattning <dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></a>
+            </section>
+          </div>
+        </sc-if>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { step: 'brainstorm' }; }
+  renderVals() {
+    const step = this.state.step;
+    const tabs = [['portioner', 'Portioner', 1], ['brainstorm', 'Brainstorm', 2], ['schema', 'Schema', 3]].map(([id, label, n]) => {
+      const on = id === step;
+      return { label, n, on, pick: () => this.setState({ step: id }), bg: on ? '#FFFFFF' : 'transparent', fg: on ? '#15171A' : '#5C6066', w: on ? 600 : 500, sh: on ? '0 1px 2px rgba(0,0,0,0.06)' : 'none', badgeBg: on ? '#15171A' : '#E2E0D8', badgeFg: on ? '#FFFFFF' : '#5C6066' };
+    });
+    const L = (t, n, note) => ({ type: t, n, note: note || '' });
+    const pdays = [
+      { label: 'Lördag 21 nov', slots: [L('Middag', 4, 'Farmor äter med')] }, { label: 'Söndag 22 nov', slots: [L('Lunch', 2), L('Middag', 2)] },
+      { label: 'Måndag 23 nov', slots: [L('Lunch', 0, 'Jobb'), L('Middag', 2)] }, { label: 'Tisdag 24 nov', slots: [L('Lunch', 0), L('Middag', 2)] },
+      { label: 'Onsdag 25 nov', slots: [L('Lunch', 0), L('Middag', 2)] }, { label: 'Torsdag 26 nov', slots: [L('Lunch', 0), L('Middag', 2)] },
+      { label: 'Fredag 27 nov', slots: [L('Lunch', 1), L('Middag', 3, 'Fotbollsträning 18')] }, { label: 'Lördag 28 nov', slots: [L('Lunch', 2)] }
+    ];
+    const meals = [
+      { name: 'Tacos', p: 4 }, { name: 'Rester', p: 2, rest: true }, { name: 'Butter chicken', p: 2 }, { name: 'Fiskpinnar med potatismos', p: 2 },
+      { name: 'Köttfärssås med spagetti', p: 2, freeze: true }, { name: 'Shakshuka', p: 2, noIng: true },
+      { name: 'Grön curry med ris', p: 3, comps: ['Jasminris', 'Gurkraita'] }, { name: 'Lasagne', p: 3 }
+    ].map(m => ({ ...m, noIng: !!m.noIng, freeze: !!m.freeze, comps: m.comps || [], border: m.rest ? '#FDE68A' : '#E2E0D8', restColor: m.rest ? '#F59E0B' : '#8A8E94' }));
+    const S = (type, need, names, bal) => ({ type, need, names, bal });
+    const raw = [
+      { label: 'Lör 21/11', slots: [S('Middag', 4, ['Tacos'], 2)] }, { label: 'Sön 22/11', slots: [S('Lunch', 2, ['Tacos'], 0), S('Middag', 2, ['Butter chicken'], 0)] },
+      { label: 'Mån 23/11', slots: [S('Middag', 2, ['Fiskpinnar med potatismos'], 0)] }, { label: 'Tis 24/11', slots: [S('Middag', 2, ['Köttfärssås med spagetti'], 2)] },
+      { label: 'Ons 25/11', slots: [S('Middag', 2, ['Shakshuka'], 0)] }, { label: 'Tor 26/11', slots: [S('Middag', 2, ['Grön curry med ris'], 1)] },
+      { label: 'Fre 27/11', slots: [S('Lunch', 1, ['Rester'], 1), S('Middag', 3, ['Lasagne'], 0)] }, { label: 'Lör 28/11', slots: [S('Lunch', 2, ['Rester'], -1)] }
+    ];
+    const tone = b => b < 0 ? { dot: '#F87171', pillBg: '#FEE2E2', pillFg: '#B91C1C', pillBorder: '#FECACA' } : b <= 1 ? { dot: '#FBBF24', pillBg: '#FEF3C7', pillFg: '#B45309', pillBorder: '#FDE68A' } : { dot: '#5AAE7E', pillBg: '#DDF3E4', pillFg: '#16503A', pillBorder: '#BFE3CC' };
+    const sdays = raw.map(d => ({ ...d, slots: d.slots.map((s, i) => ({ ...s, ...tone(s.bal), bal: s.bal > 0 ? '+' + s.bal : String(s.bal), border: i ? '1px solid #EEEDE7' : '0', meals: s.names.map(n => { const r = n === 'Rester'; return { name: n, bg: r ? '#FFFBEB' : '#F5F4EF', border: r ? '#FDE68A' : '#E2E0D8', fg: r ? '#92400E' : '#15171A' }; }) })) }));
+    return {
+      tabs, pdays, meals, sdays,
+      portioner: step === 'portioner', brainstorm: step === 'brainstorm', schema: step === 'schema',
+      goBrain: () => this.setState({ step: 'brainstorm' }), goSchema: () => this.setState({ step: 'schema' })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Recept – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+.row:hover{background:#F5F4EF}
+.ib{width:40px;height:40px;border-radius:999px;border:0;background:transparent;color:#5C6066;display:flex;align-items:center;justify-content:center}
+.ib:hover{background:#FFFFFF}
+.eb{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#5C6066}
+</style>
+</helmet>
+<div style="height: 900px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px"><dc-import name="SideNav" active="recept" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0; box-sizing: border-box; height: 900px">
+    <main style="height: 100%; border-radius: 32px; background: #FFFFFF; overflow: hidden; display: flex">
+      <aside style="width: 288px; flex-shrink: 0; border-right: 1px solid #EEEDE7; display: flex; flex-direction: column; overflow: hidden">
+        <div style="padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #EEEDE7">
+          <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Recept</h1>
+          <label style="position: relative; display: block">
+            <span style="position: absolute; left: 16px; top: 15px; color: #5C6066"><dc-import name="Icon" icon="search" size="18" hint-size="18px,18px"></dc-import></span>
+            <input aria-label="Sök recept" placeholder="Sök recept…" style="width: 100%; box-sizing: border-box; height: 48px; border-radius: 999px; border: 1px solid transparent; background: #F5F4EF; padding: 0 16px 0 44px; font-size: 16px; font-family: inherit">
+          </label>
+          <div><button style="height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #E2E0D8; background: #FFFFFF; color: #15171A"><dc-import name="Icon" icon="calendar-days" size="14" hint-size="14px,14px"></dc-import>Veckans rätter</button></div>
+        </div>
+        <ul style="list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto">
+          <sc-for list="{{dishes}}" as="d" hint-placeholder-count="14">
+            <li style="border-bottom: 1px solid #EEEDE7">
+              <button class="row" onClick="{{d.pick}}" aria-current="{{d.current}}" style="width: 100%; text-align: left; border: 0; padding: 0 16px; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: {{d.bg}}; color: #15171A">
+                <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.name}}</span>
+                <sc-if value="{{d.week}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; background: #DDF3E4; color: #16503A; border-radius: 999px; padding: 2px 6px; white-space: nowrap">denna vecka</span></sc-if>
+              </button>
+            </li>
+          </sc-for>
+        </ul>
+      </aside>
+
+      <section style="flex: 1; min-width: 0; background: #F5F4EF; display: flex; flex-direction: column; overflow: hidden">
+        <header style="padding: 20px 24px 12px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 4px">
+            <span style="flex: 1"></span>
+            <a class="ib" href="#" aria-label="Öppna originalkälla"><dc-import name="Icon" icon="external" size="18" hint-size="18px,18px"></dc-import></a>
+            <button class="ib" aria-label="Håll skärmen tänd"><dc-import name="Icon" icon="sunrise" size="18" hint-size="18px,18px"></dc-import></button>
+            <a class="ib" href="ReceptAI.dc.html" aria-label="Dela upp i steg med AI"><dc-import name="Icon" icon="wand" size="18" hint-size="18px,18px"></dc-import></a>
+            <a class="ib" href="ReceptAI.dc.html" aria-label="Förbättringsförslag med AI"><dc-import name="Icon" icon="bulb" size="18" hint-size="18px,18px"></dc-import></a>
+            <button class="ib" aria-label="Redigera instruktioner"><dc-import name="Icon" icon="pencil" size="18" hint-size="18px,18px"></dc-import></button>
+            <button class="ib" aria-label="Exportera instruktioner"><dc-import name="Icon" icon="download" size="18" hint-size="18px,18px"></dc-import></button>
+            <button class="ib" aria-label="Importera instruktioner"><dc-import name="Icon" icon="upload" size="18" hint-size="18px,18px"></dc-import></button>
+          </div>
+          <h2 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1">{{title}}</h2>
+        </header>
+        <div style="padding: 0 24px 12px; max-width: 520px">
+          <div style="background: #FFFFFF; border-radius: 24px; padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 8px">
+            <div style="flex: 1"><div style="font-size: 15px; font-weight: 600">Portioner</div><div style="font-size: 12px; color: #5C6066">Påverkar inte veckoplanen</div></div>
+            <button aria-label="Färre portioner" style="width: 44px; height: 44px; border-radius: 999px; background: #F5F4EF; border: 0; display: flex; align-items: center; justify-content: center; color: #15171A"><dc-import name="Icon" icon="minus" size="18" hint-size="18px,18px"></dc-import></button>
+            <span style="width: 36px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800">2</span>
+            <button aria-label="Fler portioner" style="width: 44px; height: 44px; border-radius: 999px; background: #15171A; border: 0; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import></button>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; overflow: hidden; padding-bottom: 16px; flex-wrap: wrap">
+          <div style="flex: 999 1 400px; min-width: 0; display: flex; flex-direction: column; overflow: hidden; height: 100%">
+            <div class="eb" style="padding: 0 28px 8px">Gör så här</div>
+            <ol style="list-style: none; margin: 0; padding: 0 24px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+                <li style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; gap: 14px; align-items: flex-start">
+                  <span style="flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{s.n}}</span>
+                  <p style="margin: 0; flex: 1; font-size: 16px; line-height: 1.625; padding-top: 2px">{{s.a}}<b style="color: #16503A; font-weight: 600">{{s.x}}</b>{{s.b}}<b style="color: #16503A; font-weight: 600">{{s.y}}</b>{{s.c}}</p>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+          <div style="flex: 1 1 384px; max-width: 384px; display: flex; flex-direction: column; overflow: hidden; height: 100%">
+            <div class="eb" style="padding: 0 28px 8px">Ingredienser</div>
+            <div style="padding: 0 24px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">
+              <ul style="list-style: none; margin: 0; padding: 0; background: #FFFFFF; border-radius: 24px; overflow: hidden">
+                <sc-for list="{{ing}}" as="i" hint-placeholder-count="8">
+                  <li style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; min-height: 52px; box-sizing: border-box; border-top: {{i.border}}">
+                    <span><span style="display: block; font-size: 15px">{{i.name}}</span><span style="display: block; font-size: 11px; color: #5C6066">{{i.sub}}</span></span>
+                    <span style="font-size: 15px; font-weight: 600; white-space: nowrap">{{i.amt}}</span>
+                  </li>
+                </sc-for>
+              </ul>
+              <div style="background: #FFFFFF; border-radius: 24px; padding: 14px; display: flex; align-items: center; gap: 12px">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: #EAB308; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center">C</div>
+                <div><div style="font-size: 12px; color: #5C6066">Uppskattning för 2 port.</div><div style="font-size: 15px; font-weight: 600">74 kr · 3,2 kg CO₂e</div><div style="font-size: 12px; color: #5C6066">per portion: 37 kr · 1.6 kg</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { sel: 'Butter chicken' }; }
+  renderVals() {
+    const names = ['Aranchini', 'Biff Rydberg', 'Blodpudding med lingon', 'Boeuf Bourguignon', 'Butter chicken', 'Butter halloumi', 'Caesarsallad med kyckling', 'Carbonara', 'Citronpasta', 'Dan dan nudlar', 'Fiskpinnar med potatismos', 'Grön curry', 'Kanelbullar', 'Köttfärssås med spagetti', 'Lasagne', 'Shakshuka', 'Tacos'];
+    const inWeek = new Set(['Butter chicken', 'Fiskpinnar med potatismos', 'Grön curry', 'Kanelbullar', 'Köttfärssås med spagetti', 'Lasagne', 'Shakshuka', 'Tacos']);
+    const sel = this.state.sel;
+    const dishes = names.map(name => ({ name, week: inWeek.has(name), bg: name === sel ? '#DDF3E4' : 'transparent', current: name === sel ? 'true' : 'false', pick: () => this.setState({ sel: name }) }));
+    const ing = [['Kycklingfilé', '300 g', '~44 kr'], ['Gul lök', '0,5 st', '~2 kr'], ['Vitlök', '1,5 klyftor', '~2 kr'], ['Krossade tomater', '200 g', '~7 kr'], ['Grädde', '1 dl', '~6 kr'], ['Smör', '15 g', '~2 kr'], ['Garam masala', '1 tsk', '~2 kr'], ['Basmatiris', '1,5 dl', '~5 kr']].map(([name, amt, sub], i) => ({ name, amt, sub, border: i ? '1px solid #EEEDE7' : '0' }));
+    const S = (n, a, x, b, y, c) => ({ n, a, x: x || '', b: b || '', y: y || '', c: c || '' });
+    const steps = [
+      S(1, 'Skär kycklingfilé ', '(300 g)', ' i bitar och marinera med garam masala ', '(1 tsk)', ' i minst 15 min.'),
+      S(2, 'Fräs gul lök ', '(0,5 st)', ' och vitlök ', '(1,5 klyftor)', ' i smöret tills mjuka.'),
+      S(3, 'Tillsätt krossade tomater ', '(200 g)', ' och grädde ', '(1 dl)', ', låt puttra 15 min.'),
+      S(4, 'Lägg i kycklingen och sjud tills den är genomstekt.'),
+      S(5, 'Koka basmatiris ', '(1,5 dl)', ' enligt förpackningen och servera.')
+    ];
+    return { dishes, title: sel, ing, steps };
+  }
+}
+</script>
+</body>
+</html>
