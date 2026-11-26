@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { RefreshCw, Sparkles, CheckCheck, ShoppingCart, Plus, Check, Home, X } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
@@ -46,6 +46,9 @@ export default function ShoppingPage() {
   const mathemJob = useMathemJob()
   const wide = useMinWidth(1180)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const asideRef = useRef<HTMLElement>(null)
+  // A new row picked: show its product picker from the top.
+  useEffect(() => { if (editingId) asideRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }, [editingId])
 
   const allItems = week.shoppingList
   /** Everything that's not deleted (deleted rows only show under Borttagna). */
@@ -269,9 +272,9 @@ export default function ShoppingPage() {
 
   const waitingIds = new Set(guesses.map(g => g.item.id))
   const editingItem = editingId ? items.find(i => i.id === editingId && i.mathem && !i.isExcluded) : undefined
+  // The product picker goes first while it's open, so it's in view wherever you are in the list.
   const side = (
     <>
-      <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />
       {wide && editingItem && (
         <section aria-label={`Redigera ${editingItem.name}`} className="card p-1 space-y-1">
           <p className="px-3 pt-2.5 text-[15px] font-bold">
@@ -284,7 +287,8 @@ export default function ShoppingPage() {
           />
         </section>
       )}
-      <RemovedSection items={allItems} defaultOpen={wide} />
+      <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />
+      <RemovedSection items={allItems} defaultOpen={wide && !editingItem} />
     </>
   )
 
@@ -438,7 +442,15 @@ export default function ShoppingPage() {
         </div>
       </div>
     </AnimatedDiv>
-    {wide && <aside className="sticky top-0"><AnimatedDiv className="space-y-4">{side}</AnimatedDiv></aside>}
+    {wide && (
+      // Follows the scroll, and never gets taller than the window: if it does, it scrolls on its own.
+      <aside
+        ref={asideRef}
+        className="sticky top-3 max-h-[calc(100dvh-96px)] overflow-y-auto overscroll-contain -mx-1 px-1 pb-3 [scrollbar-width:thin]"
+      >
+        <AnimatedDiv className="space-y-4">{side}</AnimatedDiv>
+      </aside>
+    )}
     </div>
   )
 }
