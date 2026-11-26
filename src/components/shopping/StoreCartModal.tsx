@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../store/settingsStore'
 import type { ProductPreference, ShopId, ShoppingItem } from '../../types'
 import { mathemShop, icaShop, STORE_BOOKMARKLET, type Shop, type StoreProduct } from '../../api/shops'
 import { DEFAULT_ICA_STORE } from '../../api/ica'
+import { useIcaPrefetch } from '../../store/icaPrefetch'
 import { matchProductsWithAi } from '../../api/anthropic'
 import {
   ingredientKey, searchQuery, isNotAProduct, findPreference, estimatePacks,
@@ -152,6 +153,8 @@ function CartMatcher({ shop, items, onSummary }: {
       estimatePacks(row.item.amount, row.item.unit, p.packSize) ?? fallback
 
     ;(async () => {
+      // ICA: wait for the background job to have every price (it goes slowly on purpose).
+      if (shop.prepare) await shop.prepare(toMatch.map(r => searchQuery(r.item.name)))
       await mapLimit(toMatch, SEARCH_CONCURRENCY, async row => {
         const { item } = row
         try {
@@ -287,6 +290,7 @@ function CartMatcher({ shop, items, onSummary }: {
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-muted">
+        {loading > 0 && shop.id === 'ica' && <IcaProgress />}
         {loading > 0
           ? `Letar produkter hos ${shop.label}… (${rows.length - loading}/${rows.length})`
           : `${chosen.length} av ${rows.length} varor valda. Ändra det som inte stämmer. Dina val sparas och används nästa gång.`}
@@ -517,5 +521,20 @@ function BookmarkletHelp({ highlight, site, storeName }: { highlight: boolean; s
         till bokmärkesfältet. Samma bokmärke fungerar för Mathem, ICA Handla och ICA-listan. Du behöver vara inloggad på {site}. Med Claude: tryck "Kopiera till Claude" och klistra in i Claude-appen.
       </p>
     </div>
+  )
+}
+
+/** Where the slow ICA price fetch is, and why it may be waiting. */
+export function IcaProgress() {
+  const { total, done, pausedUntil, running, error } = useIcaPrefetch()
+  if (!running && !pausedUntil) return null
+  const at = pausedUntil ? new Date(pausedUntil).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : ''
+  return (
+    <span className="block mb-1 text-xs text-ink-faint">
+      {pausedUntil
+        ? `ICA bad oss vänta. Hämtningen fortsätter kl ${at} (${done} av ${total} varor klara).`
+        : `Hämtar ICA-priser i lugn takt: ${done} av ${total} varor klara.`}
+      {error && ` (${error})`}
+    </span>
   )
 }

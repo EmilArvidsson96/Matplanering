@@ -10,7 +10,8 @@ import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
 import { componentCookPortions, isExtraMeal, formatWeekParts } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
-import StoreCartModal from './StoreCartModal'
+import StoreCartModal, { IcaProgress } from './StoreCartModal'
+import { useIcaPrefetch } from '../../store/icaPrefetch'
 import ShopPickerModal, { type ShopChoice } from './ShopPickerModal'
 import IcaListModal from './IcaListModal'
 import { DEFAULT_ICA_STORE } from '../../api/ica'
@@ -23,7 +24,7 @@ import AtHomeSection from './AtHomeSection'
 import { AnimatedDiv } from '../common/Animated'
 import RemovedSection from './RemovedSection'
 import { useMathemJob, packsFor } from '../../store/mathemStore'
-import { ingredientKey } from '../../utils/productMatch'
+import { ingredientKey, isNotAProduct, searchQuery } from '../../utils/productMatch'
 import { guessAtHome, stockLevel, usageFraction } from '../../utils/stock'
 import { markAtHome, removeItem, recordStockUsage } from '../../store/shoppingActions'
 import { batch } from '../../store/undoStore'
@@ -278,6 +279,20 @@ export default function ShoppingPage() {
 
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
+  // Fetch ICA prices for the list slowly in the background, so "Fyll korg" is
+  // ready when it's opened. Search and prices cost nothing; no AI is used here.
+  const icaQueries = useMemo(() => {
+    const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
+    return items
+      .filter(i => !i.isPurchased && !i.isExcluded && !pantry.has(i.name.toLowerCase()) && !isNotAProduct(i.name, i.amount, i.unit))
+      .map(i => searchQuery(i.name))
+      .sort()
+      .join('\n')
+  }, [items, settings.pantryItems])
+  useEffect(() => {
+    if (icaQueries) useIcaPrefetch.getState().want(icaStore.id, icaQueries.split('\n'))
+  }, [icaQueries, icaStore.id])
+
   const activeItems = items.filter(i => !i.isExcluded)
   const purchasedCount = activeItems.filter(i => i.isPurchased).length
   const progressPct = activeItems.length ? Math.round((purchasedCount / activeItems.length) * 100) : 0
@@ -374,6 +389,8 @@ export default function ShoppingPage() {
           </button>
         )}
       </div>
+
+      <IcaProgress />
 
       {cartShop && (
         <StoreCartModal

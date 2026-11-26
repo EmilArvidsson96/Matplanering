@@ -5,6 +5,7 @@
  */
 
 import type { ProductPreference, ShopId } from '../types'
+import { waitForIca } from '../store/icaPrefetch'
 import { searchMathem, cartHandoffUrl, claudeCartPrompt, type MathemProduct } from './mathem'
 import {
   searchIca, icaProducts, icaCartHandoffUrl, icaCartClaudePrompt, ICA_HANDLA, type IcaProduct,
@@ -37,6 +38,8 @@ export interface Shop {
   findPreferred: (pref: ProductPreference) => Promise<StoreProduct | undefined>
   handoffUrl: (lines: CartLine[]) => string
   claudePrompt: (lines: CartLine[]) => string
+  /** Optional: get ready to search these queries (ICA fetches them slowly in the background). */
+  prepare?: (queries: string[]) => Promise<void>
 }
 
 // ── Mathem ──────────────────────────────────────────────────────────────────
@@ -96,6 +99,7 @@ export function icaShop(store: { id: string; name: string }): Shop {
     },
     handoffUrl: lines => icaCartHandoffUrl(store.id, lines),
     claudePrompt: lines => icaCartClaudePrompt(store.id, lines),
+    prepare: queries => waitForIca(store.id, queries),
   }
 }
 
