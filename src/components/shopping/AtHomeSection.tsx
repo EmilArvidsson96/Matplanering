@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { HomeGuess } from '../../utils/stock'
 import { markAtHome, answerBuy, answerAll } from '../../store/shoppingActions'
+import { AnimatedDiv, Collapse } from '../common/Animated'
 
 const COLLAPSED_KEY = 'matplan.atHome.collapsed'
 
@@ -46,12 +47,11 @@ export default function AtHomeSection({ guesses, wide }: { guesses: HomeGuess[];
         </button>
       </div>
 
-      {!collapsed && (
-        <div id="hemma-lista">
+      <Collapse open={!collapsed} id="hemma-lista">
           <p className="px-4 pb-2 -mt-1 text-[12.5px] text-ink-muted">
             Mest troliga först. Har hemma tar bort varan, Köp lägger den kvar i listan.
           </p>
-          <div className={wide ? 'grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2 px-3 pb-3' : 'divide-y divide-line-soft border-t border-line-soft'}>
+          <AnimatedDiv className={wide ? 'grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2 px-3 pb-3' : 'divide-y divide-line-soft border-t border-line-soft'}>
             {guesses.map(g => (
               <div key={g.item.id} className={`flex items-center gap-1.5 ${wide ? 'bg-canvas rounded-2xl pl-3.5 pr-2 py-2' : 'pl-4 pr-2 py-2'}`}>
                 <div className="flex-1 min-w-0">
@@ -71,15 +71,14 @@ export default function AtHomeSection({ guesses, wide }: { guesses: HomeGuess[];
                 >Har hemma</button>
               </div>
             ))}
-          </div>
+          </AnimatedDiv>
           {!wide && (
             <div className="flex gap-2 px-4 py-3 border-t border-line-soft">
               <button onClick={() => answerAll(items, 'home')} className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-[13px] font-semibold">{guesses.length === 1 ? 'Har hemma' : `Alla ${guesses.length} hemma`}</button>
               <button onClick={() => answerAll(items, 'buy')} className="h-10 px-4 rounded-full bg-canvas hover:bg-line text-[13px] font-medium">Köp alla</button>
             </div>
           )}
-        </div>
-      )}
+      </Collapse>
     </section>
   )
 }

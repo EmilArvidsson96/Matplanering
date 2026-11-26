@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AnimatedDiv, AnimatedUl } from '../common/Animated'
 import { Minus, Plus, Search } from 'lucide-react'
 import type { MathemSuggestion, ShoppingItem } from '../../types'
 import { searchMathem, type MathemProduct } from '../../api/mathem'
@@ -36,7 +37,8 @@ export default function MathemSuggestionLine({ item, onUpdate, open, onToggle, i
   const p = s.product
 
   return (
-    <div className="pl-[52px] pr-3 pb-2.5 -mt-1 space-y-1.5">
+    <div>
+    <AnimatedDiv className="pl-[52px] pr-3 pb-2.5 -mt-1 space-y-1.5">
       <button
         onClick={onToggle}
         aria-expanded={open}
@@ -81,6 +83,7 @@ export default function MathemSuggestionLine({ item, onUpdate, open, onToggle, i
       )}
 
       {open && inlineEditor && <MathemRowEditor item={item} onUpdate={onUpdate} onClose={onToggle} />}
+    </AnimatedDiv>
     </div>
   )
 }
@@ -251,7 +254,7 @@ export function MathemRowEditor({ item, onUpdate, onClose }: {
       {error && <p className="text-xs text-red-700">{error}</p>}
       {visibleHits && visibleHits.length === 0 && <p className="text-xs text-ink-faint">Inga träffar.</p>}
       {visibleHits && visibleHits.length > 0 && (
-        <ul className="max-h-72 overflow-y-auto -mx-1 divide-y divide-line-soft">
+        <AnimatedUl className="max-h-72 overflow-y-auto -mx-1 divide-y divide-line-soft">
           {visibleHits.map(h => {
             const chosen = h.id === s.product?.productId
             return (
@@ -276,7 +279,7 @@ export function MathemRowEditor({ item, onUpdate, onClose }: {
               </li>
             )
           })}
-        </ul>
+        </AnimatedUl>
       )}
 
       <div className="flex items-center justify-between pt-1 gap-2">

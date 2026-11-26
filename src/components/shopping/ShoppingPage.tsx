@@ -13,6 +13,7 @@ import type { AiCleanupResult } from '../../api/anthropic'
 import MathemCartBar from './MathemCartBar'
 import MathemSuggestionLine, { MathemRowEditor } from './MathemSuggestionLine'
 import AtHomeSection from './AtHomeSection'
+import { AnimatedDiv } from '../common/Animated'
 import RemovedSection from './RemovedSection'
 import { useMathemJob, packsFor } from '../../store/mathemStore'
 import { ingredientKey } from '../../utils/productMatch'
@@ -289,7 +290,7 @@ export default function ShoppingPage() {
 
   return (
     <div className={wide ? 'grid grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-6 items-start' : 'max-w-2xl'}>
-    <div className="space-y-5 min-w-0">
+    <AnimatedDiv className="space-y-5 min-w-0">
       {/* Progress */}
       {activeItems.length > 0 && (
         <div className="space-y-2">
@@ -375,11 +376,11 @@ export default function ShoppingPage() {
           <p className="text-sm text-ink-muted mt-1">Tryck "Uppdatera från recept" eller lägg till varor nedan.</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <AnimatedDiv className="space-y-5">
           {grouped.map(([cat, catItems]) => (
             <section key={cat} className="space-y-2">
               <h2 className="eyebrow px-1 font-sans tracking-wider">{CATEGORY_LABELS[cat]}</h2>
-              <div className="card overflow-hidden divide-y divide-line-soft">
+              <AnimatedDiv className="card overflow-hidden divide-y divide-line-soft">
                 {catItems.map(item => (
                   <ShoppingItemRow
                     key={item.id}
@@ -395,10 +396,10 @@ export default function ShoppingPage() {
                     inlineEditor={!wide}
                   />
                 ))}
-              </div>
+              </AnimatedDiv>
             </section>
           ))}
-        </div>
+        </AnimatedDiv>
       )}
 
       {!wide && <RemovedSection items={allItems} />}
@@ -436,8 +437,8 @@ export default function ShoppingPage() {
           </button>
         </div>
       </div>
-    </div>
-    {wide && <aside className="space-y-4 sticky top-0">{side}</aside>}
+    </AnimatedDiv>
+    {wide && <aside className="sticky top-0"><AnimatedDiv className="space-y-4">{side}</AnimatedDiv></aside>}
     </div>
   )
 }
@@ -464,7 +465,7 @@ function MergeSuggestionsPanel({
       </button>
 
       {open && (
-        <div className="divide-y divide-amber-100 border-t border-amber-200">
+        <AnimatedDiv className="divide-y divide-amber-100 border-t border-amber-200">
           {suggestions.map(s => (
             <div key={s.key} className="px-4 py-3 space-y-2">
               <div className="flex flex-wrap gap-1 items-center text-sm text-ink-soft">
@@ -502,7 +503,7 @@ function MergeSuggestionsPanel({
               </div>
             </div>
           ))}
-        </div>
+        </AnimatedDiv>
       )}
     </div>
   )
@@ -551,7 +552,7 @@ function AiCleanupPanel({
         </div>
       </div>
 
-      <div className="divide-y divide-violet-100 border-t border-violet-200">
+      <AnimatedDiv className="divide-y divide-violet-100 border-t border-violet-200">
         {result.merges.map((m, idx) => (
           <div key={`m${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
             <span className="text-sm text-ink-soft">
@@ -600,7 +601,7 @@ function AiCleanupPanel({
             </button>
           </div>
         ))}
-      </div>
+      </AnimatedDiv>
     </div>
   )
 }
@@ -622,6 +623,7 @@ function ShoppingItemRow({
   const [editing, setEditing] = useState(false)
 
   return (
+    // The row's own root must not be an animated list, or its fade-out is cancelled on removal.
     <div>
     <div className="flex items-center gap-1 pl-2 pr-1.5 min-h-[56px]">
       {/* Purchased checkbox */}
@@ -713,11 +715,13 @@ function ShoppingItemRow({
         </div>
       )}
     </div>
+    <AnimatedDiv>
     {!editing && !item.isPurchased && (
       item.mathem
         ? <MathemSuggestionLine item={item} onUpdate={onUpdate} open={mathemOpen} onToggle={onMathemToggle} inlineEditor={inlineEditor} />
         : mathemPending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">Söker på Mathem…</p>
     )}
+    </AnimatedDiv>
     </div>
   )
 }
