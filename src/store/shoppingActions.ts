@@ -10,6 +10,7 @@ import { batch, notify } from './undoStore'
 import { cachedProduct } from '../api/mathem'
 import { ingredientKey } from '../utils/productMatch'
 import { lookupByKey, newStockItem, stockLevel } from '../utils/stock'
+import { categoryFor } from '../data/categories'
 
 const now = () => new Date().toISOString()
 const week = () => useWeekStore.getState()
@@ -175,7 +176,7 @@ export function stockOut(key: string) {
       w.updateShoppingItem(existing.id, { isExcluded: false, excludedReason: undefined, isPurchased: false, homeAnswer: 'buy' })
     } else {
       w.addShoppingItem({
-        name: s.name, amount: '', unit: '', category: s.category ?? 'övrigt', isAutoAdded: false,
+        name: s.name, amount: '', unit: '', category: categoryFor(s.name, s.category), isAutoAdded: false,
         dishIds: [], isPurchased: false, isExcluded: false, homeAnswer: 'buy',
       })
     }

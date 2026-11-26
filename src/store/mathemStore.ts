@@ -144,7 +144,7 @@ async function run(weekId: string, items: ShoppingItem[]) {
 
       const pref = findPreference(item.name, learned)
       const fixed = pref?.fixedQuantity
-      const current = pref && !avoid.has(pref.productId) ? (await getMathemProduct(pref.productId)) ?? undefined : undefined
+      const current = pref && !avoid.has(Number(pref.productId)) ? (await getMathemProduct(Number(pref.productId))) ?? undefined : undefined
 
       // A known choice that still follows the rules needs no search at all.
       if (current && passesRules(current, rules) && !settings.shoppingRules?.preferOffers) {

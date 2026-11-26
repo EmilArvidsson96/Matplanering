@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { RefreshCw, Sparkles, CheckCheck, ShoppingCart, Plus, Check, Home, X } from 'lucide-react'
+import { RefreshCw, Sparkles, CheckCheck, ShoppingCart, Plus, Check, Home, X, ChevronDown, ListChecks } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -8,8 +8,15 @@ import type { ShoppingItem, ShoppingCategory } from '../../types'
 import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
-import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
+import { componentCookPortions, isExtraMeal, formatWeekParts } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
+import StoreCartModal from './StoreCartModal'
+import ShopPickerModal, { type ShopChoice } from './ShopPickerModal'
+import IcaListModal from './IcaListModal'
+import { DEFAULT_ICA_STORE } from '../../api/ica'
+import { shortIcaName } from '../../api/shops'
+import type { ShopId } from '../../types'
+import { CATEGORY_LABELS, CATEGORY_ORDER, categoryFor, subFor } from '../../data/categories'
 import MathemCartBar from './MathemCartBar'
 import MathemSuggestionLine, { MathemRowEditor } from './MathemSuggestionLine'
 import AtHomeSection from './AtHomeSection'
@@ -22,27 +29,23 @@ import { markAtHome, removeItem, recordStockUsage } from '../../store/shoppingAc
 import { batch } from '../../store/undoStore'
 import { useMinWidth } from '../../hooks/useDevice'
 
-const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
-  grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
-  kött: 'Kött & chark', fisk: 'Fisk & skaldjur', bröd: 'Bröd & bakverk',
-  torrvaror: 'Torrvaror', konserver: 'Konserver', frys: 'Frys',
-  kryddor: 'Kryddor & smaksättare', övrigt: 'Övrigt',
-}
-const CATEGORY_ORDER: ShoppingCategory[] = [
-  'grönsaker','frukt','mejeri','kött','fisk','bröd','torrvaror','konserver','frys','kryddor','övrigt',
-]
-
 export default function ShoppingPage() {
   const store         = useWeekStore()
   const week          = activeWeek(store)
   const { dishes }    = useLibraryStore()
-  const { settings }  = useSettingsStore()
+  const { settings, setCategoryOverride, update: updateSettings } = useSettingsStore()
+  const preferredShop: ShopId = settings.preferredShop ?? 'ica'
+  const icaStore = settings.icaStore ?? DEFAULT_ICA_STORE
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
+  const [newCatTouched, setNewCatTouched] = useState(false)
   const [showPurchased, setShowPurchased] = useState(false)
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
+  const [cartShop, setCartShop] = useState<ShopId | null>(null)
+  const [showPicker, setShowPicker] = useState(false)
+  const [showIcaList, setShowIcaList] = useState(false)
   const mathemJob = useMathemJob()
   const wide = useMinWidth(1180)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -86,7 +89,7 @@ export default function ShoppingPage() {
             name: ing.name,
             amount: (ing.amount * scale).toFixed(1).replace(/\.0$/, ''),
             unit: ing.unit,
-            category: ing.category,
+            category: categoryFor(ing.name, ing.category, settings.categoryOverrides),
             isAutoAdded: true,
             dishIds: [comp.dishId],
             isPurchased: false,
@@ -137,7 +140,10 @@ export default function ShoppingPage() {
       name: newItem.trim(), amount: '', unit: '', category: newCat,
       isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
+    if (newCatTouched) setCategoryOverride(newItem.trim(), newCat)
     setNewItem('')
+    setNewCat('övrigt')
+    setNewCatTouched(false)
   }
 
   function markAllPurchased() {
@@ -217,6 +223,8 @@ export default function ShoppingPage() {
 
   function applyAiRecat(recat: AiCleanupResult['recategorizations'][number]) {
     store.updateShoppingItem(recat.itemId, { category: recat.category })
+    const item = items.find(i => i.id === recat.itemId)
+    if (item) setCategoryOverride(item.name, recat.category)
     setAiResult(r => r && { ...r, recategorizations: r.recategorizations.filter(x => x !== recat) })
   }
 
@@ -248,6 +256,10 @@ export default function ShoppingPage() {
     for (const item of visible) {
       const list = map.get(item.category) ?? map.get('övrigt')!
       list.push(item)
+    }
+    // Within a category, keep ICA's sub-departments together (Pasta, Torra kryddor, Asiatiskt …).
+    for (const list of map.values()) {
+      list.sort((a, b) => subFor(a.name).localeCompare(subFor(b.name), 'sv'))
     }
     return [...map.entries()].filter(([, list]) => list.length > 0)
   }, [items, showPurchased, guesses])
@@ -326,10 +338,32 @@ export default function ShoppingPage() {
         >
           <Sparkles className="w-4 h-4" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
+        {unpurchasedCount > 0 && (
+          <div className="flex shrink-0">
+            <button
+              onClick={() => setCartShop(preferredShop)}
+              className="chip rounded-r-none bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700"
+            >
+              <ShoppingCart className="w-4 h-4" /> Fyll korg · {preferredShop === 'ica' ? shortIcaName(icaStore.name) : 'Mathem'}
+            </button>
+            <button
+              onClick={() => setShowPicker(true)}
+              aria-label="Välj butik"
+              className="chip rounded-l-none border-l border-l-white/40 px-2.5 bg-brand-600 border-brand-600 text-white hover:bg-brand-700"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {unpurchasedCount > 0 && (
+          <button onClick={() => setShowIcaList(true)} className="chip chip-off shrink-0 font-medium">
+            <ListChecks className="w-4 h-4" /> Till ICA-listan
+          </button>
+        )}
         {unpurchasedCount > 0 && !items.some(i => i.mathem) && !mathemRunning && (
           <button
             onClick={() => mathemJob.start(week.id, items)}
-            className="chip shrink-0 bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700"
+            className="chip chip-off shrink-0 font-medium"
           >
             <ShoppingCart className="w-4 h-4" /> Hämta Mathem-förslag
           </button>
@@ -340,6 +374,32 @@ export default function ShoppingPage() {
           </button>
         )}
       </div>
+
+      {cartShop && (
+        <StoreCartModal
+          items={items.filter(i => !i.isPurchased && !i.isExcluded)}
+          initialShop={cartShop}
+          onClose={() => setCartShop(null)}
+        />
+      )}
+      {showPicker && (
+        <ShopPickerModal
+          onClose={() => setShowPicker(false)}
+          onPick={(choice: ShopChoice) => {
+            setShowPicker(false)
+            if (choice === 'ica-list') { setShowIcaList(true); return }
+            updateSettings({ preferredShop: choice })
+            setCartShop(choice)
+          }}
+        />
+      )}
+      {showIcaList && (
+        <IcaListModal
+          items={items.filter(i => !i.isPurchased && !i.isExcluded)}
+          defaultName={`Matplan ${formatWeekParts(week.id).title.replace('Vecka ', 'v.')}`}
+          onClose={() => setShowIcaList(false)}
+        />
+      )}
 
       {!wide && <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />}
 
@@ -417,14 +477,17 @@ export default function ShoppingPage() {
             aria-label="Lägg till vara"
             placeholder="Lägg till vara"
             value={newItem}
-            onChange={e => setNewItem(e.target.value)}
+            onChange={e => {
+              setNewItem(e.target.value)
+              if (!newCatTouched) setNewCat(categoryFor(e.target.value, 'övrigt', settings.categoryOverrides))
+            }}
             onKeyDown={e => e.key === 'Enter' && addManual()}
             className="flex-1 min-w-0 h-10 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
           <select
             aria-label="Kategori"
             value={newCat}
-            onChange={e => setNewCat(e.target.value as ShoppingCategory)}
+            onChange={e => { setNewCat(e.target.value as ShoppingCategory); setNewCatTouched(true) }}
             className="h-10 max-w-[120px] rounded-full bg-canvas px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-300"
           >
             {CATEGORY_ORDER.map(c => (

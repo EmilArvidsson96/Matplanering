@@ -18,9 +18,10 @@ export type Tag = 'snabb' | 'festlig' | 'barnvänlig' | 'lowfodmap' | 'lchf' | '
 
 export type SortOrder = 'popularitet' | 'säsong' | 'alfabetisk'
 
+/** Matches ICA's article groups. Labels and order live in src/data/categories.ts. */
 export type ShoppingCategory =
-  | 'mejeri' | 'kött' | 'fisk' | 'grönsaker' | 'frukt'
-  | 'torrvaror' | 'konserver' | 'frys' | 'bröd' | 'kryddor' | 'övrigt'
+  | 'fruktgrönt' | 'köttfågel' | 'chark' | 'fiskskaldjur' | 'ost' | 'mejeriägg' | 'brödbageri'
+  | 'skafferi' | 'godissnacks' | 'dryck' | 'djupfryst' | 'hushåll' | 'övrigt'
 
 export interface Ingredient {
   id: string
@@ -214,10 +215,18 @@ export interface AppSettings {
   recipeSiteRules?: Record<string, RecipeSiteRule>  // hostname (no www.) → learned scraping rule
   /** Learned ingredient → store product choices, keyed by normalized ingredient name. */
   productPreferences?: Record<string, ProductPreference>
+  /** Same as productPreferences, for ICA Handla. */
+  icaProductPreferences?: Record<string, ProductPreference>
   /** Main rules for picking store products. */
   shoppingRules?: ShoppingRules
   /** Extra free-text household rules for picking products. */
   productRules?: string
+  /** Categories the household set by hand, keyed by categoryKey(name). Win over ICA's table. */
+  categoryOverrides?: Record<string, ShoppingCategory>
+  /** ICA store used for ICA Handla (account number from the store's ica.se address). */
+  icaStore?: { id: string; name: string }
+  /** Store the "Fyll korg" button uses by default (last one used). */
+  preferredShop?: ShopId
   /** Things bought in a big pack and only when they run out, by ingredient key. */
   stockItems?: Record<string, StockItem>
   /** Ingredient keys where the user said no to "Gör till förrådsvara?". */
@@ -246,6 +255,8 @@ export interface StockItem {
   neverAsk?: boolean
 }
 
+export type ShopId = 'mathem' | 'ica'
+
 export interface ShoppingRules {
   lactoseFree: boolean     // always lactose-free where a lactose-free variant exists
   preferSwedish: boolean   // Swedish origin unless there's no reasonable Swedish option
@@ -255,8 +266,9 @@ export interface ShoppingRules {
 
 /** A store product the household has chosen for an ingredient before. */
 export interface ProductPreference {
-  store: 'mathem'
-  productId: number
+  store: ShopId
+  /** Mathem: numeric product id. ICA: product UUID. */
+  productId: number | string
   name: string        // product full name when chosen
   packSize: string    // e.g. "5 dl", "Sverige, 900 g"
   chosenAt: string    // ISO date of the latest choice

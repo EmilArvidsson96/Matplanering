@@ -23,7 +23,7 @@ export function rulesFor(name: string, category: ShoppingCategory, rules: Shoppi
   const words = organicWords(rules?.organicFor ?? '')
   const grainRule = words.some(w => w.startsWith('spannmål'))
   return {
-    lactose: !!rules?.lactoseFree && (category === 'mejeri' || DAIRY.test(key)),
+    lactose: !!rules?.lactoseFree && (category === 'mejeriägg' || DAIRY.test(key)),
     // A word matches at the end of a word: "mjöl" covers "vetemjöl" but not "mjölk".
     organic: (grainRule && GRAIN.test(key))
       || words.some(w => !w.startsWith('spannmål') && new RegExp(`${w.replace(/(er|or|ar)$/, '')}(er|or|ar)?(\\s|$)`).test(key)),

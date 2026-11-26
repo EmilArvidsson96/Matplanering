@@ -1,6 +1,7 @@
 import { addDays, format, parseISO, getISOWeek, getYear } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import type { ScheduleSlot, WeekPlan, PlannedMeal, MealComponent } from '../types'
+import type { ScheduleSlot, WeekPlan, PlannedMeal, MealComponent, Dish } from '../types'
+import { migrateCategory } from '../data/categories'
 
 /** Returns the most recent Saturday on or before `date`. */
 export function getSaturdayOf(date: Date): Date {
@@ -318,6 +319,36 @@ export const MONTH_NAMES = [
  * or old 7-day Sat–Fri window). Adds missing fields and regenerates the schedule if needed.
  */
 export function migrateWeek(plan: WeekPlan): WeekPlan {
+  return migrateWeekCategories(migrateWeekStructure(plan))
+}
+
+/** Old shopping categories → ICA-matched ones (see src/data/categories.ts). Idempotent. */
+function migrateWeekCategories(plan: WeekPlan): WeekPlan {
+  return {
+    ...plan,
+    shoppingList: (plan.shoppingList ?? []).map(i => {
+      const category = migrateCategory(i.category, i.name)
+      return category === i.category ? i : { ...i, category }
+    }),
+    meals: plan.meals.map(m => ({
+      ...m,
+      temporaryIngredients: (m.temporaryIngredients ?? []).map(t => ({ ...t, category: migrateCategory(t.category, t.name) })),
+    })),
+  }
+}
+
+/** Old ingredient categories in the library → ICA-matched ones. Idempotent. */
+export function migrateDishCategories(dishes: Dish[]): Dish[] {
+  return dishes.map(d => ({
+    ...d,
+    ingredients: (d.ingredients ?? []).map(i => {
+      const category = migrateCategory(i.category, i.name)
+      return category === i.category ? i : { ...i, category }
+    }),
+  }))
+}
+
+function migrateWeekStructure(plan: WeekPlan): WeekPlan {
   // 1. Convert old assignedMealIds → assignments
   const migratedSchedule = plan.schedule.map(slot => {
     const s = slot as ScheduleSlot & { assignedMealIds?: string[] }
