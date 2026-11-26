@@ -132,7 +132,7 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
 
 ## Implementerat (v1)
 
-- **Inköp → "🛒 Handla på Mathem"** öppnar `MathemCartModal`. Den söker varje rad
+- *(Ersatt av v2 nedan.)* **Inköp → "🛒 Handla på Mathem"** öppnade `MathemCartModal`. Den söker varje rad
   (via `recipe-proxy`-Workern i produktion, Vite-proxyn `/mathem-api` lokalt),
   utgår från tidigare val (`productPreferences`, annars `src/data/mathemSeed.json`)
   och skickar sedan allt till AI:n (`matchProductsWithAi`). AI:n följer
@@ -153,6 +153,29 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
   efteråt så att ett andra klick inte dubblar korgen) eller genom att klistra
   in prompten i Claude-appen med Chrome-kontroll.
 
+### v2: förslag direkt i inköpslistan (2026-11-26)
+
+- Modalen är borta. **"Hämta Mathem-förslag"** på Inköp startar ett bakgrundsjobb
+  (`src/store/mathemStore.ts`, utanför React) som fortsätter när man går
+  runt i appen. Resultatet sparas på raden som `ShoppingItem.mathem`
+  (produkt-snapshot med namn, förpackning, bild och senast sedda pris, antal,
+  källa och extraprisförslag). Det sparas alltså med veckan i GitHub-repot och
+  finns kvar efter omladdning och på andra enheter.
+- Varje rad visar produkten under namnet. Tryck på den för att byta produkt
+  (sökträffar med bild, jämförpris och märkning), ändra antal, hoppa över
+  eller "Har alltid hemma". Byten sparas direkt som inlärt val.
+- Kortet "Mathem" överst summerar och har "Fyll korgen på Mathem", "Kopiera
+  till Claude", "Hämta för N nya" och "Hämta om alla".
+- **Lokal cache** i `localStorage` (`matplan.mathem.products.v2` och
+  `…searches.v2`): produkter per id (namn, förpackning, bild, märkning, pris)
+  och sökningar som id-listor i 24 h. Alternativen i redigeringsvyn hämtas
+  därför inte om. Tidigare val slås upp via `/api/v1/products/<id>/`
+  i stället för att söka på namnet.
+- "Uppdatera från recept" behåller förslaget för ingredienser som finns kvar
+  och räknar om antalet förpackningar.
+- Extrapris = `discount.is_discounted` eller kampanjen "Extrapris".
+  "Prismatch" räknas inte.
+
 ### Testat i Chrome (2026-11-25)
 
 - Bokmärkets kod kördes på `mathem.se/se/cart/#matplan=…` med 2 varor: båda
@@ -161,3 +184,41 @@ Antalen valdes för hand utifrån mängd och förpackning, t.ex. vispgrädde 1 k
 - "Öppna Mathem och fyll korgen" öppnar ingen flik vid ett skriptat klick
   (Chrome blockerar popup-fönster), men gör det vid ett riktigt klick.
 - AI-matchningen med huvudreglerna är inte testad mot en riktig API-nyckel än.
+
+### v3: inköpsprofil, förråd och ångra (2026-11-26)
+
+Design: Claude Design-canvasen "Matplanering inköpsprofil".
+
+- **Ångra överallt** (`src/store/undoStore.ts`): veckans ändringar (via
+  `mutateActive` i `weekStore`) och inställningar (prenumeration i
+  `settingsStore`) sparas som ångra-steg, max 50. ⌘Z / Ctrl+Z ångrar,
+  ⇧⌘Z / Ctrl+Y gör om, inte när fokus är i ett textfält. Snabba
+  textändringar på samma sak slås ihop. `batch()` gör flera ändringar till ett
+  steg. Borttagningar visar en toast med "Ångra" (`UndoToast`).
+- **Borttagna denna vecka:** "Ta bort" är nu mjuk (`deletedAt`). "Har hemma",
+  "Alltid hemma" (skafferi, visas nu i stället för att tyst hoppas över) och
+  borttagna rader visas med Återställ. Sammanslagningar tar bort på riktigt
+  (`replaceShoppingItems`). Borttagna rader försvinner vid "Uppdatera från recept".
+- **"Har du redan hemma?"** (`guessAtHome` i `src/utils/stock.ts`): förrådsvara
+  (0,95, eller 0,7 när den är nästan slut), hemma minst 2 gånger och ≥ 60 %
+  av gångerna (`homeStats`), köpt i stor förpackning de senaste 3 veckorna,
+  krydda eller skafferivara. Frågade rader visas överst, inte i listan, och
+  läggs inte i Mathem-korgen förrän de besvarats. Köp/Har hemma räknas in i
+  `homeStats`. Avsnittet kan minimeras (sparas i webbläsaren).
+- **Förrådsvaror** (`settings.stockItems`): nivån = `baseline.fraction` minus
+  veckornas förbrukning (`usage[weekId]`, andel av förpackningen, sätts vid
+  "Uppdatera från recept"; -1 = går inte att räkna). Under 25 % frågar appen.
+  "Har hemma" på en nästan slut vara sätter nivån till 50 %, "Köp" till en ny
+  förpackning (1 st av förrådsprodukten). Sidan **Förråd** (`#/forrad`):
+  Slut (läggs på listan), Full igen, ta bort, lägg till, förslag och "Alltid hemma".
+- **Radredigeraren:** Efter recept / Förråd / Alltid hemma, "Köp alltid N st"
+  (`fixedQuantity`), "Inte denna produkt igen" (`productAvoid`). Väljer man en
+  förpackning ≥ 5× behovet föreslås förrådsvara (nej sparas i `stockDeclined`).
+- **Matchningen utan onödiga anrop** (`run` i `mathemStore.ts`): förrådsvara →
+  dess produkt. Tidigare val som följer reglerna → klart utan sökning (om
+  extrapris inte ska jämföras). Annars sök + regelvarianter ("laktosfri …",
+  "eko …"), filtrera lokalt på reglerna (`productRules.ts`), svenskt före. AI
+  bara när den finns och inget tidigare val håller. Extrapris: bland träffarna,
+  följer reglerna och ≥ 5 % lägre jämförpris.
+- **Desktop (≥ 1180 px):** högerkolumn med Mathem-kortet, radredigeraren och
+  Borttagna.

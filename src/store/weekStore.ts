@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { WeekPlan, PlannedMeal, MealComponent, ScheduleSlot, ShoppingItem, MealType, MealAssignment, StepsCompleted } from '../types'
+import { record } from './undoStore'
 import { currentWeekId, createEmptyWeek, applyWeekWindow, scaleMealComponents } from '../utils/weekUtils'
 
 interface WeekStore {
@@ -42,21 +43,42 @@ interface WeekStore {
   // Shopping list
   addShoppingItem: (item: Omit<ShoppingItem, 'id'>) => void
   updateShoppingItem: (id: string, patch: Partial<ShoppingItem>) => void
+  /** Soft delete: the row stays (deletedAt) so it can be restored from Borttagna. */
   deleteShoppingItem: (id: string) => void
+  /** Merge: remove these rows for good and add one in their place (one undo step). */
+  replaceShoppingItems: (removeIds: string[], add: Omit<ShoppingItem, 'id'>) => void
+  /** Bring back a row that was deleted or marked as at home. */
+  restoreShoppingItem: (id: string) => void
+  /** Patch several rows of a given week at once (used by background jobs). */
+  patchShoppingItems: (weekId: string, patches: Record<string, Partial<ShoppingItem>>) => void
   rebuildShoppingFromIngredients: (items: ShoppingItem[]) => void
   dismissMergeSuggestion: (key: string) => void
 }
 
 export const useWeekStore = create<WeekStore>((set, get) => {
-  function mutateActive(fn: (plan: WeekPlan) => WeekPlan) {
+  function restore(id: string, plan: WeekPlan) {
+    set((s) => ({
+      weeks: { ...s.weeks, [id]: plan },
+      dirtyWeeks: new Set([...s.dirtyWeeks, id]),
+    }))
+  }
+
+  /** Change the active week and record the change for undo. */
+  function mutateActive(fn: (plan: WeekPlan) => WeekPlan, coalesceKey?: string) {
     const id = get().activeWeekId
-    set((s) => {
-      const plan = s.weeks[id] ?? createEmptyWeek(id, 2)
-      return {
-        weeks: { ...s.weeks, [id]: fn(plan) },
-        dirtyWeeks: new Set([...s.dirtyWeeks, id]),
-      }
-    })
+    const before = get().weeks[id] ?? createEmptyWeek(id, 2)
+    const after = fn(before)
+    if (after === before) return
+    restore(id, after)
+    record(() => restore(id, before), () => restore(id, after), coalesceKey && `${id}:${coalesceKey}`)
+  }
+
+  /** Typing in a field: merge quick successive edits of the same thing into one undo step. */
+  function textKey(id: string, patch: object): string | undefined {
+    const vals = Object.values(patch)
+    return vals.length > 0 && vals.every((v) => typeof v === 'string')
+      ? `${id}:${Object.keys(patch).sort().join(',')}`
+      : undefined
   }
 
   function mutateSlot(
@@ -107,7 +129,7 @@ export const useWeekStore = create<WeekStore>((set, get) => {
     updateSlot: (date, type, patch) =>
       mutateActive((p) =>
         mutateSlot(p, date, type, (sl) => ({ ...sl, ...patch })),
-      ),
+      textKey(`${date}:${type}`, patch)),
 
     addMeal: (meal) => {
       const id = uuid()
@@ -122,7 +144,7 @@ export const useWeekStore = create<WeekStore>((set, get) => {
       mutateActive((p) => ({
         ...p,
         meals: p.meals.map((m) => (m.id === id ? { ...m, ...patch } : m)),
-      })),
+      }), textKey(id, patch)),
 
     deleteMeal: (id) =>
       mutateActive((p) => ({
@@ -158,7 +180,7 @@ export const useWeekStore = create<WeekStore>((set, get) => {
             ? { ...m, components: m.components.map(c => c.id === componentId ? { ...c, ...patch } : c) }
             : m
         ),
-      })),
+      }), textKey(componentId, patch)),
 
     removeMealComponent: (id, componentId) =>
       mutateActive((p) => ({
@@ -211,17 +233,52 @@ export const useWeekStore = create<WeekStore>((set, get) => {
         shoppingList: p.shoppingList.map((it) =>
           it.id === id ? { ...it, ...patch } : it,
         ),
-      })),
+      }), textKey(id, patch)),
 
     deleteShoppingItem: (id) =>
       mutateActive((p) => ({
         ...p,
-        shoppingList: p.shoppingList.filter((it) => it.id !== id),
+        shoppingList: p.shoppingList.map((it) =>
+          it.id === id ? { ...it, deletedAt: new Date().toISOString() } : it,
+        ),
       })),
+
+    replaceShoppingItems: (removeIds, add) =>
+      mutateActive((p) => ({
+        ...p,
+        shoppingList: [...p.shoppingList.filter((it) => !removeIds.includes(it.id)), { ...add, id: uuid() }],
+      })),
+
+    restoreShoppingItem: (id) =>
+      mutateActive((p) => ({
+        ...p,
+        shoppingList: p.shoppingList.map((it) =>
+          it.id === id
+            ? { ...it, deletedAt: undefined, isExcluded: false, excludedAt: undefined, excludedReason: undefined, homeAnswer: undefined }
+            : it,
+        ),
+      })),
+
+    patchShoppingItems: (weekId, patches) =>
+      set((s) => {
+        const plan = s.weeks[weekId]
+        if (!plan || Object.keys(patches).length === 0) return s
+        return {
+          weeks: {
+            ...s.weeks,
+            [weekId]: {
+              ...plan,
+              shoppingList: plan.shoppingList.map((it) => patches[it.id] ? { ...it, ...patches[it.id] } : it),
+            },
+          },
+          dirtyWeeks: new Set([...s.dirtyWeeks, weekId]),
+        }
+      }),
 
     rebuildShoppingFromIngredients: (items) =>
       mutateActive((p) => {
-        const manual = p.shoppingList.filter((it) => !it.isAutoAdded)
+        // Deleted rows are dropped for good when the list is rebuilt.
+        const manual = p.shoppingList.filter((it) => !it.isAutoAdded && !it.deletedAt)
         return { ...p, shoppingList: [...manual, ...items] }
       }),
 

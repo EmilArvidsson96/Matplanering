@@ -17,6 +17,8 @@ export interface MathemProduct {
   packSize: string      // name_extra, e.g. "5 dl"
   price: number         // SEK per pack
   unitPrice: string     // e.g. "48.00 kr/l"
+  /** Comparison price as a number (kr per kg/l/st), NaN when missing. */
+  unitPriceValue: number
   onSale: boolean
   /** Store labels, e.g. "Lactose free", "Från Sverige", "Ekologisk". */
   tags: string[]
@@ -31,16 +33,15 @@ interface RawProduct {
   gross_price: string
   gross_unit_price?: string
   unit_price_quantity_abbreviation?: string
-  promotion?: unknown
-  discount?: unknown
+  promotion?: { title?: string } | null
+  discount?: { is_discounted?: boolean } | null
   availability?: { is_available?: boolean }
   client_classifiers?: Array<{ name?: string }>
   images?: Array<{ thumbnail?: { url?: string } }>
   front_url?: string
 }
 
-function searchUrl(query: string): string {
-  const path = `/api/v1/search/mixed/?q=${encodeURIComponent(query)}`
+function apiUrl(path: string): string {
   return import.meta.env.DEV
     ? `/mathem-api${path}`
     : PROD_PROXY + encodeURIComponent(MATHEM + path)
@@ -55,32 +56,116 @@ function toProduct(a: RawProduct): MathemProduct {
     unitPrice: a.gross_unit_price
       ? `${a.gross_unit_price} kr/${a.unit_price_quantity_abbreviation ?? ''}`
       : '',
-    onSale: !!(a.promotion || a.discount),
+    unitPriceValue: Number(a.gross_unit_price ?? NaN),
+    // "Prismatch" is also a promotion but not an offer, so only count real discounts.
+    onSale: !!a.discount?.is_discounted || /extrapris/i.test(a.promotion?.title ?? ''),
     tags: (a.client_classifiers ?? []).map(c => c.name ?? '').filter(n => n && !/färskvarugaranti/i.test(n)),
     imageUrl: a.images?.[0]?.thumbnail?.url,
     url: a.front_url ?? `${MATHEM}/se/products/${a.id}/`,
   }
 }
 
-const searchCache = new Map<string, Promise<MathemProduct[]>>()
+// ── Local cache (this browser) ────────────────────────────────────────────
+//
+// Products are kept by id (name, pack, image and tags rarely change; price
+// and extrapris are refreshed whenever a search returns the product again).
+// Search hits are kept as id lists for SEARCH_TTL, so reopening the page or
+// switching alternatives never refetches.
 
-/** Available products for a query, in Mathem's ranking order. Cached per session. */
-export function searchMathem(query: string, limit = 8): Promise<MathemProduct[]> {
+const PRODUCTS_KEY = 'matplan.mathem.products.v3'
+const SEARCHES_KEY = 'matplan.mathem.searches.v3'
+const SEARCH_TTL = 24 * 3600_000
+const MAX_PRODUCTS = 4000
+const MAX_SEARCHES = 600
+
+type Stored<T> = Record<string, T>
+interface CachedProduct extends MathemProduct { seenAt: number }
+interface CachedSearch { ids: number[]; at: number }
+
+function readStore<T>(key: string): Stored<T> {
+  try { return JSON.parse(localStorage.getItem(key) ?? '{}') as Stored<T> } catch { return {} }
+}
+
+const products: Stored<CachedProduct> = readStore(PRODUCTS_KEY)
+const searches: Stored<CachedSearch> = readStore(SEARCHES_KEY)
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+
+function prune<T>(map: Stored<T>, max: number, age: (t: T) => number) {
+  const keys = Object.keys(map)
+  if (keys.length <= max) return
+  keys.sort((a, b) => age(map[a]) - age(map[b]))
+  for (const k of keys.slice(0, keys.length - max)) delete map[k]
+}
+
+function persistSoon() {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    prune(products, MAX_PRODUCTS, p => p.seenAt)
+    prune(searches, MAX_SEARCHES, s => s.at)
+    try {
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products))
+      localStorage.setItem(SEARCHES_KEY, JSON.stringify(searches))
+    } catch { /* storage full or blocked: the cache is only a speed-up */ }
+  }, 500)
+}
+
+function remember(list: MathemProduct[]) {
+  const now = Date.now()
+  for (const p of list) products[p.id] = { ...p, seenAt: now }
+  persistSoon()
+}
+
+/** A product we've seen in this browser, if any. */
+export function cachedProduct(id: number): MathemProduct | undefined {
+  return products[id]
+}
+
+const inflight = new Map<string, Promise<MathemProduct[]>>()
+
+/** Available products for a query, in Mathem's ranking order. Cached locally for a day. */
+export async function searchMathem(query: string, limit = 8): Promise<MathemProduct[]> {
   const key = query.trim().toLowerCase()
-  const cached = searchCache.get(key)
-  if (cached) return cached.then(list => list.slice(0, limit))
+  const hit = searches[key]
+  if (hit && Date.now() - hit.at < SEARCH_TTL && hit.ids.every(id => products[id])) {
+    return hit.ids.slice(0, limit).map(id => products[id])
+  }
 
-  const p = (async () => {
-    const res = await fetch(searchUrl(key), { headers: { accept: 'application/json' } })
-    if (!res.ok) throw new Error(`Mathem-sök misslyckades (${res.status})`)
-    const data = await res.json() as { items?: Array<{ type: string; attributes: RawProduct }> }
-    return (data.items ?? [])
-      .filter(i => i.type === 'product' && i.attributes.availability?.is_available !== false)
-      .map(i => toProduct(i.attributes))
-  })()
-  searchCache.set(key, p)
-  p.catch(() => searchCache.delete(key))
-  return p.then(list => list.slice(0, limit))
+  let p = inflight.get(key)
+  if (!p) {
+    p = (async () => {
+      const res = await fetch(apiUrl(`/api/v1/search/mixed/?q=${encodeURIComponent(key)}`), { headers: { accept: 'application/json' } })
+      if (!res.ok) throw new Error(`Mathem-sök misslyckades (${res.status})`)
+      const data = await res.json() as { items?: Array<{ type: string; attributes: RawProduct }> }
+      const list = (data.items ?? [])
+        .filter(i => i.type === 'product' && i.attributes.availability?.is_available !== false)
+        .map(i => toProduct(i.attributes))
+        .slice(0, 20)
+      remember(list)
+      searches[key] = { ids: list.map(x => x.id), at: Date.now() }
+      persistSoon()
+      return list
+    })()
+    inflight.set(key, p)
+    p.finally(() => inflight.delete(key)).catch(() => {})
+  }
+  return (await p).slice(0, limit)
+}
+
+/** One product by id: from the local cache when we have it, else from Mathem. */
+export async function getMathemProduct(id: number): Promise<MathemProduct | null> {
+  if (products[id]) return products[id]
+  try {
+    const res = await fetch(apiUrl(`/api/v1/products/${id}/`), { headers: { accept: 'application/json' } })
+    if (!res.ok) return null
+    const raw = await res.json() as RawProduct & { attributes?: RawProduct }
+    const a = raw.full_name ? raw : raw.attributes
+    if (!a?.id || !a.full_name) return null
+    const p = toProduct(a)
+    remember([p])
+    return p
+  } catch {
+    return null
+  }
 }
 
 // ── Cart hand-off ──────────────────────────────────────────────────────────

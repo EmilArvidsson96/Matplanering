@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2,
-  MoreHorizontal, LogOut, ChevronRight,
+  MoreHorizontal, LogOut, ChevronRight, Package,
 } from 'lucide-react'
 import PlayerBar from '../game/PlayerBar'
 import type { LucideIcon } from 'lucide-react'
@@ -10,6 +10,7 @@ import { useIsDesktop } from '../../hooks/useDevice'
 import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
 import DebugPanel from './DebugPanel'
+import UndoToast from '../common/UndoToast'
 import Modal, { type ModalHandle } from '../common/Modal'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 
@@ -30,6 +31,7 @@ const PRIMARY_NAV: NavDef[] = [
 ]
 
 const SECONDARY_NAV: NavDef[] = [
+  { to: '/forrad', label: 'Förråd',      Icon: Package },
   { to: '/spel', label: 'Spel',          Icon: Gamepad2 },
   { to: '/inst', label: 'Inställningar', Icon: Settings },
 ]
@@ -44,6 +46,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/bibliotek': 'Bibliotek',
   '/inst':      'Inställningar',
   '/spel':      'Spel',
+  '/forrad':    'Förråd',
 }
 
 function PageHeader({ size }: { size: 'md' | 'lg' }) {
@@ -189,6 +192,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
           )}
         </div>
         {debug}
+        <UndoToast bottomClass="bottom-24" />
       </div>
     )
   }
@@ -270,6 +274,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
       )}
 
       {debug}
+      <UndoToast bottomClass="bottom-[calc(96px+env(safe-area-inset-bottom))]" />
     </div>
   )
 }

@@ -91,7 +91,7 @@ function parseAmount(n: string): number {
 }
 
 /** Pack size from the store's text ("Sverige, 900 g", "3x28g", "1,5 l", "0,5 L", "12 st"). */
-function parsePack(packSize: string): { qty: number; kind: 'mass' | 'vol' | 'count' } | null {
+export function parsePack(packSize: string): { qty: number; kind: 'mass' | 'vol' | 'count' } | null {
   const multi = packSize.match(/(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|dl|cl|ml)\b/i)
   if (multi) {
     const [f, kind] = TO_BASE[multi[3].toLowerCase()]
@@ -119,4 +119,21 @@ export function estimatePacks(amount: string, unit: string, packSize: string): n
   const sameFamily = kind === pack.kind || (kind !== 'count' && pack.kind !== 'count')
   if (!sameFamily) return null
   return Math.max(1, Math.ceil((need * f) / pack.qty - 0.1))
+}
+
+/** An amount in base units (g, ml or st), or null when the unit is unknown. */
+export function toBase(amount: string, unit: string): { qty: number; kind: 'mass' | 'vol' | 'count' } | null {
+  const n = parseAmount(amount)
+  const u = TO_BASE[unit.trim().toLowerCase()]
+  if (!u || !n || n <= 0) return null
+  return { qty: n * u[0], kind: u[1] }
+}
+
+/** How many times bigger the pack is than the need (null when not comparable). */
+export function packOverNeed(amount: string, unit: string, packSize: string): number | null {
+  const need = toBase(amount, unit)
+  const pack = parsePack(packSize)
+  if (!need || !pack) return null
+  const comparable = need.kind === pack.kind || (need.kind !== 'count' && pack.kind !== 'count')
+  return comparable ? pack.qty / need.qty : null
 }
