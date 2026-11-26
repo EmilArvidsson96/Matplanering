@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Calendar, BookOpen, ShoppingCart, Settings, UtensilsCrossed, Gamepad2,
   MoreHorizontal, LogOut, ChevronRight, Package,
@@ -11,7 +11,7 @@ import WeekNavigator from './WeekNavigator'
 import SaveIndicator from './SaveIndicator'
 import DebugPanel from './DebugPanel'
 import UndoToast from '../common/UndoToast'
-import Modal, { type ModalHandle } from '../common/Modal'
+import { SubPageRoot, useSubPageOpen } from '../common/SubPage'
 import type { SaveStatus, SaveError } from '../../hooks/useAutoSave'
 
 interface Props {
@@ -43,6 +43,7 @@ const WEEK_ROUTES = new Set(['/', '/planera', '/inkop', '/recept'])
 const FULLBLEED_ROUTES = new Set(['/recept'])
 
 const PAGE_TITLES: Record<string, string> = {
+  '/mer':       'Mer',
   '/bibliotek': 'Bibliotek',
   '/inst':      'Inställningar',
   '/spel':      'Spel',
@@ -113,7 +114,7 @@ function SideItem({ to, label, Icon }: NavDef) {
 
 // ─── Mobile floating tab bar item ────────────────────────────────────────────
 
-function TabItem({ label, Icon, active, onClick, to }: NavDef & { active: boolean; onClick?: () => void }) {
+function TabItem({ label, Icon, active, to }: NavDef & { active: boolean }) {
   const cls = `h-12 rounded-full flex items-center justify-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-safe:active:scale-90
     ${active ? 'px-4 bg-ink text-white' : 'w-12 text-ink-muted hover:text-ink'}`
   const inner = (
@@ -122,20 +123,17 @@ function TabItem({ label, Icon, active, onClick, to }: NavDef & { active: boolea
       {active && <span className="text-sm font-semibold whitespace-nowrap motion-safe:animate-fade-in">{label}</span>}
     </>
   )
-  if (onClick) {
-    return <button onClick={onClick} className={cls} aria-label={label}>{inner}</button>
-  }
   return <NavLink to={to} end={to === '/'} className={cls} aria-label={label}>{inner}</NavLink>
 }
 
 export default function AppShell({ logout, saveStatus, saveError, onRetrySave }: Props) {
   const isDesktop = useIsDesktop()
   const [debugOpen, setDebugOpen] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
-  const navigate = useNavigate()
   const mainRef = useRef<HTMLElement>(null)
-  const moreModal = useRef<ModalHandle>(null)
+  const subPageOpen = useSubPageOpen()
+  // While a sub-page covers the content, the page underneath must not be reachable by keyboard/AT.
+  const inertWhenCovered = subPageOpen ? ({ inert: '' } as object) : {}
 
   // Toggle debug panel with Ctrl+Shift+D
   useEffect(() => {
@@ -174,13 +172,13 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col overflow-hidden py-3 pr-3">
+        <div className="relative flex-1 flex flex-col overflow-hidden py-3 pr-3">
           {FULLBLEED_ROUTES.has(pathname) ? (
-            <main className="flex-1 overflow-hidden rounded-4xl bg-white">
+            <main className="flex-1 overflow-hidden rounded-4xl bg-white" {...inertWhenCovered}>
               <PageTransition className="h-full"><Outlet /></PageTransition>
             </main>
           ) : (
-          <main ref={mainRef} className="flex-1 overflow-y-auto">
+          <main ref={mainRef} className="flex-1 overflow-y-auto" {...inertWhenCovered}>
             <PageTransition className="max-w-6xl px-5 pt-5 pb-12" scrollRef={mainRef}>
               <header className="flex flex-wrap items-end gap-4 mb-7">
                 <div className="flex-1 min-w-[280px]"><PageHeader size="lg" /></div>
@@ -190,6 +188,7 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
             </PageTransition>
           </main>
           )}
+          <SubPageRoot />
         </div>
         {debug}
         <UndoToast bottomClass="bottom-24" />
@@ -198,19 +197,20 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
   }
 
   // ── Mobile ──
-  const moreActive = SECONDARY_NAV.some(n => n.to === pathname)
+  const moreActive = pathname === '/mer' || SECONDARY_NAV.some(n => n.to === pathname)
 
   return (
-    <div className="flex flex-col h-dvh bg-canvas">
+    <div className="relative flex flex-col h-dvh bg-canvas">
       {FULLBLEED_ROUTES.has(pathname) ? (
         <main
           className="flex-1 min-h-0 overflow-hidden flex flex-col"
+          {...inertWhenCovered}
           style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}
         >
           <PageTransition className="flex-1 min-h-0 flex flex-col"><Outlet /></PageTransition>
         </main>
       ) : (
-      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden" {...inertWhenCovered}>
         <PageTransition scrollRef={mainRef}>
         <header
           className="px-5 pb-4 flex flex-col gap-3"
@@ -225,14 +225,18 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
           <PlayerBar />
         </header>
         <div className="px-4 pb-32">
-          <Outlet />
+          {pathname === '/mer'
+            ? <MoreMenu saveStatus={saveStatus} saveError={saveError} onRetrySave={onRetrySave} logout={logout} />
+            : <Outlet />}
         </div>
         </PageTransition>
       </main>
       )}
 
-      {/* Floating tab bar */}
-      <nav
+      <SubPageRoot />
+
+      {/* Floating tab bar (hidden while a sub-page is open: it has its own back arrow) */}
+      {!subPageOpen && <nav
         aria-label="Huvudmeny"
         className="fixed left-0 right-0 bottom-0 z-40 px-4 pt-6 bg-gradient-to-b from-canvas/0 via-canvas/90 to-canvas pointer-events-none"
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
@@ -245,36 +249,39 @@ export default function AppShell({ logout, saveStatus, saveError, onRetrySave }:
               active={item.to === '/' ? pathname === '/' || pathname === '/planera' : pathname === item.to}
             />
           ))}
-          <TabItem to="" label="Mer" Icon={MoreHorizontal} active={moreActive} onClick={() => setMoreOpen(true)} />
+          <TabItem to="/mer" label="Mer" Icon={MoreHorizontal} active={moreActive} />
         </div>
-      </nav>
-
-      {moreOpen && (
-        <Modal ref={moreModal} title="Mer" onClose={() => setMoreOpen(false)}>
-          <div className="card overflow-hidden">
-            {SECONDARY_NAV.map(({ to, label, Icon }, i) => (
-              <button
-                key={to}
-                onClick={() => { navigate(to); moreModal.current?.close() }}
-                className={`w-full min-h-[56px] px-4 flex items-center gap-3 text-left text-[15px] ${i > 0 ? 'border-t border-line-soft' : ''}`}
-              >
-                <Icon className="w-5 h-5 text-ink-muted" />
-                <span className="flex-1 font-medium">{label}</span>
-                <ChevronRight className="w-4 h-4 text-ink-faint" />
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center justify-between mt-4 px-1">
-            <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
-            <button onClick={logout} className="h-11 px-4 rounded-full text-sm font-semibold text-red-700 flex items-center gap-2">
-              <LogOut className="w-4 h-4" /> Logga ut
-            </button>
-          </div>
-        </Modal>
-      )}
+      </nav>}
 
       {debug}
       <UndoToast bottomClass="bottom-[calc(96px+env(safe-area-inset-bottom))]" />
     </div>
+  )
+}
+
+/** Mobile "Mer" page: secondary destinations + save status and logout. */
+function MoreMenu({ logout, saveStatus, saveError, onRetrySave }: Props) {
+  return (
+    <>
+      <div className="card overflow-hidden">
+        {SECONDARY_NAV.map(({ to, label, Icon }, i) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={`w-full min-h-[56px] px-4 flex items-center gap-3 text-left text-[15px] ${i > 0 ? 'border-t border-line-soft' : ''}`}
+          >
+            <Icon className="w-5 h-5 text-ink-muted" />
+            <span className="flex-1 font-medium">{label}</span>
+            <ChevronRight className="w-4 h-4 text-ink-faint" />
+          </NavLink>
+        ))}
+      </div>
+      <div className="flex items-center justify-between mt-4 px-1">
+        <SaveIndicator status={saveStatus} error={saveError} onRetry={onRetrySave} />
+        <button onClick={logout} className="h-11 px-4 rounded-full text-sm font-semibold text-red-700 flex items-center gap-2">
+          <LogOut className="w-4 h-4" /> Logga ut
+        </button>
+      </div>
+    </>
   )
 }

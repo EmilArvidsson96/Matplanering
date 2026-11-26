@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishPopularity, dishLastCooked, dayOfYear } from '../../utils/weekUtils'
-import Modal, { type ModalHandle } from '../common/Modal'
+import SubPage, { type SubPageHandle } from '../common/SubPage'
 import type { Dish, SortOrder } from '../../types'
 
 const FILTERS: { key: string; label: string; values: { id: string; label: string }[] }[] = [
@@ -51,7 +51,7 @@ interface Props {
 }
 
 export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
-  const modalRef = useRef<ModalHandle>(null)
+  const pageRef = useRef<SubPageHandle>(null)
   const { dishes }  = useLibraryStore()
   const weeks       = Object.values(useWeekStore().weeks)
   const [search, setSearch]           = useState('')
@@ -100,7 +100,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
   }, [dishes, search, active, sort, weeks, today])
 
   return (
-    <Modal ref={modalRef} title="Välj rätt från biblioteket" onClose={onClose} wide>
+    <SubPage ref={pageRef} title="Välj rätt från biblioteket" onClose={onClose} wide>
       {/* Search + sort */}
       <div className="flex gap-2 mb-3">
         <input
@@ -208,7 +208,7 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
           return (
             <button
               key={dish.id}
-              onClick={() => modalRef.current ? modalRef.current.close(() => onSelect(dish)) : onSelect(dish)}
+              onClick={() => pageRef.current ? pageRef.current.close(() => onSelect(dish)) : onSelect(dish)}
               className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50 transition-colors ${alreadyAdded ? 'opacity-50' : ''}`}
             >
               <div className="flex-1 min-w-0">
@@ -231,6 +231,6 @@ export default function DishPicker({ onSelect, onClose, weekMealIds }: Props) {
           <p className="text-sm text-ink-faint py-6 text-center">Inga rätter matchar.</p>
         )}
       </div>
-    </Modal>
+    </SubPage>
   )
 }

@@ -24,6 +24,8 @@ export default function GamePanel() {
   const [newColor, setNewColor] = useState(COLORS[0])
   const [handbookOpen, setHandbookOpen] = useState(true)
   const [lexiconOpen, setLexiconOpen] = useState(false)
+  /** Player whose card shows the inline "remove?" confirmation */
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
 
   const sorted = [...data.players].sort((a, b) => statsFor(b.id, data).totalPoints - statsFor(a.id, data).totalPoints)
   const recent = [...events].sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 12)
@@ -110,12 +112,21 @@ export default function GamePanel() {
                   <div className="bg-white/60 rounded p-1">🥗 {stats.healthyMealCount}</div>
                 </div>
 
-                <button
-                  className="absolute bottom-2 right-2 text-ink-faint hover:text-red-500 p-1"
-                  onClick={(e) => { e.stopPropagation(); if (confirm(`Ta bort ${p.name}?`)) removePlayer(p.id) }}
-                >
-                  <Trash2 className="w-3.5 h-3.5"/>
-                </button>
+                {confirmRemoveId === p.id ? (
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-white rounded-full pl-3 pr-1 py-1 shadow-sm" onClick={e => e.stopPropagation()}>
+                    <span className="text-xs font-medium text-ink">Ta bort {p.name}?</span>
+                    <button className="h-7 px-2.5 rounded-full text-xs font-medium text-ink-muted hover:bg-canvas" onClick={() => setConfirmRemoveId(null)}>Avbryt</button>
+                    <button className="h-7 px-2.5 rounded-full text-xs font-semibold bg-red-700 text-white hover:bg-red-800" onClick={() => { setConfirmRemoveId(null); removePlayer(p.id) }}>Ta bort</button>
+                  </div>
+                ) : (
+                  <button
+                    className="absolute bottom-2 right-2 text-ink-faint hover:text-red-500 p-1"
+                    aria-label={`Ta bort ${p.name}`}
+                    onClick={(e) => { e.stopPropagation(); setConfirmRemoveId(p.id) }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5"/>
+                  </button>
+                )}
               </div>
             )
           })}

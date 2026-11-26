@@ -90,13 +90,21 @@ export default function IcaListSection({ items, defaultName }: { items: Shopping
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => { window.open(icaListHandoffUrl(name.trim(), texts), '_blank'); setSent(true) }}
-                disabled={texts.length === 0 || !name.trim()}
-                className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold"
-              >
-                Öppna ica.se och fyll listan
-              </button>
+              {texts.length > 0 && name.trim() ? (
+                <a
+                  href={icaListHandoffUrl(name.trim(), texts)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setSent(true)}
+                  className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold inline-flex items-center"
+                >
+                  Öppna ica.se och fyll listan
+                </a>
+              ) : (
+                <button disabled className="h-10 px-4 rounded-full bg-brand-600 opacity-50 text-white text-sm font-semibold">
+                  Öppna ica.se och fyll listan
+                </button>
+              )}
               <button
                 onClick={async () => { await navigator.clipboard.writeText(icaListClaudePrompt(name.trim(), texts)); setCopied(true); setSent(true) }}
                 disabled={texts.length === 0 || !name.trim()}
