@@ -28,10 +28,13 @@ butikens adress på ica.se.
   `unitPrice`, `countryOfOrigin`, `available`, `promotions[].description`
   ("3 för 56 kr"), `image.src`, `retailerProductId`.
 - Korgsidan är `/stores/{nr}/basket`. Minsta order är 400 kr.
-- **Bot-skydd (AWS WAF):** anrop från en annan webbplats i webbläsaren får alltid
-  `202` med tom body. Från en hemma-IP räcker 2–3 snabba sökningar för att bli
-  spärrad i flera minuter. Via Cloudflare-Workern gick 12 sökningar i rad bra.
-  Workern försöker igen med paus vid `202`.
+- **Bot-skydd (AWS WAF):** ICA svarar `202` med tom body när det kommer för
+  många automatiska anrop, även via Cloudflare-Workern. Spärren kan sitta kvar
+  i flera minuter. Appen respekterar den: Workern skickar få anrop (upp till 10
+  sökningar delar ett prisanrop via `/ica/batch`), cachar svar i 12 h och
+  slutar direkt vid `202`. Appen hämtar priserna i bakgrunden i lugn takt så
+  fort inköpslistan finns, sparar dem lokalt i 3 dagar och pausar 5 minuter när
+  ICA ber om det. Vi försöker inte ta oss förbi spärren.
 
 ## ICA-inköpslistan (ICA-appen)
 
