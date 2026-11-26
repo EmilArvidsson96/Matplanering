@@ -68,6 +68,23 @@ export interface Dish {
   /** AI results saved on the recipe so they survive reloads and other devices. */
   ai?: DishAiData
   yieldUnit?: string          // what the recipe yields, e.g. "bullar", "limpor"; empty = portioner
+  /** Picture chosen by the user. Wins over `autoImage`. */
+  imageUrl?: string
+  /** Picture found automatically (recipe page or image search). */
+  autoImage?: DishAutoImage
+}
+
+export interface DishAutoImage {
+  /** Empty when nothing good was found (retried after a while). */
+  url: string
+  source?: 'recipe' | 'search'
+  /** Page the picture comes from. */
+  pageUrl?: string
+  /** Other pictures that passed the checks, best first — offered in the editor. */
+  alternatives?: string[]
+  /** Name + link it was found for; a change triggers a new search. */
+  key: string
+  at: string   // ISO date
 }
 
 export interface RecipeImprovement {

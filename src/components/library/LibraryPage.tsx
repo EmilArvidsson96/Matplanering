@@ -6,6 +6,7 @@ import { useGameStore } from '../../store/gameStore'
 import { dishPopularity, dishLastCooked } from '../../utils/weekUtils'
 import { computeCompleteness } from '../../utils/recipeCompleteness'
 import DishEditor from './DishEditor'
+import DishImage from '../common/DishImage'
 import { Search, Plus, SlidersHorizontal, ArrowUpDown, Download, Link2 } from 'lucide-react'
 import type { Dish, Protein, Carb, Cuisine, DishType, Tag, SortOrder } from '../../types'
 
@@ -245,13 +246,19 @@ function DishCard({ dish, popularity, lastCooked, onClick, showCompleteness }: {
       onClick={onClick}
       className="text-left card overflow-hidden flex flex-col hover:shadow-[0_6px_20px_rgba(21,23,26,0.08)] transition-shadow"
     >
-      <div className="h-20 md:h-24 flex items-center justify-center relative" style={{ background: bg, color: fg }}>
-        <span className="font-display text-3xl font-extrabold opacity-85" aria-hidden="true">{dish.name.charAt(0).toUpperCase()}</span>
+      <div className="h-28 md:h-36 flex items-center justify-center relative overflow-hidden" style={{ background: bg, color: fg }}>
+        <DishImage
+          dish={dish}
+          className="absolute inset-0 w-full h-full object-cover"
+          fallback={<span className="font-display text-3xl font-extrabold opacity-85" aria-hidden="true">{dish.name.charAt(0).toUpperCase()}</span>}
+        />
         {popularity > 0 && (
-          <span className="absolute top-2 right-2 text-[11px] font-semibold bg-white/70 rounded-full px-1.5 py-0.5" title={`Lagad ${popularity} gånger`}>×{popularity}</span>
+          <span className="absolute top-2 right-2 text-[11px] font-semibold bg-white/80 text-ink rounded-full px-1.5 py-0.5" title={`Lagad ${popularity} gånger`}>×{popularity}</span>
         )}
         {dish.recipeUrl && (
-          <Link2 className="absolute top-2 left-2 w-3.5 h-3.5 opacity-60" aria-label="Har receptlänk" />
+          <span className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/80 text-ink flex items-center justify-center">
+            <Link2 className="w-3.5 h-3.5" aria-label="Har receptlänk" />
+          </span>
         )}
       </div>
       <div className="p-3 pb-3.5 flex flex-col gap-1 flex-1">

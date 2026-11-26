@@ -10,6 +10,7 @@ import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
 import SubPage, { type SubPageHandle } from '../common/SubPage'
 import SegmentedControl from '../common/SegmentedControl'
+import DishImagePicker from './DishImagePicker'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
 } from '../../types'
@@ -138,6 +139,8 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string; info?: string }>({ state: 'idle', error: '' })
   const fetchCacheRef = useRef<{ url: string; promise: Promise<RecipeFetchResult> } | null>(null)
 
+  // Live copy, so a picture found in the background shows up while editing.
+  const liveDish = useLibraryStore(s => (dish ? s.dishes.find(d => d.id === dish.id) ?? dish : null))
   const historyMonth = dish ? dishMostCommonMonth(dish.id, weeks) : null
   const isNew = !dish
 
@@ -147,11 +150,15 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
   function save() {
     if (!form.name.trim()) return
+    // autoImage is written by the background picker, possibly while the
+    // editor is open — never overwrite it with the snapshot taken on open.
+    const { autoImage: _auto, ...patch } = form
+    if (!patch.imageUrl?.trim()) patch.imageUrl = undefined
     if (isNew) {
-      const id = addDish(form)
+      const id = addDish(patch)
       onSaved?.(id)
     } else {
-      updateDish(dish.id, form)
+      updateDish(dish.id, patch)
       onSaved?.(dish.id)
     }
     closeEditor()
@@ -329,6 +336,11 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           placeholder="T.ex. Linsgryta"
         />
       </div>
+      <DishImagePicker
+        form={form}
+        dish={liveDish}
+        onChange={imageUrl => setForm(f => ({ ...f, imageUrl }))}
+      />
       <ChipGroup
         label="Protein"
         options={ALL_PROTEINS}

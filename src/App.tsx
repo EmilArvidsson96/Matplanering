@@ -17,6 +17,7 @@ import GamePanel from './components/game/GamePanel'
 import GameOverlay from './components/game/GameOverlay'
 import FeedbackWidget from './components/feedback/FeedbackWidget'
 import { useGameTracker } from './hooks/useGameTracker'
+import { useAutoDishImages } from './hooks/useAutoDishImages'
 import { useGameStore } from './store/gameStore'
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
   const activeWeekId = useWeekStore(s => s.activeWeekId)
   const gameMode = useGameStore(s => s.data.gameMode)
   useGameTracker()
+  useAutoDishImages(authed && dataLoaded)
 
   useEffect(() => {
     document.body.classList.toggle('game-mode', gameMode)

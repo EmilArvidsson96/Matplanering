@@ -8,6 +8,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useMinWidth } from '../../hooks/useDevice'
 import RecipeAiTools from './RecipeAiTools'
+import DishImage from '../common/DishImage'
 import SegmentedControl from '../common/SegmentedControl'
 import type { Dish, RecipeStep, Ingredient } from '../../types'
 import { ingredientImpact, dishImpactPerPortion, climateGrade, CLIMATE_COLORS, formatSEK, formatCO2e } from '../../utils/ingredientImpact'
@@ -478,7 +479,10 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
           <Upload className="w-[18px] h-[18px]" />
         </button>
       </div>
-      <h2 className="font-display text-[26px] md:text-[30px] font-extrabold tracking-tight leading-[1.1] text-ink">{dish.name}</h2>
+      <div className="flex items-center gap-3.5">
+        <DishImage dish={dish} alt={dish.name} className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover shrink-0 bg-canvas" />
+        <h2 className="font-display text-[26px] md:text-[30px] font-extrabold tracking-tight leading-[1.1] text-ink">{dish.name}</h2>
+      </div>
       {importError && (
         <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 pl-4 pr-1.5 py-1.5 flex items-center gap-2 text-sm text-red-800">
           <span className="flex-1">{importError}</span>
