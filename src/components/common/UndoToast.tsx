@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useUndo, undo, redo } from '../../store/undoStore'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
@@ -25,17 +25,29 @@ export default function UndoToast({ bottomClass }: { bottomClass: string }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Keep the last toast on screen while it animates out.
+  const [shown, setShown] = useState(toast)
+  const [leaving, setLeaving] = useState(false)
+  useEffect(() => {
+    if (toast) { setShown(toast); setLeaving(false); return }
+    if (!shown) return
+    setLeaving(true)
+    const t = setTimeout(() => { setShown(null); setLeaving(false) }, 220)
+    return () => clearTimeout(t)
+  }, [toast]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(dismissToast, 6000)
     return () => clearTimeout(t)
   }, [toast, dismissToast])
 
-  if (!toast) return null
+  if (!shown) return null
   return (
-    <div className={`fixed left-1/2 -translate-x-1/2 ${bottomClass} z-50 w-[calc(100%-32px)] max-w-md animate-pop-in`}>
+    <div className={`fixed left-1/2 -translate-x-1/2 ${bottomClass} z-50 w-[calc(100%-32px)] max-w-md`}>
+      <div key={shown.id} className={leaving ? 'animate-pop-out' : 'animate-pop-in'}>
       <div role="status" className="bg-ink text-white rounded-2xl pl-4 pr-2 py-2 flex items-center gap-3 shadow-[0_8px_24px_rgba(21,23,26,0.25)]">
-        <span className="flex-1 min-w-0 text-sm truncate">{toast.label}</span>
+        <span className="flex-1 min-w-0 text-sm truncate">{shown.label}</span>
         <button
           onClick={() => undo()}
           className="h-9 px-4 rounded-full bg-mint-bright text-mint-ink text-sm font-bold shrink-0"
@@ -43,6 +55,7 @@ export default function UndoToast({ bottomClass }: { bottomClass: string }) {
           Ångra <span className="hidden md:inline font-medium opacity-70">{isMac ? '⌘Z' : 'Ctrl+Z'}</span>
         </button>
         <button onClick={dismissToast} aria-label="Stäng" className="w-8 h-8 rounded-full text-white/60 hover:text-white shrink-0">✕</button>
+      </div>
       </div>
     </div>
   )

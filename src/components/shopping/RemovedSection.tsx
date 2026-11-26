@@ -4,6 +4,7 @@ import type { ShoppingItem } from '../../types'
 import { restoreItem } from '../../store/shoppingActions'
 import { useWeekStore } from '../../store/weekStore'
 import { batch, notify } from '../../store/undoStore'
+import { AnimatedUl, Collapse } from '../common/Animated'
 
 const REASON: Record<string, string> = {
   home: 'Har hemma',
@@ -53,8 +54,8 @@ export default function RemovedSection({ items, defaultOpen }: { items: Shopping
           <button onClick={restoreAll} className="h-9 px-2 text-[12.5px] font-semibold text-brand-700 shrink-0">Återställ alla</button>
         )}
       </div>
-      {open && (
-        <ul className="divide-y divide-line-soft border-t border-line-soft">
+      <Collapse open={open}>
+        <AnimatedUl className="divide-y divide-line-soft border-t border-line-soft">
           {removed.map(i => (
             <li key={i.id} className="flex items-center gap-2 pl-4 pr-2 py-2">
               <div className="flex-1 min-w-0">
@@ -69,8 +70,8 @@ export default function RemovedSection({ items, defaultOpen }: { items: Shopping
               </button>
             </li>
           ))}
-        </ul>
-      )}
+        </AnimatedUl>
+      </Collapse>
     </section>
   )
 }

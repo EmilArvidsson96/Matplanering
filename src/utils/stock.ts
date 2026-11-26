@@ -6,6 +6,7 @@ import { parseISO, getISOWeek } from 'date-fns'
 import type { AppSettings, ShoppingItem, StockItem, WeekPlan } from '../types'
 import { ingredientKey, packOverNeed, parsePack, toBase } from './productMatch'
 import { prevWeekId } from './weekUtils'
+import { subFor } from '../data/categories'
 
 /** The entry in a keyed map whose key matches this ingredient (exact, else longest contained key). */
 export function lookupByKey<T>(name: string, map: Record<string, T> | undefined): [string, T] | null {
@@ -111,7 +112,7 @@ export function guessAtHome(
       }
     }
 
-    if (item.category === 'kryddor') options.push({ score: 0.5, reason: 'Krydda' })
+    if (/krydd/i.test(subFor(item.name))) options.push({ score: 0.5, reason: 'Krydda' })
     else if (LONG_LIFE.test(key)) options.push({ score: 0.5, reason: 'Skafferivara' })
 
     const best = options.sort((a, b) => b.score - a.score)[0]

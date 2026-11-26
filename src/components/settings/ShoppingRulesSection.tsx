@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useSettingsStore } from '../../store/settingsStore'
-import type { ShoppingRules } from '../../types'
+import type { ShopId, ShoppingRules } from '../../types'
+import { DEFAULT_ICA_STORE } from '../../api/ica'
+import { CATEGORY_LABELS } from '../../data/categories'
 
 const DEFAULT_RULES: ShoppingRules = {
   lactoseFree: false,
@@ -19,14 +21,41 @@ const TOGGLES: Array<{ key: 'lactoseFree' | 'preferSwedish' | 'preferOffers'; la
 export default function ShoppingRulesSection() {
   const { settings, update, setProductPreferences } = useSettingsStore()
   const rules = { ...DEFAULT_RULES, ...settings.shoppingRules }
-  const prefs = Object.entries(settings.productPreferences ?? {}).sort(([a], [b]) => a.localeCompare(b, 'sv'))
+  const prefs = ([['mathem', settings.productPreferences], ['ica', settings.icaProductPreferences]] as const)
+    .flatMap(([shop, map]) => Object.entries(map ?? {}).map(([key, p]) => ({ shop: shop as ShopId, key, p })))
+    .sort((a, b) => a.key.localeCompare(b.key, 'sv') || a.shop.localeCompare(b.shop))
+  const overrides = Object.entries(settings.categoryOverrides ?? {}).sort(([a], [b]) => a.localeCompare(b, 'sv'))
+  const ica = settings.icaStore ?? DEFAULT_ICA_STORE
+  const [showOverrides, setShowOverrides] = useState(false)
   const [showPrefs, setShowPrefs] = useState(false)
 
   const setRules = (patch: Partial<ShoppingRules>) => update({ shoppingRules: { ...rules, ...patch } })
 
   return (
     <section className="card p-5">
-      <h2 className="font-display text-lg font-bold text-ink mb-1">Handla online (Mathem)</h2>
+      <h2 className="font-display text-lg font-bold text-ink mb-1">Handla online</h2>
+      <div className="mb-5 space-y-2">
+        <label className="text-sm text-ink-soft">ICA-butik för ICA Handla</label>
+        <div className="flex gap-2">
+          <input
+            aria-label="Butiksnummer"
+            value={ica.id}
+            onChange={e => update({ icaStore: { ...ica, id: e.target.value.replace(/\D/g, '') } })}
+            inputMode="numeric"
+            className="field w-32"
+          />
+          <input
+            aria-label="Butikens namn"
+            value={ica.name}
+            onChange={e => update({ icaStore: { ...ica, name: e.target.value } })}
+            className="field flex-1 min-w-0"
+          />
+        </div>
+        <p className="text-xs text-ink-faint">
+          Numret står sist i butikens adress på ica.se, t.ex. …/maxi-ica-stormarknad-haggvik-<b>1003415</b>/.
+          Hitta butiken på <a href="https://www.ica.se/butiker/" target="_blank" rel="noreferrer" className="underline">ica.se/butiker</a>.
+        </p>
+      </div>
       <p className="text-xs text-ink-faint mb-4">
         Huvudregler som AI:n följer när den väljer produkter. De gäller före pris och tidigare val.
         Kräver API-nyckel under AI-assistent.
@@ -80,17 +109,49 @@ export default function ShoppingRulesSection() {
               </p>
             ) : (
               <div className="mt-2 divide-y divide-line-soft max-h-80 overflow-y-auto">
-                {prefs.map(([key, p]) => (
-                  <div key={key} className="flex items-center gap-2 py-1.5">
+                {prefs.map(({ shop, key, p }) => (
+                  <div key={shop + key} className="flex items-center gap-2 py-1.5">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-ink-soft">{key}</div>
+                      <div className="text-sm text-ink-soft">
+                        {key} <span className="text-[10px] uppercase tracking-wide text-ink-faint">{shop === 'ica' ? 'ICA' : 'Mathem'}</span>
+                      </div>
                       <div className="text-xs text-ink-faint truncate">
                         {p.name} · {p.packSize} · vald {p.timesChosen} {p.timesChosen === 1 ? 'gång' : 'gånger'}
                       </div>
                     </div>
                     <button
-                      onClick={() => setProductPreferences({ [key]: null })}
+                      onClick={() => setProductPreferences({ [key]: null }, shop)}
                       title="Glöm valet"
+                      className="text-ink-faint hover:text-red-400 text-sm px-1"
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+        <div className="pt-2 border-t border-line-soft">
+          <button onClick={() => setShowOverrides(s => !s)} className="text-sm text-ink-muted hover:text-ink">
+            {showOverrides ? '▲' : '▼'} Egna kategorier ({overrides.length})
+          </button>
+          {showOverrides && (
+            overrides.length === 0 ? (
+              <p className="text-xs text-ink-faint mt-2">
+                Inga ännu. När du byter kategori på en ingrediens sparas det här och går före ICA:s indelning.
+              </p>
+            ) : (
+              <div className="mt-2 divide-y divide-line-soft max-h-80 overflow-y-auto">
+                {overrides.map(([key, cat]) => (
+                  <div key={key} className="flex items-center gap-2 py-1.5">
+                    <div className="flex-1 min-w-0 text-sm text-ink-soft">{key}</div>
+                    <div className="text-xs text-ink-faint">{CATEGORY_LABELS[cat]}</div>
+                    <button
+                      onClick={() => {
+                        const next = { ...settings.categoryOverrides }
+                        delete next[key]
+                        update({ categoryOverrides: next })
+                      }}
+                      title="Glöm"
                       className="text-ink-faint hover:text-red-400 text-sm px-1"
                     >✕</button>
                   </div>

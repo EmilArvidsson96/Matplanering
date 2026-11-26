@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import type { Ingredient, RecipeSiteRule, RecipeStep, ShoppingCategory } from '../types'
+import { categoryFor, classifyIngredient } from '../data/categories'
 import { extractRecipeWithAi } from '../api/anthropic'
 import { useSettingsStore } from '../store/settingsStore'
 import { proxiedUrl } from '../api/proxy'
@@ -95,25 +96,8 @@ function parseIngredientString(raw: string): { amount: number; unit: string; nam
 
 // ── Category detection ────────────────────────────────────────────────────────
 
-const CATEGORY_MAP: Array<{ cat: ShoppingCategory; words: string[] }> = [
-  { cat: 'kött', words: ['kyckling', 'kycklingfilé', 'kycklinglår', 'kycklingben', 'nötfärs', 'köttfärs', 'fläsk', 'bacon', 'skinka', 'prosciutto', 'pancetta', 'salami', 'biff', 'entrecôte', 'kotlett', 'karré', 'lammfilé', 'lamm', 'korv', 'falukorv', 'vilt', 'älg', 'hjort', 'kalv', 'oxfilé', 'fläskfilé'] },
-  { cat: 'fisk', words: ['lax', 'torsk', 'kolja', 'fisk', 'räkor', 'skaldjur', 'tonfisk', 'sill', 'strömming', 'hummer', 'krabba', 'bläckfisk', 'musslor', 'pilgrimsmussla', 'sardiner', 'ansjovis', 'makrill'] },
-  { cat: 'mejeri', words: ['mjölk', 'grädde', 'vispgrädde', 'matlagningsgrädde', 'smör', 'ost', 'cheddar', 'parmesan', 'mozzarella', 'fetaost', 'brie', 'camembert', 'yoghurt', 'crème fraîche', 'creme fraiche', 'créme fraiche', 'kvarg', 'ricotta', 'mascarpone', 'ägg', 'fil', 'filmjölk', 'keso', 'gräddfil'] },
-  { cat: 'grönsaker', words: ['lök', 'gul lök', 'rödlök', 'schalottenlök', 'purjolök', 'salladslök', 'vitlök', 'morot', 'tomat', 'körsbärstomat', 'paprika', 'broccoli', 'blomkål', 'spenat', 'sallad', 'romansallad', 'gurka', 'zucchini', 'aubergine', 'selleri', 'rotselleri', 'fänkål', 'kål', 'vitkål', 'rödkål', 'savoykål', 'grönkål', 'majs', 'ärtor', 'sockerärtor', 'haricots verts', 'bönor', 'champinjoner', 'svamp', 'kantarell', 'shiitake', 'potatis', 'sötpotatis', 'palsternacka', 'rödbeta', 'rädisa', 'avokado', 'sparris', 'kronärtskocka', 'kålrabbi', 'ingefära', 'chili', 'jalapeño'] },
-  { cat: 'frukt', words: ['citron', 'lime', 'apelsin', 'grapefrukt', 'äpple', 'päron', 'banan', 'mango', 'ananas', 'vindruvor', 'jordgubb', 'hallon', 'blåbär', 'björnbär', 'körsbär', 'persika', 'nektarin', 'plommon', 'melon', 'vattenmelon', 'papaya', 'passionsfrukt', 'fikon', 'dadel'] },
-  { cat: 'torrvaror', words: ['pasta', 'spaghetti', 'penne', 'rigatoni', 'tagliatelle', 'lasagneplattor', 'ris', 'basmatiris', 'jasminris', 'arborio', 'mjöl', 'vetemjöl', 'rismjöl', 'potatismjöl', 'socker', 'strösocker', 'farinsocker', 'florsocker', 'havregryn', 'nudlar', 'glasnudlar', 'risnudlar', 'udon', 'couscous', 'quinoa', 'bulgur', 'linser', 'röda linser', 'kikärtor', 'svarta bönor', 'kidneybönor', 'cornflakes', 'müsli', 'mandel', 'valnöt', 'cashew', 'jordnötter', 'solrosfrön', 'pumpafrön', 'sesamfrön', 'jäst'] },
-  { cat: 'konserver', words: ['krossade tomater', 'passerade tomater', 'tomatpuré', 'kokosmjölk', 'kokosgrädde', 'konserverade', 'kapris', 'oliver', 'sojasås', 'fisksås', 'ostronsås', 'sweet chili', 'tabasco', 'worcestershire', 'sambal', 'tahini', 'hummus', 'röd currypasta', 'grön currypasta', 'misopasta', 'hoisin', 'teriyaki', 'bbq-sås', 'senap', 'ketchup', 'majonnäs', 'aioli', 'balsamvinäger', 'vitvinsvinäger', 'rödvinsvinäger', 'sushivinäger'] },
-  { cat: 'kryddor', words: ['salt', 'peppar', 'svartpeppar', 'vitpeppar', 'oregano', 'basilika', 'timjan', 'rosmarin', 'spiskummin', 'koriander', 'curry', 'paprikapulver', 'rökt paprika', 'chilipulver', 'kanel', 'kardemumma', 'kryddpeppar', 'lagerblad', 'muskotnöt', 'gurkmeja', 'cayennepeppar', 'vitlökspulver', 'lökpulver', 'dill', 'persilja', 'gräslök', 'dragon', 'mynta', 'citrongräs', 'zest', 'malen', 'torkad', 'hackad', 'rivet', 'buljong', 'buljongtärning', 'fond', 'olja', 'olivolja', 'rapsolja', 'sesamolja'] },
-  { cat: 'bröd', words: ['bröd', 'tortilla', 'pitabröd', 'pita', 'bagel', 'ciabatta', 'baguette', 'naanbröd', 'naan', 'knäckebröd', 'ströbröd', 'panko'] },
-  { cat: 'frys', words: ['fryst', 'frysta', 'frysärt', 'frysärtor'] },
-]
-
 function guessCategory(name: string): ShoppingCategory {
-  const lower = name.toLowerCase()
-  for (const { cat, words } of CATEGORY_MAP) {
-    if (words.some(w => lower.includes(w))) return cat
-  }
-  return 'övrigt'
+  return categoryFor(name)
 }
 
 // ── JSON-LD extraction ────────────────────────────────────────────────────────
@@ -354,7 +338,7 @@ function isLikelyHeader(s: string): boolean {
   const lower = s.toLowerCase()
   // Single-word compound names ending in sauce/component suffixes are headers
   if (words.length === 1 && COMPONENT_SUFFIXES.test(lower)) return true
-  const knownIngredient = CATEGORY_MAP.some(({ words: kws }) => kws.some(w => lower.includes(w)))
+  const knownIngredient = classifyIngredient(lower) !== null
   return !knownIngredient
 }
 

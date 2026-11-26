@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatedDiv } from '../common/Animated'
 import { Link } from 'react-router-dom'
 import { Plus, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/settingsStore'
@@ -24,7 +25,7 @@ export default function StockPage() {
 
   const stockList = (
     <div className="space-y-3">
-      <div className="card overflow-hidden divide-y divide-line-soft">
+      <AnimatedDiv className="card overflow-hidden divide-y divide-line-soft">
         {stock.length === 0 && (
           <p className="px-4 py-6 text-sm text-ink-muted">
             Inga förrådsvaror än. Välj "Förråd" i en varas Mathem-förslag på <Link to="/inkop">Inköp</Link>, eller lägg till här.
@@ -68,7 +69,7 @@ export default function StockPage() {
             </div>
           )
         })}
-      </div>
+      </AnimatedDiv>
       <form
         onSubmit={e => { e.preventDefault(); addStock(newName); setNewName('') }}
         className="flex items-center gap-2 bg-white rounded-full p-1.5 pl-4 shadow-[0_0_0_1px_rgba(21,23,26,0.06)]"
@@ -96,7 +97,7 @@ export default function StockPage() {
       {pantry.length === 0
         ? <p className="text-sm text-ink-muted">Inget än.</p>
         : (
-          <div className="flex flex-wrap gap-1.5">
+          <AnimatedDiv className="flex flex-wrap gap-1.5">
             {pantry.map(p => (
               <span key={p} className="inline-flex items-center gap-1 bg-canvas rounded-full pl-3 pr-1 py-1 text-[13px]">
                 {p}
@@ -105,7 +106,7 @@ export default function StockPage() {
                 </button>
               </span>
             ))}
-          </div>
+          </AnimatedDiv>
         )}
     </section>
   )

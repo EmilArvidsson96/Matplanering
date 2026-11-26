@@ -3,21 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# Queue deployments instead of cancelling one that is already publishing.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
@@ -40,5 +39,15 @@ jobs:
         with:
           path: dist
 
+  # A separate job, so the uploaded artifact is registered before deploy-pages
+  # looks for it ("No artifacts named github-pages were found" when they ran
+  # back to back in one job).
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/deploy-pages@v5.0.0
         id: deployment
