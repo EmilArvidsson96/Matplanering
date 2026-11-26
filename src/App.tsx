@@ -1,6 +1,6 @@
 import StockPage from './components/shopping/StockPage'
 import { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { usePinAuth } from './hooks/usePinAuth'
 import { useAutoSave, loadInitialData } from './hooks/useAutoSave'
 import { useWeekLoader } from './hooks/useWeekLoader'
@@ -62,6 +62,8 @@ export default function App() {
             <Route path="inst"      element={<SettingsPage />} />
             <Route path="spel"      element={<GamePanel />} />
             <Route path="forrad"    element={<StockPage />} />
+            {/* Mobile renders its "Mer" menu in AppShell; desktop has it all in the sidebar */}
+            <Route path="mer"       element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
         <FeedbackWidget />

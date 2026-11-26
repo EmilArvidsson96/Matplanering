@@ -6,7 +6,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
-import Modal, { type ModalHandle } from '../common/Modal'
+import SubPage, { type SubPageHandle } from '../common/SubPage'
 import SegmentedControl from '../common/SegmentedControl'
 import type {
   Dish, Ingredient, Protein, Carb, Cuisine, DishType, Tag, ShoppingCategory,
@@ -127,11 +127,10 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [tab, setTab] = useState<EditorTab>('grund')
-  // Sheets close through these so Spara/Klar/Avbryt get the same slide-out as the X
-  const editorModal = useRef<ModalHandle>(null)
-  const ingModal = useRef<ModalHandle>(null)
-  const confirmModal = useRef<ModalHandle>(null)
-  const closeEditor = () => (editorModal.current ? editorModal.current.close() : onClose())
+  // Sub-pages close through these so Spara/Klar/Avbryt get the same slide-out as the back arrow
+  const editorPage = useRef<SubPageHandle>(null)
+  const ingPage = useRef<SubPageHandle>(null)
+  const closeEditor = () => (editorPage.current ? editorPage.current.close() : onClose())
   const [editingIngId, setEditingIngId] = useState<string | null>(null)
   const isDesktop = useIsDesktop()
   const [fetchStatus, setFetchStatus] = useState<{ state: 'idle' | 'loading' | 'error'; error: string; info?: string }>({ state: 'idle', error: '' })
@@ -558,6 +557,25 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     </div>
   )
 
+  // Inline confirmation (no dialog): replaces the delete button until answered.
+  const deleteConfirm = (
+    <div role="alert" className={`rounded-3xl border border-red-200 bg-red-50 ${isDesktop ? 'flex items-center gap-3 px-4 py-2' : 'p-4 space-y-3'}`}>
+      <p className={`text-[14px] text-red-800 ${isDesktop ? 'flex-1' : ''}`}>
+        <span className="font-semibold">Ta bort {dish?.name}?</span> Det går inte att ångra.
+      </p>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setConfirmDelete(false)} className={`btn-secondary ${isDesktop ? '' : 'flex-1'}`}>Avbryt</button>
+        <button
+          type="button"
+          onClick={() => { if (dish) { const id = dish.id; editorPage.current ? editorPage.current.close(() => deleteDish(id)) : (deleteDish(id), onClose()) } }}
+          className={`h-12 px-5 rounded-full bg-red-700 hover:bg-red-800 text-white font-semibold text-[15px] ${isDesktop ? '' : 'flex-1'}`}
+        >
+          Ta bort
+        </button>
+      </div>
+    </div>
+  )
+
   const mer = (
     <div className="space-y-6">
       <div>
@@ -602,7 +620,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
           className="field h-auto py-3 resize-none"
         />
       </div>
-      {!isNew && !isDesktop && (
+      {!isNew && !isDesktop && (confirmDelete ? deleteConfirm : (
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
@@ -610,7 +628,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         >
           <Trash2 className="w-[18px] h-[18px]" /> Ta bort rätten
         </button>
-      )}
+      ))}
     </div>
   )
 
@@ -627,7 +645,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
     />
   )
 
-  const footer = isDesktop ? (
+  const footer = isDesktop ? (confirmDelete ? deleteConfirm : (
     <div className="flex items-center justify-between gap-3">
       {!isNew ? (
         <button
@@ -645,7 +663,7 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         </button>
       </div>
     </div>
-  ) : (
+  )) : (
     <button type="button" onClick={save} disabled={!form.name.trim()} className="btn-primary w-full h-14 text-base">
       {isNew ? 'Lägg till rätten' : 'Spara'}
     </button>
@@ -653,13 +671,12 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
 
   return (
     <>
-      <Modal
-        ref={editorModal}
+      <SubPage
+        ref={editorPage}
         title={form.name.trim() || (isNew ? 'Ny rätt' : 'Namnlös rätt')}
         subtitle={isNew ? 'Ny rätt' : 'Redigera rätt'}
         onClose={onClose}
         wide
-        fullHeight
         toolbar={isDesktop ? undefined : mobileTabs}
         footer={footer}
       >
@@ -688,22 +705,22 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
         ) : (
           <div key={tab} className="pt-1 motion-safe:animate-fade-up">{panels[tab]}</div>
         )}
-      </Modal>
+      </SubPage>
 
-      {/* Mobile: edit one ingredient in its own half sheet */}
+      {/* Mobile: edit one ingredient on its own sub-page */}
       {editingIng && !isDesktop && (
-        <Modal ref={ingModal} title="Ingrediens" onClose={() => setEditingIngId(null)}
+        <SubPage ref={ingPage} title="Ingrediens" onClose={() => setEditingIngId(null)}
           footer={
             <div className="flex gap-2.5">
               <button
                 type="button"
-                onClick={() => { const id = editingIng.id; ingModal.current?.close(() => removeIngredient(id)) }}
+                onClick={() => { const id = editingIng.id; ingPage.current?.close(() => removeIngredient(id)) }}
                 aria-label="Ta bort ingrediens"
                 className="w-14 h-14 rounded-full bg-red-50 text-red-700 flex items-center justify-center shrink-0"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
-              <button type="button" onClick={() => ingModal.current?.close()} className="btn-primary flex-1 h-14 text-base">Klar</button>
+              <button type="button" onClick={() => ingPage.current?.close()} className="btn-primary flex-1 h-14 text-base">Klar</button>
             </div>
           }
         >
@@ -758,30 +775,9 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               </select>
             </div>
           </div>
-        </Modal>
+        </SubPage>
       )}
 
-      {/* Confirm delete */}
-      {confirmDelete && dish && (
-        <Modal ref={confirmModal} title={`Ta bort ${dish.name}?`} onClose={() => setConfirmDelete(false)}
-          footer={
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
-              <button type="button" onClick={() => confirmModal.current?.close()} className="btn-secondary h-14 sm:h-12">Avbryt</button>
-              <button
-                type="button"
-                onClick={() => confirmModal.current?.close(() => { deleteDish(dish.id); closeEditor() })}
-                className="h-14 sm:h-12 px-6 rounded-full bg-red-700 hover:bg-red-800 text-white font-semibold text-[15px]"
-              >
-                Ta bort
-              </button>
-            </div>
-          }
-        >
-          <p className="text-[15px] text-ink-muted leading-relaxed pt-1">
-            Rätten försvinner från biblioteket. Det går inte att ångra.
-          </p>
-        </Modal>
-      )}
     </>
   )
 }
