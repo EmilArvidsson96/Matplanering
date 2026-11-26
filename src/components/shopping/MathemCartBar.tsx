@@ -33,9 +33,10 @@ export default function MathemCartBar({ weekId, items, waiting }: {
   }
   const lines = () => chosen.map(i => ({ productId: i.mathem!.product!.productId, quantity: i.mathem!.quantity, label: i.name }))
 
-  function openMathem() {
+  // A plain link (not window.open): opens a normal tab that popup blockers and
+  // installed home-screen apps leave alone.
+  function onOpenMathem() {
     learnAll()
-    window.open(cartHandoffUrl(lines()), '_blank')
     setSent(true)
     setHelp(true)
   }
@@ -78,13 +79,21 @@ export default function MathemCartBar({ weekId, items, waiting }: {
 
       {!runningHere && (
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={openMathem}
-            disabled={chosen.length === 0}
-            className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold"
-          >
-            Fyll korgen på Mathem
-          </button>
+          {chosen.length > 0 ? (
+            <a
+              href={cartHandoffUrl(lines())}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onOpenMathem}
+              className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold inline-flex items-center"
+            >
+              Fyll korgen på Mathem
+            </a>
+          ) : (
+            <button disabled className="h-10 px-4 rounded-full bg-brand-600 opacity-50 text-white text-sm font-semibold">
+              Fyll korgen på Mathem
+            </button>
+          )}
           <button
             onClick={copyForClaude}
             disabled={chosen.length === 0}
@@ -136,7 +145,8 @@ function BookmarkletHelp({ open, sent, onToggle }: { open: boolean; sent: boolea
           >
             Fyll Mathem-korg
           </a>{' '}
-          till bokmärkesfältet. Du behöver vara inloggad på mathem.se. Med Claude: tryck "Kopiera till Claude" och klistra in i
+          till bokmärkesfältet. Har du ett äldre bokmärke (som visar rutor du måste klicka bort)? Ta bort det och dra in det
+          här igen. Bokmärket visar resultatet i en rad överst på Mathem-sidan. Du behöver vara inloggad på mathem.se. Med Claude: tryck "Kopiera till Claude" och klistra in i
           Claude-appen. Dina val sparas och används nästa gång.
         </p>
       )}

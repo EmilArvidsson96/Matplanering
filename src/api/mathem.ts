@@ -180,18 +180,31 @@ export function cartHandoffUrl(lines: CartLine[]): string {
 
 /**
  * Bookmarklet run on mathem.se: reads #matplan=…, POSTs it to the cart with
- * the page's own session + CSRF token, clears the hash so a second click
- * can't add everything twice, and reloads the cart.
+ * the page's own session + CSRF token and clears the hash so a second click
+ * can't add everything twice.
+ *
+ * No alert() boxes: progress and the result show in a status bar at the top of
+ * the Mathem page (in the page flow, closable), with a "Visa korgen" button
+ * that reloads the cart once everything is in.
  */
 export const MATHEM_BOOKMARKLET = 'javascript:' + encodeURIComponent(`(async()=>{
+const C={info:'#15171a',ok:'#1f7a4d',err:'#b42318'};
+const btn=(t,f,l)=>{const e=document.createElement('button');e.textContent=t;if(l)e.setAttribute('aria-label',l);e.onclick=f;e.style.cssText='all:unset;cursor:pointer;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.18);font:600 14px system-ui,sans-serif';return e};
+const say=(t,k,a)=>{let b=document.getElementById('matplan-msg');if(!b){b=document.createElement('div');b.id='matplan-msg';b.setAttribute('role','status');document.body.prepend(b)}
+b.style.cssText='position:sticky;top:0;z-index:2147483647;display:flex;gap:10px;align-items:center;padding:12px 16px;color:#fff;background:'+C[k]+';font:600 15px/1.35 system-ui,sans-serif';
+b.replaceChildren();const s=document.createElement('span');s.style.flex='1';s.textContent=t;b.append(s);
+if(a)b.append(btn(a[0],a[1]));b.append(btn('✕',()=>b.remove(),'Stäng'));scrollTo(0,0)};
+if(window.__matplanBusy)return;
 const m=location.hash.match(/matplan=([^&]+)/);
-if(!m){alert('Ingen inköpslista hittades. Öppna Mathem via knappen i Matplanering först.');return}
-let plan;try{plan=JSON.parse(atob(decodeURIComponent(m[1])))}catch(e){alert('Kunde inte läsa listan.');return}
-const c=document.cookie.match(/csrftoken=([^;]+)/);
+if(!m){say('Ingen inköpslista hittades. Öppna Mathem via knappen "Fyll korgen på Mathem" i Matplanering först.','err');return}
+let plan;try{plan=JSON.parse(atob(decodeURIComponent(m[1])))}catch(e){say('Kunde inte läsa inköpslistan. Öppna Mathem igen från Matplanering.','err');return}
+window.__matplanBusy=1;say('Lägger '+plan.length+' produkter i korgen…','info');
+try{const c=document.cookie.match(/csrftoken=([^;]+)/);
 const r=await fetch('/api/v1/cart/items/',{method:'POST',credentials:'include',headers:{'content-type':'application/json',accept:'application/json','x-csrftoken':c?c[1]:''},body:JSON.stringify({items:plan.map(p=>({product_id:p[0],quantity:p[1]}))})});
-history.replaceState(null,'',location.pathname+location.search);
-if(r.ok){alert('Klart! '+plan.length+' produkter lades i korgen.');location.reload()}
-else alert('Mathem svarade '+r.status+'. Är du inloggad på mathem.se?')
+if(r.ok){history.replaceState(null,'',location.pathname+location.search);say('Klart! '+plan.length+' produkter ligger i korgen.','ok',['Visa korgen',()=>location.reload()])}
+else say('Mathem svarade '+r.status+(r.status==401||r.status==403?'. Logga in på mathem.se och klicka på bokmärket igen.':'. Försök igen om en stund.'),'err')}
+catch(e){say('Kunde inte nå Mathem. Kontrollera uppkopplingen och klicka på bokmärket igen.','err')}
+finally{window.__matplanBusy=0}
 })()`)
 
 /** Instructions + plan for Claude (desktop app with Chrome control). */
