@@ -23,8 +23,11 @@ interface MathemJob {
   total: number
   error: string | null
   /** Find products for rows without a suggestion (or all rows with refresh). */
-  start: (weekId: string, items: ShoppingItem[], opts?: { refresh?: boolean }) => void
+  start: (weekId: string, items: ShoppingItem[], opts?: { refresh?: boolean; retry?: boolean }) => void
 }
+
+/** Rows tried this session, so the automatic start doesn't retry a failing row in a loop. */
+const tried = new Set<string>()
 
 const AI_CHUNK = 15
 const SEARCH_CONCURRENCY = 4
@@ -70,8 +73,10 @@ export const useMathemJob = create<MathemJob>((set, get) => ({
 
   start: (weekId, allItems, opts) => {
     if (get().running) return
-    const items = allItems.filter(i => !i.isPurchased && !i.isExcluded && !i.deletedAt && (opts?.refresh || !i.mathem))
+    const items = allItems.filter(i => !i.isPurchased && !i.isExcluded && !i.deletedAt
+      && (opts?.refresh || (!i.mathem && (opts?.retry || !tried.has(i.id)))))
     if (items.length === 0) return
+    for (const i of items) tried.add(i.id)
     set({ running: true, weekId, pending: new Set(items.map(i => i.id)), total: items.length, error: null })
     run(weekId, items).finally(() => set({ running: false, pending: new Set() }))
   },
@@ -144,7 +149,7 @@ async function run(weekId: string, items: ShoppingItem[]) {
 
       const pref = findPreference(item.name, learned)
       const fixed = pref?.fixedQuantity
-      const current = pref && !avoid.has(pref.productId) ? (await getMathemProduct(pref.productId)) ?? undefined : undefined
+      const current = pref && !avoid.has(Number(pref.productId)) ? (await getMathemProduct(Number(pref.productId))) ?? undefined : undefined
 
       // A known choice that still follows the rules needs no search at all.
       if (current && passesRules(current, rules) && !settings.shoppingRules?.preferOffers) {

@@ -3,6 +3,8 @@ import { Minus, Plus, X, ChevronRight, ChevronUp, ChevronDown, Link2, Download, 
 import { useIsDesktop } from '../../hooks/useDevice'
 import { v4 as uuid } from 'uuid'
 import { useLibraryStore } from '../../store/libraryStore'
+import { useSettingsStore } from '../../store/settingsStore'
+import { CATEGORY_ORDER, CATEGORY_LABELS, categoryFor } from '../../data/categories'
 import { useWeekStore } from '../../store/weekStore'
 import { dishMostCommonMonth, MONTH_NAMES } from '../../utils/weekUtils'
 import { fetchRecipeFromUrl, type RecipeFetchResult } from '../../utils/recipeFetcher'
@@ -17,7 +19,6 @@ const ALL_CARBS:    Carb[]    = ['ris','pasta','potatis','nudlar','bröd','ingen
 const ALL_CUISINES: Cuisine[] = ['svensk','italiensk','asiatisk','japansk','koreansk','indisk','mellanöstern','mexikansk','fransk','nordafrikansk','övrigt']
 const ALL_TYPES:    DishType[] = ['soppa','sallad','paj','gryta','grillat','bowl','burgare','taco','wrap','pizza','pasta','curry','risotto','omelett','smörgås','wok','sushi','köttbit']
 const ALL_TAGS:     Tag[]     = ['snabb','festlig','barnvänlig','lowfodmap','lchf','stark','lågfett']
-const ALL_CATS:     ShoppingCategory[] = ['mejeri','kött','fisk','grönsaker','frukt','torrvaror','konserver','frys','bröd','kryddor','övrigt']
 const ALL_MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 const LABEL: Record<string, string> = {
@@ -119,6 +120,7 @@ function blank(): Omit<Dish, 'id' | 'cookingHistory'> {
 
 export default function DishEditor({ dish, initialName, onClose, onSaved }: Props) {
   const { addDish, updateDish, deleteDish } = useLibraryStore()
+  const { settings, setCategoryOverride } = useSettingsStore()
   const weeks = Object.values(useWeekStore().weeks)
   const [form, setForm] = useState<Omit<Dish, 'id' | 'cookingHistory'>>(
     dish
@@ -177,8 +179,22 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
   function updateIngredient(id: string, patch: Partial<Ingredient>) {
     setForm(f => ({
       ...f,
-      ingredients: f.ingredients.map(i => i.id === id ? { ...i, ...patch } : i),
+      ingredients: f.ingredients.map(i => {
+        if (i.id !== id) return i
+        const next = { ...i, ...patch }
+        // A new name in Övrigt gets ICA's category; a category set by hand is kept.
+        if (patch.name !== undefined && i.category === 'övrigt') {
+          next.category = categoryFor(patch.name, 'övrigt', settings.categoryOverrides)
+        }
+        return next
+      }),
     }))
+  }
+
+  /** A category picked by hand: remembered for this ingredient everywhere. */
+  function pickCategory(ing: Ingredient, category: ShoppingCategory) {
+    updateIngredient(ing.id, { category })
+    if (ing.name.trim()) setCategoryOverride(ing.name, category)
   }
 
   function removeIngredient(id: string) {
@@ -436,10 +452,10 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               <select
                 aria-label="Kategori"
                 value={ing.category}
-                onChange={e => updateIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
+                onChange={e => pickCategory(ing, e.target.value as ShoppingCategory)}
                 className="cell"
               >
-                {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
+                {CATEGORY_ORDER.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
               </select>
               <button
                 type="button"
@@ -768,10 +784,10 @@ export default function DishEditor({ dish, initialName, onClose, onSaved }: Prop
               <select
                 id="ing-cat"
                 value={editingIng.category}
-                onChange={e => updateIngredient(editingIng.id, { category: e.target.value as ShoppingCategory })}
+                onChange={e => pickCategory(editingIng, e.target.value as ShoppingCategory)}
                 className="field"
               >
-                {ALL_CATS.map(c => <option key={c} value={c}>{LABEL[c] ?? c}</option>)}
+                {CATEGORY_ORDER.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
               </select>
             </div>
           </div>

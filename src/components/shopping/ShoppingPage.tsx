@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { RefreshCw, Sparkles, CheckCheck, ShoppingCart, Plus, Check, Home, X } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useWeekStore, activeWeek } from '../../store/weekStore'
@@ -8,10 +8,17 @@ import type { ShoppingItem, ShoppingCategory } from '../../types'
 import { mergeExactDuplicates, computeMergeSuggestions, computeMergedAmount } from '../../utils/ingredientMerge'
 import type { MergeSuggestion } from '../../utils/ingredientMerge'
 import { cleanupShoppingList } from '../../api/anthropic'
-import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
+import { componentCookPortions, isExtraMeal, formatWeekParts } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
-import MathemCartBar from './MathemCartBar'
+import { DEFAULT_ICA_STORE } from '../../api/ica'
+import { shortIcaName } from '../../api/shops'
+import type { ShopId } from '../../types'
+import { CATEGORY_LABELS, CATEGORY_ORDER, categoryFor, subFor } from '../../data/categories'
+import StoreCompare, { compareStores, icaFor, rowCost, kr } from './StoreCompare'
+import IcaListSection from './IcaListSection'
 import MathemSuggestionLine, { MathemRowEditor } from './MathemSuggestionLine'
+import IcaSuggestionLine, { IcaRowEditor } from './IcaSuggestionLine'
+import { useIcaJob, needsIca } from '../../store/icaJob'
 import AtHomeSection from './AtHomeSection'
 import { AnimatedDiv } from '../common/Animated'
 import RemovedSection from './RemovedSection'
@@ -22,30 +29,26 @@ import { markAtHome, removeItem, recordStockUsage } from '../../store/shoppingAc
 import { batch } from '../../store/undoStore'
 import { useMinWidth } from '../../hooks/useDevice'
 
-const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
-  grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
-  kött: 'Kött & chark', fisk: 'Fisk & skaldjur', bröd: 'Bröd & bakverk',
-  torrvaror: 'Torrvaror', konserver: 'Konserver', frys: 'Frys',
-  kryddor: 'Kryddor & smaksättare', övrigt: 'Övrigt',
-}
-const CATEGORY_ORDER: ShoppingCategory[] = [
-  'grönsaker','frukt','mejeri','kött','fisk','bröd','torrvaror','konserver','frys','kryddor','övrigt',
-]
-
 export default function ShoppingPage() {
   const store         = useWeekStore()
   const week          = activeWeek(store)
   const { dishes }    = useLibraryStore()
-  const { settings }  = useSettingsStore()
+  const { settings, setCategoryOverride, update: updateSettings } = useSettingsStore()
+  const icaStore = settings.icaStore ?? DEFAULT_ICA_STORE
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
+  const [newCatTouched, setNewCatTouched] = useState(false)
   const [showPurchased, setShowPurchased] = useState(false)
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
   const mathemJob = useMathemJob()
+  const icaJob = useIcaJob()
   const wide = useMinWidth(1180)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const asideRef = useRef<HTMLElement>(null)
+  // A new row picked: show its product picker from the top.
+  useEffect(() => { if (editingId) asideRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }, [editingId])
 
   const allItems = week.shoppingList
   /** Everything that's not deleted (deleted rows only show under Borttagna). */
@@ -83,7 +86,7 @@ export default function ShoppingPage() {
             name: ing.name,
             amount: (ing.amount * scale).toFixed(1).replace(/\.0$/, ''),
             unit: ing.unit,
-            category: ing.category,
+            category: categoryFor(ing.name, ing.category, settings.categoryOverrides),
             isAutoAdded: true,
             dishIds: [comp.dishId],
             isPurchased: false,
@@ -93,7 +96,7 @@ export default function ShoppingPage() {
       }
     }
 
-    // Keep answers and Mathem suggestions for ingredients that are still on the list.
+    // Keep answers and store suggestions for ingredients that are still on the list.
     const previous = new Map(
       items.filter(i => i.isAutoAdded && i.excludedReason !== 'pantry').map(i => [ingredientKey(i.name), i]),
     )
@@ -101,12 +104,14 @@ export default function ShoppingPage() {
       const prev = previous.get(ingredientKey(item.name))
       if (!prev) return item
       const m = prev.mathem
+      const ica = prev.ica
       return {
         ...item,
         isPurchased: prev.isPurchased,
         isExcluded: prev.isExcluded, excludedReason: prev.excludedReason, excludedAt: prev.excludedAt,
         homeAnswer: prev.homeAnswer,
         mathem: m?.product ? { ...m, quantity: m.note === 'Förrådsvara' ? m.quantity : packsFor(item, m.product.packSize, m.quantity) } : m,
+        ica: ica?.product ? { ...ica, quantity: ica.note === 'Förrådsvara' ? ica.quantity : packsFor(item, ica.product.packSize, ica.quantity) } : ica,
       }
     })
 
@@ -134,7 +139,10 @@ export default function ShoppingPage() {
       name: newItem.trim(), amount: '', unit: '', category: newCat,
       isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
+    if (newCatTouched) setCategoryOverride(newItem.trim(), newCat)
     setNewItem('')
+    setNewCat('övrigt')
+    setNewCatTouched(false)
   }
 
   function markAllPurchased() {
@@ -214,6 +222,8 @@ export default function ShoppingPage() {
 
   function applyAiRecat(recat: AiCleanupResult['recategorizations'][number]) {
     store.updateShoppingItem(recat.itemId, { category: recat.category })
+    const item = items.find(i => i.id === recat.itemId)
+    if (item) setCategoryOverride(item.name, recat.category)
     setAiResult(r => r && { ...r, recategorizations: r.recategorizations.filter(x => x !== recat) })
   }
 
@@ -246,6 +256,10 @@ export default function ShoppingPage() {
       const list = map.get(item.category) ?? map.get('övrigt')!
       list.push(item)
     }
+    // Within a category, keep ICA's sub-departments together (Pasta, Torra kryddor, Asiatiskt …).
+    for (const list of map.values()) {
+      list.sort((a, b) => subFor(a.name).localeCompare(subFor(b.name), 'sv'))
+    }
     return [...map.entries()].filter(([, list]) => list.length > 0)
   }, [items, showPurchased, guesses])
 
@@ -263,28 +277,54 @@ export default function ShoppingPage() {
 
   const unpurchasedCount = items.filter(i => !i.isPurchased && !i.isExcluded).length
 
+  // Prices from every store, fetched in the background as soon as the list
+  // has rows without them. Each job tries a row once per session; the
+  // comparison card offers to try again. ICA goes slowly on purpose.
+  const mathemNeed = items.filter(i => !i.isPurchased && !i.isExcluded && !i.mathem).map(i => i.id).join()
+  useEffect(() => {
+    if (mathemNeed && !mathemJob.running) mathemJob.start(week.id, items)
+  }, [mathemNeed, mathemJob.running, week.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const icaNeed = items.filter(i => needsIca(i, icaStore.id)).map(i => i.id).join()
+  useEffect(() => {
+    if (icaNeed && !icaJob.running) icaJob.start(week.id, icaStore.id, items)
+  }, [icaNeed, icaJob.running, week.id, icaStore.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const activeItems = items.filter(i => !i.isExcluded)
   const purchasedCount = activeItems.filter(i => i.isPurchased).length
   const progressPct = activeItems.length ? Math.round((purchasedCount / activeItems.length) * 100) : 0
 
-  const waitingIds = new Set(guesses.map(g => g.item.id))
-  const editingItem = editingId ? items.find(i => i.id === editingId && i.mathem && !i.isExcluded) : undefined
+  const waitingIds = useMemo(() => new Set(guesses.map(g => g.item.id)), [guesses])
+  const cmp = useMemo(() => compareStores(items, waitingIds, icaStore.id), [items, waitingIds, icaStore.id])
+  // The household's pick, else the cheapest store, else ICA.
+  const shop: ShopId = settings.preferredShop ?? cmp.cheapest ?? 'ica'
+  const icaRunning = icaJob.running && icaJob.weekId === week.id
+  const suggestionFor = (i: ShoppingItem) => shop === 'ica' ? icaFor(i, icaStore.id) : i.mathem
+  const editingItem = editingId ? items.find(i => i.id === editingId && suggestionFor(i) && !i.isExcluded) : undefined
+  const compare = (
+    <StoreCompare
+      weekId={week.id}
+      items={items}
+      cmp={cmp}
+      shop={shop}
+      onShop={id => updateSettings({ preferredShop: id })}
+      icaStore={icaStore}
+    />
+  )
+  // The product picker goes first while it's open, so it's in view wherever you are in the list.
   const side = (
     <>
-      <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />
       {wide && editingItem && (
         <section aria-label={`Redigera ${editingItem.name}`} className="card p-1 space-y-1">
           <p className="px-3 pt-2.5 text-[15px] font-bold">
             {editingItem.name} <span className="text-[13px] font-normal text-ink-muted">{editingItem.amount} {editingItem.unit}</span>
           </p>
-          <MathemRowEditor
-            item={editingItem}
-            onUpdate={p => store.updateShoppingItem(editingItem.id, p)}
-            onClose={() => setEditingId(null)}
-          />
+          {shop === 'ica'
+            ? <IcaRowEditor item={editingItem} onUpdate={p => store.updateShoppingItem(editingItem.id, p)} onClose={() => setEditingId(null)} />
+            : <MathemRowEditor item={editingItem} onUpdate={p => store.updateShoppingItem(editingItem.id, p)} onClose={() => setEditingId(null)} />}
         </section>
       )}
-      <RemovedSection items={allItems} defaultOpen={wide} />
+      {compare}
+      <RemovedSection items={allItems} defaultOpen={wide && !editingItem} />
     </>
   )
 
@@ -322,14 +362,6 @@ export default function ShoppingPage() {
         >
           <Sparkles className="w-4 h-4" /> {aiLoading ? 'Städar…' : 'Städa med AI'}
         </button>
-        {unpurchasedCount > 0 && !items.some(i => i.mathem) && !mathemRunning && (
-          <button
-            onClick={() => mathemJob.start(week.id, items)}
-            className="chip shrink-0 bg-brand-600 border-brand-600 text-white font-semibold hover:bg-brand-700"
-          >
-            <ShoppingCart className="w-4 h-4" /> Hämta Mathem-förslag
-          </button>
-        )}
         {unpurchasedCount > 0 && (
           <button onClick={markAllPurchased} className="chip chip-off shrink-0 font-medium">
             <CheckCheck className="w-4 h-4" /> Allt handlat ({unpurchasedCount})
@@ -337,7 +369,7 @@ export default function ShoppingPage() {
         )}
       </div>
 
-      {!wide && <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />}
+      {!wide && compare}
 
       <AtHomeSection guesses={guesses} wide={wide} />
 
@@ -386,7 +418,11 @@ export default function ShoppingPage() {
                     key={item.id}
                     item={item}
                     recipeNames={(item.dishIds ?? []).map(id => dishNameById.get(id)).filter((n): n is string => !!n)}
-                    mathemPending={mathemRunning && mathemJob.pending.has(item.id)}
+                    shop={shop}
+                    icaStore={icaStore}
+                    pending={shop === 'ica'
+                      ? (icaRunning && icaJob.pending.has(item.id) ? 'Väntar på ICA-priser…' : null)
+                      : (mathemRunning && mathemJob.pending.has(item.id) ? 'Söker på Mathem…' : null)}
                     onToggle={() => store.updateShoppingItem(item.id, { isPurchased: !item.isPurchased })}
                     onExclude={() => markAtHome(item)}
                     onDelete={() => removeItem(item)}
@@ -402,6 +438,11 @@ export default function ShoppingPage() {
         </AnimatedDiv>
       )}
 
+      <IcaListSection
+        items={items.filter(i => !i.isPurchased && !i.isExcluded)}
+        defaultName={`Matplan ${formatWeekParts(week.id).title.replace('Vecka ', 'v.')}`}
+      />
+
       {!wide && <RemovedSection items={allItems} />}
 
       {/* Add item — sticks above the tab bar on mobile so it stays in thumb reach */}
@@ -413,14 +454,17 @@ export default function ShoppingPage() {
             aria-label="Lägg till vara"
             placeholder="Lägg till vara"
             value={newItem}
-            onChange={e => setNewItem(e.target.value)}
+            onChange={e => {
+              setNewItem(e.target.value)
+              if (!newCatTouched) setNewCat(categoryFor(e.target.value, 'övrigt', settings.categoryOverrides))
+            }}
             onKeyDown={e => e.key === 'Enter' && addManual()}
             className="flex-1 min-w-0 h-10 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
           <select
             aria-label="Kategori"
             value={newCat}
-            onChange={e => setNewCat(e.target.value as ShoppingCategory)}
+            onChange={e => { setNewCat(e.target.value as ShoppingCategory); setNewCatTouched(true) }}
             className="h-10 max-w-[120px] rounded-full bg-canvas px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-300"
           >
             {CATEGORY_ORDER.map(c => (
@@ -438,7 +482,15 @@ export default function ShoppingPage() {
         </div>
       </div>
     </AnimatedDiv>
-    {wide && <aside className="sticky top-0"><AnimatedDiv className="space-y-4">{side}</AnimatedDiv></aside>}
+    {wide && (
+      // Follows the scroll, and never gets taller than the window: if it does, it scrolls on its own.
+      <aside
+        ref={asideRef}
+        className="sticky top-3 max-h-[calc(100dvh-96px)] overflow-y-auto overscroll-contain -mx-1 px-1 pb-3 [scrollbar-width:thin]"
+      >
+        <AnimatedDiv className="space-y-4">{side}</AnimatedDiv>
+      </aside>
+    )}
     </div>
   )
 }
@@ -607,11 +659,14 @@ function AiCleanupPanel({
 }
 
 function ShoppingItemRow({
-  item, recipeNames, mathemPending, onToggle, onExclude, onDelete, onUpdate, mathemOpen, onMathemToggle, inlineEditor,
+  item, recipeNames, shop, icaStore, pending, onToggle, onExclude, onDelete, onUpdate, mathemOpen, onMathemToggle, inlineEditor,
 }: {
   item: ShoppingItem
   recipeNames: string[]
-  mathemPending: boolean
+  shop: ShopId
+  icaStore: { id: string; name: string }
+  /** Text while the chosen store's job is still looking for this row. */
+  pending: string | null
   mathemOpen: boolean
   onMathemToggle: () => void
   inlineEditor: boolean
@@ -621,6 +676,15 @@ function ShoppingItemRow({
   onUpdate: (p: Partial<ShoppingItem>) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const ica = icaFor(item, icaStore.id)
+  // The other store's price, small under this one's, so every row compares.
+  const otherCost = rowCost(shop === 'ica' ? item.mathem : ica)
+  const otherName = shop === 'ica' ? 'Mathem' : shortIcaName(icaStore.name)
+  const otherMissing = shop === 'ica'
+    ? item.mathem && !item.mathem.product && item.mathem.note !== 'Inte en vara'
+    : ica && !ica.product && ica.note !== 'Inte en vara'
+  const other = otherCost != null ? `${otherName} ${kr(otherCost)}` : otherMissing ? `Finns inte hos ${otherName}` : undefined
+  const lineProps = { item, onUpdate, open: mathemOpen, onToggle: onMathemToggle, inlineEditor, other }
 
   return (
     // The row's own root must not be an animated list, or its fade-out is cancelled on removal.
@@ -717,9 +781,13 @@ function ShoppingItemRow({
     </div>
     <AnimatedDiv>
     {!editing && !item.isPurchased && (
-      item.mathem
-        ? <MathemSuggestionLine item={item} onUpdate={onUpdate} open={mathemOpen} onToggle={onMathemToggle} inlineEditor={inlineEditor} />
-        : mathemPending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">Söker på Mathem…</p>
+      shop === 'ica'
+        ? ica
+          ? <IcaSuggestionLine {...lineProps} />
+          : pending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">{pending}</p>
+        : item.mathem
+          ? <MathemSuggestionLine {...lineProps} />
+          : pending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">{pending}</p>
     )}
     </AnimatedDiv>
     </div>

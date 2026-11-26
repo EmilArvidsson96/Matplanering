@@ -10,6 +10,7 @@ import { batch, notify } from './undoStore'
 import { cachedProduct } from '../api/mathem'
 import { ingredientKey } from '../utils/productMatch'
 import { lookupByKey, newStockItem, stockLevel } from '../utils/stock'
+import { categoryFor } from '../data/categories'
 
 const now = () => new Date().toISOString()
 const week = () => useWeekStore.getState()
@@ -67,6 +68,7 @@ export function answerBuy(item: ShoppingItem, opts: { silent?: boolean } = {}) {
           note: 'Förrådsvara', matchedAt: now(),
         }
       }
+      if (item.ica?.product) patch.ica = { ...item.ica, quantity: 1, include: true, note: 'Förrådsvara' }
     }
     week().updateShoppingItem(item.id, patch)
     countAnswer(item.name, 'buy')
@@ -115,7 +117,10 @@ export function setBuyMode(item: ShoppingItem, mode: BuyMode) {
         productId: p?.productId, productName: p?.name, packSize: p?.packSize, imageUrl: p?.imageUrl,
       }))
       updateSettings({ stockDeclined: (settings().stockDeclined ?? []).filter(k => k !== key) })
-      if (item.mathem?.product) week().updateShoppingItem(item.id, { mathem: { ...item.mathem, quantity: 1, note: 'Förrådsvara' } })
+      week().updateShoppingItem(item.id, {
+        ...(item.mathem?.product ? { mathem: { ...item.mathem, quantity: 1, note: 'Förrådsvara' } } : {}),
+        ...(item.ica?.product ? { ica: { ...item.ica, quantity: 1, note: 'Förrådsvara' } } : {}),
+      })
     }
     if (mode === 'pantry') {
       useSettingsStore.getState().addPantryItem(lower)
@@ -175,7 +180,7 @@ export function stockOut(key: string) {
       w.updateShoppingItem(existing.id, { isExcluded: false, excludedReason: undefined, isPurchased: false, homeAnswer: 'buy' })
     } else {
       w.addShoppingItem({
-        name: s.name, amount: '', unit: '', category: s.category ?? 'övrigt', isAutoAdded: false,
+        name: s.name, amount: '', unit: '', category: categoryFor(s.name, s.category), isAutoAdded: false,
         dishIds: [], isPurchased: false, isExcluded: false, homeAnswer: 'buy',
       })
     }

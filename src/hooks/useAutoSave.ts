@@ -4,7 +4,7 @@ import { useWeekStore } from '../store/weekStore'
 import { useLibraryStore } from '../store/libraryStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useGameStore } from '../store/gameStore'
-import { migrateWeek } from '../utils/weekUtils'
+import { migrateWeek, migrateDishCategories } from '../utils/weekUtils'
 import type { AppSettings, LibraryData, WeekPlan } from '../types'
 import type { GameData } from '../types/game'
 
@@ -138,7 +138,7 @@ export function useAutoSave() {
       if (!libraryStore.isDirty) {
         const file = await getFile('library.json')
         if (file && file.sha !== libraryStore.sha) {
-          libraryStore.load((JSON.parse(file.content) as LibraryData).dishes, file.sha)
+          libraryStore.load(migrateDishCategories((JSON.parse(file.content) as LibraryData).dishes), file.sha)
         }
       }
       if (!settingsStore.isDirty) {
@@ -185,14 +185,14 @@ export async function loadInitialData() {
   if (libFile) {
     const data = JSON.parse(libFile.content) as LibraryData
     if (data.dishes && data.dishes.length > 0) {
-      libraryStore.load(data.dishes, libFile.sha)
+      libraryStore.load(migrateDishCategories(data.dishes), libFile.sha)
     } else {
       const { INITIAL_DISHES } = await import('../data/library')
-      libraryStore.seed(INITIAL_DISHES)
+      libraryStore.seed(migrateDishCategories(INITIAL_DISHES))
     }
   } else {
     const { INITIAL_DISHES } = await import('../data/library')
-    libraryStore.seed(INITIAL_DISHES)
+    libraryStore.seed(migrateDishCategories(INITIAL_DISHES))
   }
 
   // Load active week
