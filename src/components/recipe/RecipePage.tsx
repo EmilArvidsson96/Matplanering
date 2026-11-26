@@ -7,6 +7,7 @@ import { useIsDesktop } from '../../hooks/useDevice'
 import { componentCookPortions, mealCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { Dish, ExtraType } from '../../types'
 import { ExtraTypeIcon } from '../steps/ExtraCookingSection'
+import DishImage from '../common/DishImage'
 
 type WeekItem = { key: string; dish: Dish | null; name: string; portions: number; extra: ExtraType | null }
 import RecipeDetail from './RecipeDetail'
@@ -145,7 +146,10 @@ export default function RecipePage() {
             selectedId === dish.id ? 'bg-mint' : ''
           }`}
         >
-          <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
+          <span className="flex items-center gap-3 min-w-0">
+            <DishImage dish={dish} className="w-9 h-9 rounded-lg object-cover shrink-0 bg-canvas" fallback={<span className="w-9 h-9 rounded-lg bg-canvas shrink-0" />} />
+            <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
+          </span>
           <span className="shrink-0 flex items-center gap-1 text-xs text-ink-muted">
             {it.extra && (
               <ExtraTypeIcon
@@ -234,7 +238,10 @@ export default function RecipePage() {
                   selectedId === dish.id ? 'bg-mint' : ''
                 }`}
               >
-                <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
+                <span className="flex items-center gap-3 min-w-0">
+                  <DishImage dish={dish} className="w-9 h-9 rounded-lg object-cover shrink-0 bg-canvas" fallback={<span className="w-9 h-9 rounded-lg bg-canvas shrink-0" />} />
+                  <span className="text-[15px] font-medium text-ink truncate">{dish.name}</span>
+                </span>
                 {weekDishIds.has(dish.id) && (
                   <span className="shrink-0 text-xs bg-brand-100 text-brand-700 rounded-full px-1.5 py-0.5">
                     denna vecka

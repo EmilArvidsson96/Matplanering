@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid'
 import type { Ingredient, RecipeSiteRule, RecipeStep, ShoppingCategory } from '../types'
 import { extractRecipeWithAi } from '../api/anthropic'
 import { useSettingsStore } from '../store/settingsStore'
+import { proxiedUrl } from '../api/proxy'
 
 // Any https page can be fetched. Parsing is tried in this order:
 //   1. hand-written parsers for a few Swedish sites
@@ -11,11 +12,6 @@ import { useSettingsStore } from '../store/settingsStore'
 //   5. AI extraction — which also returns selectors that are verified and saved
 //      as a learned rule, so the next recipe from that site needs no AI call.
 
-const CORS_PROXY = 'https://matplanering-recipe-proxy.emil-arvidsson.workers.dev/?url='
-
-function proxiedUrl(url: string): string {
-  return CORS_PROXY + encodeURIComponent(url)
-}
 
 // ── Fraction / amount parsing ─────────────────────────────────────────────────
 
