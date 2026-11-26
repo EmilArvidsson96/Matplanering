@@ -147,15 +147,15 @@ export default function StoreCompare({ weekId, items, cmp, shop, onShop, icaStor
       else learnChoice(i.name, i.mathem!.product!, true)
     }
   }
-  function openStore() {
+  const l = lines()
+  const storeUrl = shop === 'ica'
+    ? icaCartHandoffUrl(icaStore.id, l as Array<{ productId: string; quantity: number }>)
+    : shop === 'willys'
+      ? willysCartHandoffUrl(l as Array<{ productId: string; quantity: number }>)
+      : cartHandoffUrl(l as Array<{ productId: number; quantity: number }>)
+  // A plain link (not window.open): a normal tab that popup blockers and home-screen apps leave alone.
+  function onOpenStore() {
     learnAll()
-    const l = lines()
-    const url = shop === 'ica'
-      ? icaCartHandoffUrl(icaStore.id, l as Array<{ productId: string; quantity: number }>)
-      : shop === 'willys'
-        ? willysCartHandoffUrl(l as Array<{ productId: string; quantity: number }>)
-        : cartHandoffUrl(l as Array<{ productId: number; quantity: number }>)
-    window.open(url, '_blank')
     setSent(shop)
   }
   async function copyForClaude() {
@@ -282,13 +282,21 @@ export default function StoreCompare({ weekId, items, cmp, shop, onShop, icaStor
           <p className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-2xl px-3 py-2">{error}</p>
         )}
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={openStore}
-            disabled={chosen.length === 0}
-            className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold"
-          >
-            Fyll korgen på {name(shop)}
-          </button>
+          {chosen.length > 0 ? (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onOpenStore}
+              className="h-10 px-4 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold inline-flex items-center"
+            >
+              Fyll korgen på {name(shop)}
+            </a>
+          ) : (
+            <button disabled className="h-10 px-4 rounded-full bg-brand-600 opacity-50 text-white text-sm font-semibold">
+              Fyll korgen på {name(shop)}
+            </button>
+          )}
           <button
             onClick={copyForClaude}
             disabled={chosen.length === 0}
@@ -347,7 +355,7 @@ export function BookmarkletHelp({ sent, site, storeName, what = 'korgen' }: {
           >
             Matplanering: fyll
           </a>{' '}
-          till bokmärkesfältet. Samma bokmärke fungerar för Willys, Mathem, ICA Handla och ICA-listan. Du behöver vara inloggad på {site}.
+          till bokmärkesfältet. Samma bokmärke fungerar för Willys, Mathem, ICA Handla och ICA-listan. Det visar resultatet i en rad överst på butikens sida. Har du ett äldre bokmärke som visar rutor du måste klicka bort? Ta bort det och dra in det här igen. Du behöver vara inloggad på {site}.
           Med Claude: tryck "Kopiera till Claude" och klistra in i Claude-appen. Dina val sparas och används nästa gång.
         </p>
       )}

@@ -347,6 +347,7 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
   const defaultPortions = plannedPortions ?? dish.ingredients[0]?.portionsBase ?? 4
   const [portions, setPortions] = useState(defaultPortions)
   const [editMode, setEditMode] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('instruktioner')
 
   // Update portions when dish changes
@@ -409,8 +410,9 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
         })).filter((s: RecipeStep) => s.text)
         if (steps.length === 0) throw new Error('Inga steg hittades')
         updateDish(dish.id, { instructions: steps })
+        setImportError(null)
       } catch (e: any) {
-        alert(`Kunde inte importera: ${e.message}`)
+        setImportError(`Kunde inte importera: ${e.message}`)
       }
     }
     input.click()
@@ -477,6 +479,12 @@ export default function RecipeDetail({ dish, plannedPortions, onBack }: Props) {
         </button>
       </div>
       <h2 className="font-display text-[26px] md:text-[30px] font-extrabold tracking-tight leading-[1.1] text-ink">{dish.name}</h2>
+      {importError && (
+        <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 pl-4 pr-1.5 py-1.5 flex items-center gap-2 text-sm text-red-800">
+          <span className="flex-1">{importError}</span>
+          <button onClick={() => setImportError(null)} className="h-8 px-3 rounded-full text-xs font-semibold hover:bg-red-100">OK</button>
+        </div>
+      )}
     </div>
   )
 

@@ -5,7 +5,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { splitInstructions, splitInputHash, suggestRecipeImprovements } from '../../api/anthropic'
 import type { Dish, DishAiData, RecipeImprovement, RecipeStep } from '../../types'
-import SheetModal, { type ModalHandle } from '../common/Modal'
+import SubPage, { type SubPageHandle } from '../common/SubPage'
 
 /** Merge AI results into the dish's saved `ai` data, using the latest store state. */
 function saveAiData(dishId: string, patch: Partial<DishAiData>) {
@@ -16,21 +16,21 @@ function saveAiData(dishId: string, patch: Partial<DishAiData>) {
 }
 
 // ---------------------------------------------------------------------------
-// Modal shell
+// Sub-page shell
 // ---------------------------------------------------------------------------
-function Modal({ title, onClose, children, modalRef }: {
+function ToolPage({ title, onClose, children, pageRef }: {
   title: string
   onClose: () => void
   children: React.ReactNode
-  modalRef?: React.Ref<ModalHandle>
+  pageRef?: React.Ref<SubPageHandle>
 }) {
-  // Shared sheet/dialog; the tools bring their own padding, so cancel the sheet's.
+  // Shared sub-page; the tool content sits on a white card.
   return (
-    <SheetModal ref={modalRef} title={title} onClose={onClose}>
-      <div className="-mx-4 md:-mx-7 -mb-6 bg-white rounded-t-3xl md:rounded-3xl md:mx-0 md:mb-0 overflow-hidden flex flex-col">
+    <SubPage ref={pageRef} title={title} onClose={onClose}>
+      <div className="bg-white rounded-3xl overflow-hidden flex flex-col">
         {children}
       </div>
-    </SheetModal>
+    </SubPage>
   )
 }
 
@@ -66,19 +66,19 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
   // Kick off on first render (uses cached result if available)
   useEffect(() => { run() }, [])
 
-  const modalRef = useRef<ModalHandle>(null)
+  const pageRef = useRef<SubPageHandle>(null)
 
   function apply() {
     if (!steps) return
     const next: RecipeStep[] = steps.map(text => ({ id: uuid(), text }))
     updateDish(dish.id, { instructions: next })
-    modalRef.current ? modalRef.current.close() : onClose()
+    pageRef.current ? pageRef.current.close() : onClose()
   }
 
   const current = (dish.instructions ?? []).filter(s => s.text.trim())
 
   return (
-    <Modal modalRef={modalRef} title="Dela upp i tydligare steg" onClose={onClose}>
+    <ToolPage pageRef={pageRef} title="Dela upp i tydligare steg" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
@@ -130,7 +130,7 @@ function SplitTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <Check className="w-4 h-4" /> Ersätt instruktionerna
         </button>
       </div>
-    </Modal>
+    </ToolPage>
   )
 }
 
@@ -171,7 +171,7 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
     })
   }
 
-  const modalRef = useRef<ModalHandle>(null)
+  const pageRef = useRef<SubPageHandle>(null)
 
   function apply() {
     if (!items) return
@@ -186,11 +186,11 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
       notes,
       ai: { ...latest?.ai, improvements: { items: marked, at: latest?.ai?.improvements?.at ?? new Date().toISOString() } },
     })
-    modalRef.current ? modalRef.current.close() : onClose()
+    pageRef.current ? pageRef.current.close() : onClose()
   }
 
   return (
-    <Modal modalRef={modalRef} title="Förbättringsförslag" onClose={onClose}>
+    <ToolPage pageRef={pageRef} title="Förbättringsförslag" onClose={onClose}>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-ink-muted py-8 justify-center">
@@ -259,12 +259,12 @@ function ImproveTool({ dish, onClose }: { dish: Dish; onClose: () => void }) {
           <Check className="w-4 h-4" /> Lägg till {selected.size > 0 ? `(${selected.size})` : ''}
         </button>
       </div>
-    </Modal>
+    </ToolPage>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Entry point: two header buttons + active modal
+// Entry point: two header buttons + active sub-page
 // ---------------------------------------------------------------------------
 export default function RecipeAiTools({ dish }: { dish: Dish }) {
   const [tool, setTool] = useState<'split' | 'improve' | null>(null)
