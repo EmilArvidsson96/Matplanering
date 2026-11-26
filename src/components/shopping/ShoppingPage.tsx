@@ -29,6 +29,26 @@ import { markAtHome, removeItem, recordStockUsage } from '../../store/shoppingAc
 import { batch } from '../../store/undoStore'
 import { useMinWidth } from '../../hooks/useDevice'
 
+const UNIT_OPTIONS = ['st', 'förp', 'g', 'kg', 'ml', 'dl', 'l', 'msk', 'tsk', 'krm', 'burk', 'paket']
+
+/** Step size for the −/+ buttons, based on unit and current amount. */
+function amountStep(unit: string, current: number): number {
+  const u = unit.trim().toLowerCase()
+  if (u === 'g' || u === 'ml') return current >= 500 ? 100 : 50
+  if (u === 'kg' || u === 'l') return 0.5
+  return 1
+}
+
+/** Empty or plain numeric amounts get a −/+ stepper; free text ("en näve") does not. */
+function isSteppable(amount: string): boolean {
+  const t = amount.trim()
+  return !t || /^\d+([.,]\d+)?$/.test(t)
+}
+
+function formatAmount(n: number): string {
+  return (Math.round(n * 10) / 10).toString()
+}
+
 export default function ShoppingPage() {
   const store         = useWeekStore()
   const week          = activeWeek(store)
@@ -39,6 +59,8 @@ export default function ShoppingPage() {
   const [newItem, setNewItem] = useState('')
   const [newCat, setNewCat]   = useState<ShoppingCategory>('övrigt')
   const [newCatTouched, setNewCatTouched] = useState(false)
+  const [newAmount, setNewAmount] = useState('')
+  const [newUnit, setNewUnit]     = useState('st')
   const [showPurchased, setShowPurchased] = useState(false)
   const [aiResult, setAiResult]   = useState<AiCleanupResult | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -137,11 +159,15 @@ export default function ShoppingPage() {
   function addManual() {
     if (!newItem.trim()) return
     store.addShoppingItem({
-      name: newItem.trim(), amount: '', unit: '', category: newCat,
+      name: newItem.trim(),
+      amount: newAmount.trim().replace(',', '.'),
+      unit: newAmount.trim() ? newUnit.trim() : '',
+      category: newCat,
       isAutoAdded: false, dishIds: [], isPurchased: false, isExcluded: false,
     })
     if (newCatTouched) setCategoryOverride(newItem.trim(), newCat)
     setNewItem('')
+    setNewAmount('')
     setNewCat('övrigt')
     setNewCatTouched(false)
   }
@@ -470,7 +496,9 @@ export default function ShoppingPage() {
 
       {/* Add item — sticks above the tab bar on mobile so it stays in thumb reach */}
       <div className="sticky bottom-28 md:bottom-6 z-10">
-        <div className="bg-white rounded-full shadow-[0_8px_24px_rgba(21,23,26,0.10),0_0_0_1px_rgba(21,23,26,0.06)] p-1.5 pl-4 flex items-center gap-2">
+        <div className="bg-white rounded-[28px] md:rounded-full shadow-[0_8px_24px_rgba(21,23,26,0.10),0_0_0_1px_rgba(21,23,26,0.06)] p-1.5 flex flex-wrap md:flex-nowrap items-center gap-2">
+          {/* On mobile the name gets a full row; amount, unit and category share the row below */}
+          <div className="basis-full md:basis-auto md:flex-1 min-w-0 flex items-center gap-2 pl-2.5">
           <Plus className="w-[18px] h-[18px] text-ink-muted shrink-0" />
           <input
             type="text"
@@ -484,11 +512,35 @@ export default function ShoppingPage() {
             onKeyDown={e => e.key === 'Enter' && addManual()}
             className="flex-1 min-w-0 h-10 bg-transparent text-base text-ink placeholder:text-ink-faint focus:outline-none"
           />
+          </div>
+          <input
+            type="text"
+            inputMode="decimal"
+            aria-label="Mängd"
+            placeholder="Mängd"
+            value={newAmount}
+            onChange={e => setNewAmount(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addManual()}
+            className="w-20 h-10 rounded-full bg-canvas px-3 text-base md:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+          <input
+            type="text"
+            list="shopping-units"
+            aria-label="Enhet"
+            placeholder="Enhet"
+            value={newUnit}
+            onChange={e => setNewUnit(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addManual()}
+            className="w-20 h-10 rounded-full bg-canvas px-3 text-base md:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand-300"
+          />
+          <datalist id="shopping-units">
+            {UNIT_OPTIONS.map(u => <option key={u} value={u} />)}
+          </datalist>
           <select
             aria-label="Kategori"
             value={newCat}
             onChange={e => { setNewCat(e.target.value as ShoppingCategory); setNewCatTouched(true) }}
-            className="h-10 max-w-[120px] rounded-full bg-canvas px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-300"
+            className="h-10 flex-1 md:flex-none min-w-0 md:max-w-[140px] rounded-full bg-canvas px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-300"
           >
             {CATEGORY_ORDER.map(c => (
               <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
@@ -747,7 +799,7 @@ function ShoppingItemRow({
             <span className={`text-[15px] font-medium truncate ${item.isPurchased ? 'line-through text-ink-faint' : 'text-ink'}`}>
               {item.name}
             </span>
-            {(item.amount || item.unit) && (
+            {(item.amount || item.unit) && (item.isPurchased || !isSteppable(item.amount)) && (
               <span className={`text-[13px] whitespace-nowrap ${item.isPurchased ? 'text-ink-faint' : 'text-ink-muted'}`}>
                 {item.amount} {item.unit}
               </span>
@@ -766,6 +818,11 @@ function ShoppingItemRow({
             </span>
           )}
         </button>
+      )}
+
+      {/* Quantity stepper */}
+      {!editing && !item.isPurchased && (
+        <QuantityStepper item={item} onUpdate={onUpdate} />
       )}
 
       {/* Actions */}
@@ -797,6 +854,47 @@ function ShoppingItemRow({
         : mathemPending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">Söker på Mathem…</p>
     )}
     </AnimatedDiv>
+    </div>
+  )
+}
+
+function QuantityStepper({
+  item, onUpdate,
+}: {
+  item: ShoppingItem
+  onUpdate: (p: Partial<ShoppingItem>) => void
+}) {
+  const current = parseFloat(item.amount.replace(',', '.'))
+  const numeric = !isNaN(current)
+  // Free-text amounts ("en näve") can't be stepped; edit them by tapping the name
+  if (!isSteppable(item.amount)) return null
+
+  const value = numeric ? current : 0
+  const step  = amountStep(item.unit, value)
+
+  function change(dir: 1 | -1) {
+    const next = Math.max(0, value + dir * amountStep(item.unit, dir < 0 ? value - 0.0001 : value))
+    if (next === 0) onUpdate({ amount: '', unit: '' })
+    else onUpdate({ amount: formatAmount(next), unit: item.unit || 'st' })
+  }
+
+  return (
+    <div className="flex items-center shrink-0 rounded-full bg-canvas text-sm">
+      <button
+        onClick={() => change(-1)}
+        disabled={value <= 0}
+        aria-label={`Minska mängd ${item.name}`}
+        className="w-8 h-8 rounded-full text-ink-muted hover:text-ink hover:bg-line-soft disabled:opacity-30"
+      >−</button>
+      <span className="min-w-[1.75rem] px-0.5 text-center text-[13px] font-medium text-ink tabular-nums whitespace-nowrap">
+        {numeric ? `${formatAmount(value)}${item.unit ? ` ${item.unit}` : ''}` : '–'}
+      </span>
+      <button
+        onClick={() => change(1)}
+        aria-label={`Öka mängd ${item.name}`}
+        title={`+${formatAmount(step)} ${item.unit || 'st'}`}
+        className="w-8 h-8 rounded-full text-ink-muted hover:text-ink hover:bg-line-soft"
+      >+</button>
     </div>
   )
 }
