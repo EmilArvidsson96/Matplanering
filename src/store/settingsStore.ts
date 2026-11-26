@@ -123,7 +123,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
 
   setProductPreferences: (patch, shop = 'mathem') =>
     set((s) => {
-      const field = shop === 'ica' ? 'icaProductPreferences' : 'productPreferences'
+      const field = shop === 'ica' ? 'icaProductPreferences' : shop === 'willys' ? 'willysProductPreferences' : 'productPreferences'
       const next = { ...(s.settings[field] ?? {}) }
       for (const [key, pref] of Object.entries(patch)) {
         if (pref) next[key] = pref

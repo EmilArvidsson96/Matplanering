@@ -148,11 +148,13 @@ export interface ShoppingItem {
   mathem?: MathemSuggestion
   /** Suggested ICA Handla product in the chosen ICA store (same idea as mathem). */
   ica?: IcaSuggestion
+  /** Suggested Willys product (same idea as mathem; Willys prices are the same in every store online). */
+  willys?: WillysSuggestion
 }
 
-/** What we keep about an ICA Handla product on a shopping row (price = last seen). */
+/** What we keep about an ICA Handla or Willys product on a shopping row (price = last seen). */
 export interface IcaSnapshot {
-  /** Product UUID (used by the cart). */
+  /** ICA: product UUID. Willys: product code, e.g. "101895177_ST" (both used by the cart). */
   productId: string
   name: string
   packSize: string
@@ -168,6 +170,12 @@ export interface IcaSuggestion extends Omit<MathemSuggestion, 'product' | 'saleA
   product: IcaSnapshot | null
   /** ICA store number the price is from. */
   store: string
+}
+
+export type WillysSnapshot = IcaSnapshot
+
+export interface WillysSuggestion extends Omit<MathemSuggestion, 'product' | 'saleAlt' | 'saleReason'> {
+  product: WillysSnapshot | null
 }
 
 /** What we keep about a Mathem product on a shopping row (price = last seen). */
@@ -239,6 +247,8 @@ export interface AppSettings {
   productPreferences?: Record<string, ProductPreference>
   /** Same as productPreferences, for ICA Handla. */
   icaProductPreferences?: Record<string, ProductPreference>
+  /** Same as productPreferences, for Willys. */
+  willysProductPreferences?: Record<string, ProductPreference>
   /** Main rules for picking store products. */
   shoppingRules?: ShoppingRules
   /** Extra free-text household rules for picking products. */
@@ -277,7 +287,7 @@ export interface StockItem {
   neverAsk?: boolean
 }
 
-export type ShopId = 'mathem' | 'ica'
+export type ShopId = 'mathem' | 'ica' | 'willys'
 
 export interface ShoppingRules {
   lactoseFree: boolean     // always lactose-free where a lactose-free variant exists
@@ -289,7 +299,7 @@ export interface ShoppingRules {
 /** A store product the household has chosen for an ingredient before. */
 export interface ProductPreference {
   store: ShopId
-  /** Mathem: numeric product id. ICA: product UUID. */
+  /** Mathem: numeric product id. ICA: product UUID. Willys: product code. */
   productId: number | string
   name: string        // product full name when chosen
   packSize: string    // e.g. "5 dl", "Sverige, 900 g"

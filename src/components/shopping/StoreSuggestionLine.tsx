@@ -1,27 +1,63 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { AnimatedDiv, AnimatedUl } from '../common/Animated'
 import { Minus, Plus, Search } from 'lucide-react'
-import type { IcaSuggestion, ShoppingItem } from '../../types'
+import type { IcaSnapshot, IcaSuggestion, ShoppingItem, WillysSuggestion } from '../../types'
 import { searchIca, IcaRateLimited } from '../../api/ica'
+import { searchWillys, cachedWillys } from '../../api/willys'
 import { fromIca, type StoreProduct } from '../../api/shops'
 import { icaCandidates, icaSnapshot, learnIcaChoice } from '../../store/icaJob'
+import { willysSnapshot, learnWillysChoice } from '../../store/willysJob'
 import { packsFor } from '../../store/mathemStore'
 import { buyModeOf } from '../../store/shoppingActions'
 import { BuyModePicker } from './MathemSuggestionLine'
 import { useSettingsStore } from '../../store/settingsStore'
 import { findPreference } from '../../utils/productMatch'
 
-const SOURCE_LABEL: Record<NonNullable<IcaSuggestion['source']>, string> = {
+const SOURCE_LABEL: Record<NonNullable<Suggestion['source']>, string> = {
   preference: 'Som förra gången',
   ai: 'AI-val',
   search: 'Bästa träffen enligt reglerna',
   manual: 'Ditt val',
 }
 
+type Suggestion = IcaSuggestion | WillysSuggestion
+
+/** What differs between the stores whose rows use this line and editor. */
+export interface StoreAdapter {
+  field: 'ica' | 'willys'
+  label: string
+  cached: (s: Suggestion, q: string) => StoreProduct[] | undefined
+  search: (s: Suggestion, q: string) => Promise<StoreProduct[]>
+  snapshot: (p: StoreProduct) => IcaSnapshot
+  learn: (itemName: string, p: IcaSnapshot) => void
+}
+
+export const ICA_ADAPTER: StoreAdapter = {
+  field: 'ica',
+  label: 'ICA',
+  cached: (s, q) => icaCandidates((s as IcaSuggestion).store, q),
+  search: async (s, q) => {
+    const store = (s as IcaSuggestion).store
+    return (await searchIca(store, q, 12)).map(p => fromIca(store, p))
+  },
+  snapshot: icaSnapshot,
+  learn: (name, p) => learnIcaChoice(name, p, false),
+}
+
+export const WILLYS_ADAPTER: StoreAdapter = {
+  field: 'willys',
+  label: 'Willys',
+  cached: (_, q) => cachedWillys(q),
+  search: (_, q) => searchWillys(q, 12),
+  snapshot: willysSnapshot,
+  learn: (name, p) => learnWillysChoice(name, p, false),
+}
+
 const kr = (n: number) => Number.isFinite(n) ? `${Math.round(n)} kr` : ''
 
-/** The ICA product suggested for one shopping row, shown under its name. */
-export default function IcaSuggestionLine({ item, onUpdate, open, onToggle, inlineEditor, other }: {
+/** The ICA or Willys product suggested for one shopping row, shown under its name. */
+export default function StoreSuggestionLine({ adapter, item, onUpdate, open, onToggle, inlineEditor, other }: {
+  adapter: StoreAdapter
   item: ShoppingItem
   onUpdate: (patch: Partial<ShoppingItem>) => void
   open: boolean
@@ -31,7 +67,7 @@ export default function IcaSuggestionLine({ item, onUpdate, open, onToggle, inli
   /** The other store's price for the same row, e.g. "Mathem 15 kr". */
   other?: ReactNode
 }) {
-  const s = item.ica!
+  const s = item[adapter.field]!
   const p = s.product
 
   return (
@@ -67,21 +103,22 @@ export default function IcaSuggestionLine({ item, onUpdate, open, onToggle, inli
           </span>
         )}
       </button>
-      {open && inlineEditor && <IcaRowEditor item={item} onUpdate={onUpdate} onClose={onToggle} />}
+      {open && inlineEditor && <StoreRowEditor adapter={adapter} item={item} onUpdate={onUpdate} onClose={onToggle} />}
     </AnimatedDiv>
     </div>
   )
 }
 
-/** Change the ICA product, quantity and how the item is bought. */
-export function IcaRowEditor({ item, onUpdate, onClose }: {
+/** Change the ICA or Willys product, quantity and how the item is bought. */
+export function StoreRowEditor({ adapter, item, onUpdate, onClose }: {
+  adapter: StoreAdapter
   item: ShoppingItem
   onUpdate: (patch: Partial<ShoppingItem>) => void
   onClose: () => void
 }) {
   const { settings } = useSettingsStore()
-  const s = item.ica!
-  const set = (patch: Partial<IcaSuggestion>) => onUpdate({ ica: { ...s, ...patch } })
+  const s = item[adapter.field]!
+  const set = (patch: Partial<Suggestion>) => onUpdate({ [adapter.field]: { ...s, ...patch } })
   const [query, setQuery] = useState(s.query)
   const [hits, setHits] = useState<StoreProduct[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -91,12 +128,12 @@ export function IcaRowEditor({ item, onUpdate, onClose }: {
 
   async function load(q: string) {
     // Answers are cached for days, so most searches never reach ICA.
-    const cached = icaCandidates(s.store, q)
+    const cached = adapter.cached(s, q)
     if (cached) { setHits(cached); return }
     setBusy(true)
     setError(null)
     try {
-      setHits((await searchIca(s.store, q, 12)).map(p => fromIca(s.store, p)))
+      setHits(await adapter.search(s, q))
     } catch (e) {
       setError(e instanceof IcaRateLimited
         ? 'ICA ber oss vänta några minuter innan nästa sökning.'
@@ -108,8 +145,8 @@ export function IcaRowEditor({ item, onUpdate, onClose }: {
   useEffect(() => { setQuery(s.query); if (s.query) load(s.query) }, [item.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function choose(p: StoreProduct) {
-    const snap = icaSnapshot(p)
-    learnIcaChoice(item.name, snap, false)
+    const snap = adapter.snapshot(p)
+    adapter.learn(item.name, snap)
     set({
       product: snap, include: true, source: 'manual', note: undefined, query,
       quantity: mode === 'stock' ? 1 : fixed ?? packsFor(item, p.packSize, s.quantity || 1),
@@ -154,8 +191,8 @@ export function IcaRowEditor({ item, onUpdate, onClose }: {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && query.trim() && load(query)}
-          placeholder="Sök annan produkt hos ICA"
-          aria-label="Sök annan produkt hos ICA"
+          placeholder={`Sök annan produkt hos ${adapter.label}`}
+          aria-label={`Sök annan produkt hos ${adapter.label}`}
           className="flex-1 min-w-0 h-9 bg-transparent text-base md:text-sm focus:outline-none"
         />
         <button
