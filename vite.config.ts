@@ -29,6 +29,13 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/mathem-api/, ''),
       },
+      // Willys refuses requests carrying another site's Origin, so drop it.
+      '/willys-api': {
+        target: 'https://www.willys.se',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/willys-api/, ''),
+        configure: proxy => proxy.on('proxyReq', req => { req.removeHeader('origin'); req.removeHeader('referer') }),
+      },
     },
   },
 })

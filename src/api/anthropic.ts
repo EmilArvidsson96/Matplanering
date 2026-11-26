@@ -883,7 +883,8 @@ export async function matchProductsWithAi(
       productId: valid ? m.productId : null,
       quantity: valid ? Math.max(1, Math.round(m.quantity) || 1) : 0,
       saleAlternativeId: valid ? alt : null,
-      reason: m.reason,
+      // The AI sometimes cites candidate numbers ("(id 1)", "kandidat 2"), which mean nothing to the user.
+      reason: m.reason?.replace(/\s*\((?:id|kandidat)\s*\d+(?:\s*,[^)]*)?\)/gi, '').replace(/\s+/g, ' ').trim(),
     }]
   })
 }

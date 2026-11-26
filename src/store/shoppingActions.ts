@@ -69,6 +69,7 @@ export function answerBuy(item: ShoppingItem, opts: { silent?: boolean } = {}) {
         }
       }
       if (item.ica?.product) patch.ica = { ...item.ica, quantity: 1, include: true, note: 'Förrådsvara' }
+      if (item.willys?.product) patch.willys = { ...item.willys, quantity: 1, include: true, note: 'Förrådsvara' }
     }
     week().updateShoppingItem(item.id, patch)
     countAnswer(item.name, 'buy')
@@ -120,6 +121,7 @@ export function setBuyMode(item: ShoppingItem, mode: BuyMode) {
       week().updateShoppingItem(item.id, {
         ...(item.mathem?.product ? { mathem: { ...item.mathem, quantity: 1, note: 'Förrådsvara' } } : {}),
         ...(item.ica?.product ? { ica: { ...item.ica, quantity: 1, note: 'Förrådsvara' } } : {}),
+        ...(item.willys?.product ? { willys: { ...item.willys, quantity: 1, note: 'Förrådsvara' } } : {}),
       })
     }
     if (mode === 'pantry') {

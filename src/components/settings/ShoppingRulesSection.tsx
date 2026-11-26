@@ -21,7 +21,7 @@ const TOGGLES: Array<{ key: 'lactoseFree' | 'preferSwedish' | 'preferOffers'; la
 export default function ShoppingRulesSection() {
   const { settings, update, setProductPreferences } = useSettingsStore()
   const rules = { ...DEFAULT_RULES, ...settings.shoppingRules }
-  const prefs = ([['mathem', settings.productPreferences], ['ica', settings.icaProductPreferences]] as const)
+  const prefs = ([['mathem', settings.productPreferences], ['ica', settings.icaProductPreferences], ['willys', settings.willysProductPreferences]] as const)
     .flatMap(([shop, map]) => Object.entries(map ?? {}).map(([key, p]) => ({ shop: shop as ShopId, key, p })))
     .sort((a, b) => a.key.localeCompare(b.key, 'sv') || a.shop.localeCompare(b.shop))
   const overrides = Object.entries(settings.categoryOverrides ?? {}).sort(([a], [b]) => a.localeCompare(b, 'sv'))
@@ -113,7 +113,7 @@ export default function ShoppingRulesSection() {
                   <div key={shop + key} className="flex items-center gap-2 py-1.5">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-ink-soft">
-                        {key} <span className="text-[10px] uppercase tracking-wide text-ink-faint">{shop === 'ica' ? 'ICA' : 'Mathem'}</span>
+                        {key} <span className="text-[10px] uppercase tracking-wide text-ink-faint">{shop === 'ica' ? 'ICA' : shop === 'willys' ? 'Willys' : 'Mathem'}</span>
                       </div>
                       <div className="text-xs text-ink-faint truncate">
                         {p.name} · {p.packSize} · vald {p.timesChosen} {p.timesChosen === 1 ? 'gång' : 'gånger'}

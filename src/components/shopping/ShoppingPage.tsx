@@ -11,14 +11,14 @@ import { cleanupShoppingList } from '../../api/anthropic'
 import { componentCookPortions, isExtraMeal, formatWeekParts } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
 import { DEFAULT_ICA_STORE } from '../../api/ica'
-import { shortIcaName } from '../../api/shops'
 import type { ShopId } from '../../types'
 import { CATEGORY_LABELS, CATEGORY_ORDER, categoryFor, subFor } from '../../data/categories'
-import StoreCompare, { compareStores, icaFor, rowCost, kr } from './StoreCompare'
+import StoreCompare, { compareStores, suggestionOf, shopName, rowCost, kr, SHOPS } from './StoreCompare'
 import IcaListSection from './IcaListSection'
 import MathemSuggestionLine, { MathemRowEditor } from './MathemSuggestionLine'
-import IcaSuggestionLine, { IcaRowEditor } from './IcaSuggestionLine'
+import StoreSuggestionLine, { StoreRowEditor, ICA_ADAPTER, WILLYS_ADAPTER } from './StoreSuggestionLine'
 import { useIcaJob, needsIca } from '../../store/icaJob'
+import { useWillysJob, needsWillys } from '../../store/willysJob'
 import AtHomeSection from './AtHomeSection'
 import { AnimatedDiv } from '../common/Animated'
 import RemovedSection from './RemovedSection'
@@ -44,6 +44,7 @@ export default function ShoppingPage() {
   const [aiError, setAiError]     = useState<string | null>(null)
   const mathemJob = useMathemJob()
   const icaJob = useIcaJob()
+  const willysJob = useWillysJob()
   const wide = useMinWidth(1180)
   const [editingId, setEditingId] = useState<string | null>(null)
   const asideRef = useRef<HTMLElement>(null)
@@ -105,6 +106,7 @@ export default function ShoppingPage() {
       if (!prev) return item
       const m = prev.mathem
       const ica = prev.ica
+      const w = prev.willys
       return {
         ...item,
         isPurchased: prev.isPurchased,
@@ -112,6 +114,7 @@ export default function ShoppingPage() {
         homeAnswer: prev.homeAnswer,
         mathem: m?.product ? { ...m, quantity: m.note === 'Förrådsvara' ? m.quantity : packsFor(item, m.product.packSize, m.quantity) } : m,
         ica: ica?.product ? { ...ica, quantity: ica.note === 'Förrådsvara' ? ica.quantity : packsFor(item, ica.product.packSize, ica.quantity) } : ica,
+        willys: w?.product ? { ...w, quantity: w.note === 'Förrådsvara' ? w.quantity : packsFor(item, w.product.packSize, w.quantity) } : w,
       }
     })
 
@@ -288,6 +291,10 @@ export default function ShoppingPage() {
   useEffect(() => {
     if (icaNeed && !icaJob.running) icaJob.start(week.id, icaStore.id, items)
   }, [icaNeed, icaJob.running, week.id, icaStore.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const willysNeed = items.filter(needsWillys).map(i => i.id).join()
+  useEffect(() => {
+    if (willysNeed && !willysJob.running) willysJob.start(week.id, items)
+  }, [willysNeed, willysJob.running, week.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeItems = items.filter(i => !i.isExcluded)
   const purchasedCount = activeItems.filter(i => i.isPurchased).length
@@ -298,7 +305,8 @@ export default function ShoppingPage() {
   // The household's pick, else the cheapest store, else ICA.
   const shop: ShopId = settings.preferredShop ?? cmp.cheapest ?? 'ica'
   const icaRunning = icaJob.running && icaJob.weekId === week.id
-  const suggestionFor = (i: ShoppingItem) => shop === 'ica' ? icaFor(i, icaStore.id) : i.mathem
+  const willysRunning = willysJob.running && willysJob.weekId === week.id
+  const suggestionFor = (i: ShoppingItem) => suggestionOf(i, shop, icaStore.id)
   const editingItem = editingId ? items.find(i => i.id === editingId && suggestionFor(i) && !i.isExcluded) : undefined
   const compare = (
     <StoreCompare
@@ -318,8 +326,8 @@ export default function ShoppingPage() {
           <p className="px-3 pt-2.5 text-[15px] font-bold">
             {editingItem.name} <span className="text-[13px] font-normal text-ink-muted">{editingItem.amount} {editingItem.unit}</span>
           </p>
-          {shop === 'ica'
-            ? <IcaRowEditor item={editingItem} onUpdate={p => store.updateShoppingItem(editingItem.id, p)} onClose={() => setEditingId(null)} />
+          {shop !== 'mathem'
+            ? <StoreRowEditor adapter={shop === 'ica' ? ICA_ADAPTER : WILLYS_ADAPTER} item={editingItem} onUpdate={p => store.updateShoppingItem(editingItem.id, p)} onClose={() => setEditingId(null)} />
             : <MathemRowEditor item={editingItem} onUpdate={p => store.updateShoppingItem(editingItem.id, p)} onClose={() => setEditingId(null)} />}
         </section>
       )}
@@ -422,6 +430,8 @@ export default function ShoppingPage() {
                     icaStore={icaStore}
                     pending={shop === 'ica'
                       ? (icaRunning && icaJob.pending.has(item.id) ? 'Väntar på ICA-priser…' : null)
+                      : shop === 'willys'
+                      ? (willysRunning && willysJob.pending.has(item.id) ? 'Söker på Willys…' : null)
                       : (mathemRunning && mathemJob.pending.has(item.id) ? 'Söker på Mathem…' : null)}
                     onToggle={() => store.updateShoppingItem(item.id, { isPurchased: !item.isPurchased })}
                     onExclude={() => markAtHome(item)}
@@ -676,14 +686,16 @@ function ShoppingItemRow({
   onUpdate: (p: Partial<ShoppingItem>) => void
 }) {
   const [editing, setEditing] = useState(false)
-  const ica = icaFor(item, icaStore.id)
-  // The other store's price, small under this one's, so every row compares.
-  const otherCost = rowCost(shop === 'ica' ? item.mathem : ica)
-  const otherName = shop === 'ica' ? 'Mathem' : shortIcaName(icaStore.name)
-  const otherMissing = shop === 'ica'
-    ? item.mathem && !item.mathem.product && item.mathem.note !== 'Inte en vara'
-    : ica && !ica.product && ica.note !== 'Inte en vara'
-  const other = otherCost != null ? `${otherName} ${kr(otherCost)}` : otherMissing ? `Finns inte hos ${otherName}` : undefined
+  // The cheapest other store's price, small under this one's, so every row compares.
+  const others = SHOPS.filter(x => x !== shop).map(x => ({ x, sug: suggestionOf(item, x, icaStore.id) }))
+  const cheaper = others
+    .map(o => ({ ...o, cost: rowCost(o.sug) }))
+    .filter((o): o is typeof o & { cost: number } => o.cost != null)
+    .sort((p, q) => p.cost - q.cost)[0]
+  const missing = others.find(o => o.sug && !o.sug.product && o.sug.note !== 'Inte en vara')
+  const other = cheaper
+    ? `${shopName(cheaper.x, icaStore)} ${kr(cheaper.cost)}`
+    : missing ? `Finns inte hos ${shopName(missing.x, icaStore)}` : undefined
   const lineProps = { item, onUpdate, open: mathemOpen, onToggle: onMathemToggle, inlineEditor, other }
 
   return (
@@ -781,12 +793,12 @@ function ShoppingItemRow({
     </div>
     <AnimatedDiv>
     {!editing && !item.isPurchased && (
-      shop === 'ica'
-        ? ica
-          ? <IcaSuggestionLine {...lineProps} />
-          : pending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">{pending}</p>
-        : item.mathem
+      shop === 'mathem'
+        ? item.mathem
           ? <MathemSuggestionLine {...lineProps} />
+          : pending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">{pending}</p>
+        : suggestionOf(item, shop, icaStore.id)
+          ? <StoreSuggestionLine adapter={shop === 'ica' ? ICA_ADAPTER : WILLYS_ADAPTER} {...lineProps} />
           : pending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">{pending}</p>
     )}
     </AnimatedDiv>

@@ -54,6 +54,7 @@ export function shortIcaName(name: string): string {
  * the address and, with the page's own login:
  *  - mathem.se: POSTs the products to the cart (cookie csrftoken),
  *  - handlaprivatkund.ica.se: POSTs them to the ICA Handla cart (CSRF from the page),
+ *  - willys.se: POSTs them to the Willys cart (CSRF from /axfood/rest/csrf-token),
  *  - www.ica.se: adds the rows to the ICA shopping list with that name (creates it if missing).
  * It then clears the plan from the address so a second click can't add everything twice.
  */
@@ -75,6 +76,13 @@ if(m&&location.hostname==='handlaprivatkund.ica.se'){
  if(/"isLoggedIn":false/.test(t)){alert('Logga in på ICA Handla först (Konto uppe till höger), och klicka sedan på bokmärket igen.');return}
  const r=await fetch('/stores/'+s+'/api/cart/v1/carts/active/apply-quantity',{method:'POST',credentials:'include',headers:{'content-type':'application/json',accept:'application/json','x-csrf-token':csrf},body:JSON.stringify(plan.map(p=>({productId:p[0],quantity:p[1]})))});
  clear();if(r.ok){alert('Klart! '+plan.length+' produkter lades i ICA-varukorgen.');location.reload()}else alert('ICA svarade '+r.status+'. Är du inloggad på ICA Handla?');return}
+if(m&&/(^|\\.)willys\\.se$/.test(location.hostname)){
+ let plan;try{plan=JSON.parse(atob(decodeURIComponent(m[1])))}catch(e){alert('Kunde inte läsa listan.');return}
+ const u=await(await fetch('/axfood/rest/customer',{headers:{accept:'application/json'}})).json().catch(()=>({}));
+ if(!u.uid||u.uid==='anonymous'){alert('Logga in på willys.se först, och klicka sedan på bokmärket igen.');return}
+ const t=await(await fetch('/axfood/rest/csrf-token',{headers:{accept:'application/json'}})).json();
+ const r=await fetch('/axfood/rest/cart/addProducts',{method:'POST',credentials:'include',headers:{'content-type':'application/json',accept:'application/json','x-csrf-token':t},body:JSON.stringify({products:plan.map(p=>({productCodePost:p[0],qty:p[1],pickUnit:'pieces',hideDiscountToolTip:false,noReplacementFlag:false}))})});
+ clear();if(r.ok){alert('Klart! '+plan.length+' produkter lades i Willys-varukorgen.');location.reload()}else alert('Willys svarade '+r.status+'. Är du inloggad på willys.se?');return}
 m=h.match(/matplanlista=([^&]+)/);
 if(m&&location.hostname==='www.ica.se'){
  let plan;try{plan=dec(m[1])}catch(e){alert('Kunde inte läsa listan.');return}
