@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Recept – lista</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+.row:hover{background:#F5F4EF}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; position: relative; overflow: hidden; -webkit-font-smoothing: antialiased">
+  <div style="padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid #EEEDE7">
+    <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Recept</h1>
+    <label style="position: relative; display: block">
+      <span style="position: absolute; left: 16px; top: 15px; color: #5C6066"><dc-import name="Icon" icon="search" size="18" hint-size="18px,18px"></dc-import></span>
+      <input aria-label="Sök recept" placeholder="Sök recept…" style="width: 100%; box-sizing: border-box; height: 48px; border-radius: 999px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 40px 0 44px; font-size: 16px; font-family: inherit">
+    </label>
+    <div>
+      <button onClick="{{toggle}}" aria-pressed="{{week}}" style="height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid {{chipBorder}}; background: {{chipBg}}; color: {{chipFg}}; font-weight: {{chipWeight}}"><dc-import name="Icon" icon="calendar-days" size="14" hint-size="14px,14px"></dc-import>Veckans rätter<sc-if value="{{week}}" hint-placeholder-val="{{false}}"><b style="margin-left: 2px">(7)</b></sc-if></button>
+    </div>
+  </div>
+
+  <div style="flex: 1; overflow-y: auto; padding-bottom: 104px">
+    <sc-if value="{{all}}" hint-placeholder-val="{{true}}">
+      <ul style="list-style: none; margin: 0; padding: 0">
+        <sc-for list="{{dishes}}" as="d" hint-placeholder-count="12">
+          <li style="border-bottom: 1px solid #EEEDE7">
+            <a class="row" href="ReceptDetalj.dc.html" style="padding: 0 16px; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+              <span style="font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.name}}</span>
+              <sc-if value="{{d.week}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; background: #DDF3E4; color: #16503A; border-radius: 999px; padding: 2px 6px; white-space: nowrap">denna vecka</span></sc-if>
+            </a>
+          </li>
+        </sc-for>
+      </ul>
+    </sc-if>
+    <sc-if value="{{week}}" hint-placeholder-val="{{false}}">
+      <div>
+        <sc-for list="{{meals}}" as="m" hint-placeholder-count="6">
+          <div style="border-bottom: 1px solid #EEEDE7; padding: {{m.pad}}">
+            <sc-if value="{{m.combo}}" hint-placeholder-val="{{false}}">
+              <div style="padding: 6px 16px 4px; display: flex; align-items: baseline; gap: 6px"><span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #5C6066">{{m.name}}</span><span style="font-size: 10px; color: #8A8E94">· {{m.p}}p</span></div>
+            </sc-if>
+            <ul style="list-style: none; margin: 0 0 0 {{m.indent}}; padding: 0; border-left: {{m.rail}}">
+              <sc-for list="{{m.rows}}" as="r" hint-placeholder-count="1">
+                <li>
+                  <sc-if value="{{r.dish}}" hint-placeholder-val="{{true}}">
+                    <a class="row" href="ReceptDetalj.dc.html" style="padding: 0 16px; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                      <span style="font-size: 15px; font-weight: 500">{{r.name}}</span>
+                      <span style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #5C6066; flex-shrink: 0">
+                        <sc-if value="{{r.frys}}" hint-placeholder-val="{{false}}"><span style="color: #0284C7"><dc-import name="Icon" icon="snowflake" size="14" hint-size="14px,14px"></dc-import></span></sc-if>
+                        <sc-if value="{{r.bak}}" hint-placeholder-val="{{false}}"><span style="color: #DB2777"><dc-import name="Icon" icon="cake" size="14" hint-size="14px,14px"></dc-import></span></sc-if>
+                        {{r.amount}}
+                      </span>
+                    </a>
+                  </sc-if>
+                  <sc-if value="{{r.free}}" hint-placeholder-val="{{false}}">
+                    <div style="padding: 8px 16px; display: flex; justify-content: space-between; color: #8A8E94; font-size: 15px"><span>{{r.name}} <span style="font-size: 12px">(fritext)</span></span><span style="font-size: 12px">{{r.amount}}</span></div>
+                  </sc-if>
+                </li>
+              </sc-for>
+            </ul>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 5">
+    <dc-import name="TabBar" active="recept" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { week: false }; }
+  renderVals() {
+    const week = this.state.week;
+    const names = ['Aranchini', 'Biff med béarnaise och pommes', 'Biff Rydberg', 'Blodpudding med lingon', 'Boeuf Bourguignon', 'Broccolisoppa med ost och skinktoast', 'Butter chicken', 'Butter halloumi', 'Caesarsallad med kyckling', 'Carbonara', 'Citronpasta', 'Dan dan nudlar', 'Fiskpinnar med potatismos', 'Grön curry', 'Kanelbullar', 'Köttfärssås med spagetti', 'Lasagne', 'Shakshuka', 'Tacos'];
+    const inWeek = new Set(['Butter chicken', 'Fiskpinnar med potatismos', 'Grön curry', 'Kanelbullar', 'Köttfärssås med spagetti', 'Lasagne', 'Shakshuka', 'Tacos']);
+    const dishes = names.map(name => ({ name, week: inWeek.has(name) }));
+    const D = (name, amount, x) => ({ name, amount, dish: true, free: false, frys: x === 'frys', bak: x === 'bak' });
+    const F = (name, amount) => ({ name, amount, dish: false, free: true, frys: false, bak: false });
+    const rawMeals = [
+      { name: 'Tacos', rows: [D('Tacos', '6p')] },
+      { name: 'Butter chicken', rows: [D('Butter chicken', '2p')] },
+      { name: 'Fiskpinnar med potatismos', rows: [D('Fiskpinnar med potatismos', '2p')] },
+      { name: 'Köttfärssås med spagetti', rows: [D('Köttfärssås med spagetti', '4p', 'frys')] },
+      { name: 'Shakshuka', rows: [D('Shakshuka', '2p')] },
+      { name: 'Grön curry med ris', p: 3, rows: [D('Grön curry', '3p'), D('Jasminris', '3p'), F('Gurkraita', '3p')] },
+      { name: 'Lasagne', rows: [D('Lasagne', '3p')] },
+      { name: 'Kanelbullar', rows: [D('Kanelbullar', '24 bullar', 'bak')] }
+    ];
+    const meals = rawMeals.map(m => {
+      const combo = m.rows.length > 1;
+      return { ...m, combo, p: m.p || 0, pad: combo ? '4px 0' : '0', indent: combo ? '12px' : '0', rail: combo ? '2px solid #DDF3E4' : '0' };
+    });
+    return {
+      week, all: !week, dishes, meals,
+      chipBg: week ? '#15171A' : '#FFFFFF', chipFg: week ? '#FFFFFF' : '#15171A',
+      chipBorder: week ? '#15171A' : '#E2E0D8', chipWeight: week ? 600 : 400,
+      toggle: () => this.setState({ week: !week })
+    };
+  }
+}
+</script>
+</body>
+</html>

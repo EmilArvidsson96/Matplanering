@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Inköp – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button,select{font-family:inherit;cursor:pointer}
+.rb{width:40px;height:40px;border-radius:999px;border:0;background:transparent;color:#8A8E94;display:flex;align-items:center;justify-content:center}
+.rb.h:hover{color:#16503A;background:#F5F4EF}.rb.x:hover{color:#B91C1C;background:#FEF2F2}
+.chip{height:40px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid #E2E0D8;background:#FFFFFF;display:inline-flex;align-items:center;gap:6px;color:#15171A}
+.eb{margin:0;padding:0 4px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#5C6066}
+</style>
+</helmet>
+<div style="min-height: 1300px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px"><dc-import name="SideNav" active="inkop" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0">
+    <main style="max-width: 1152px; padding: 20px 20px 48px; box-sizing: border-box">
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="font-size: 13px; font-weight: 500; color: #5C6066">21 nov – 28 nov</div>
+          <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Vecka 47</h1>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button aria-label="Föregående vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-left" size="20" hint-size="20px,20px"></dc-import></button>
+          <button aria-label="Nästa vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-right" size="20" hint-size="20px,20px"></dc-import></button>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+        <div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="font-weight: 600">{{done}} av {{total}} klara</span><button onClick="{{toggleShow}}" style="border: 0; background: transparent; padding: 0; color: #5C6066; font-weight: 500; font-size: 13px">{{showLabel}}</button></div>
+            <div style="height: 8px; border-radius: 999px; background: #E2E0D8; overflow: hidden"><div style="height: 100%; border-radius: 999px; background: #1F6B45; width: {{pct}}"></div></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button class="chip"><dc-import name="Icon" icon="refresh" size="16" hint-size="16px,16px"></dc-import>Uppdatera från recept</button>
+            <button class="chip"><dc-import name="Icon" icon="sparkles" size="16" hint-size="16px,16px"></dc-import>Städa med AI</button>
+            <button class="chip"><dc-import name="Icon" icon="check-check" size="16" hint-size="16px,16px"></dc-import>Allt handlat ({{left}})</button>
+          </div>
+
+          <section aria-label="Har du redan hemma?" style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px">
+              <h2 style="flex: 1; margin: 0; font-family: Inter, sans-serif; font-size: 15px; font-weight: 700">Har du redan hemma? <span style="font-size: 13px; font-weight: 500; color: #5C6066">3 troliga</span></h2>
+              <button style="height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: #F5F4EF; font-size: 13px; font-weight: 500; color: #15171A">Köp alla</button>
+              <button style="height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: #1F6B45; color: #FFFFFF; font-size: 13px; font-weight: 600">Alla 3 hemma</button>
+              <button aria-label="Minimera" style="width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; color: #5C6066; display: flex; align-items: center; justify-content: center; transform: rotate(180deg)"><dc-import name="Icon" icon="chevron-down" size="20" hint-size="20px,20px"></dc-import></button>
+            </div>
+            <p style="margin: -4px 0 0; padding: 0 16px 8px; font-size: 12.5px; color: #5C6066">Mest troliga först. Har hemma tar bort varan, Köp lägger den kvar i listan.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; padding: 0 12px 12px">
+              <sc-for list="{{home}}" as="h" hint-placeholder-count="3">
+                <div style="background: #F5F4EF; border-radius: 16px; padding: 8px 8px 8px 14px; display: flex; align-items: center; gap: 8px">
+                  <div style="flex: 1; min-width: 0"><div><span style="font-size: 15px; font-weight: 500">{{h.name}}</span> <span style="font-size: 12.5px; color: #5C6066">{{h.amt}}</span></div><div style="font-size: 11.5px; color: {{h.reasonColor}}">{{h.reason}}</div></div>
+                  <button style="height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #FFFFFF; font-size: 13px; font-weight: 500; color: #15171A">Köp</button>
+                  <button style="height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #FFFFFF; font-size: 13px; font-weight: 600; color: #16503A">Har hemma</button>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+            <section style="display: flex; flex-direction: column; gap: 8px">
+              <h2 class="eb">{{c.name}}</h2>
+              <div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+                <sc-for list="{{c.items}}" as="it" hint-placeholder-count="3">
+                  <div style="border-top: {{it.border}}">
+                    <div style="display: flex; align-items: center; gap: 4px; padding: 0 6px 0 8px; min-height: 56px">
+                      <button onClick="{{it.toggle}}" role="checkbox" aria-checked="{{it.done}}" aria-label="Handlad: {{it.name}}" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><span style="width: 24px; height: 24px; border-radius: 8px; box-sizing: border-box; border: {{it.boxBorder}}; background: {{it.boxBg}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><sc-if value="{{it.done}}" hint-placeholder-val="{{false}}"><dc-import name="Icon" icon="check" size="16" sw="3" hint-size="16px,16px"></dc-import></sc-if></span></button>
+                      <div style="flex: 1; min-width: 0; padding: 8px 0">
+                        <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 15px; font-weight: 500; color: {{it.nameColor}}; text-decoration: {{it.deco}}">{{it.name}}</span><span style="font-size: 13px; color: {{it.amtColor}}">{{it.amt}}</span></div>
+                        <sc-if value="{{it.showChips}}" hint-placeholder-val="{{true}}"><div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px"><sc-for list="{{it.from}}" as="f" hint-placeholder-count="1"><span style="font-size: 11px; background: #DDF3E4; color: #0F4A2E; border-radius: 999px; padding: 2px 8px">{{f}}</span></sc-for></div></sc-if>
+                      </div>
+                      <button class="rb h" title="Har hemma" aria-label="Har hemma"><dc-import name="Icon" icon="home" size="18" hint-size="18px,18px"></dc-import></button>
+                      <button class="rb x" title="Ta bort" aria-label="Ta bort"><dc-import name="Icon" icon="x" size="18" hint-size="18px,18px"></dc-import></button>
+                    </div>
+                    <sc-if value="{{it.mathem}}" hint-placeholder-val="{{false}}">
+                      <div style="padding: 0 12px 10px 52px; margin-top: -4px">
+                        <div style="display: flex; align-items: center; gap: 8px; border-radius: 12px; padding: 6px 8px; background: {{it.mBg}}; box-shadow: {{it.mRing}}">
+                          <span style="width: 32px; height: 32px; border-radius: 8px; background: #FFFFFF; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #8A8E94"><dc-import name="Icon" icon="package" size="16" hint-size="16px,16px"></dc-import></span>
+                          <div style="flex: 1; min-width: 0"><div style="font-size: 13px; color: #3D4046">{{it.prod}}</div><div style="font-size: 11px; color: #5C6066">{{it.src}}</div></div>
+                          <span style="font-size: 13px; color: #5C6066; white-space: nowrap">{{it.price}}<sc-if value="{{it.sale}}" hint-placeholder-val="{{false}}"><span style="color: #B91C1C"> %</span></sc-if></span>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+
+          <div style="position: sticky; bottom: 24px; z-index: 5">
+            <div style="background: #FFFFFF; border-radius: 999px; box-shadow: 0 8px 24px rgba(21,23,26,0.10), 0 0 0 1px rgba(21,23,26,0.06); padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 8px">
+              <span style="color: #5C6066"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import></span>
+              <input aria-label="Lägg till vara" placeholder="Lägg till vara" style="flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; font-size: 16px; font-family: inherit">
+              <select aria-label="Kategori" style="height: 40px; max-width: 160px; border-radius: 999px; background: #F5F4EF; border: 0; padding: 0 12px; font-size: 14px"><option>Övrigt</option><option>Grönsaker &amp; örter</option></select>
+              <button aria-label="Lägg till" style="width: 40px; height: 40px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; border: 0; opacity: 0.4; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="plus" size="20" hint-size="20px,20px"></dc-import></button>
+            </div>
+          </div>
+        </div>
+
+        <aside style="flex: 1 1 320px; max-width: 380px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 0">
+          <section aria-label="Mathem" style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; align-items: flex-start; gap: 12px">
+              <span style="width: 40px; height: 40px; border-radius: 999px; background: #EEF7F1; color: #16503A; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><dc-import name="Icon" icon="cart" size="20" hint-size="20px,20px"></dc-import></span>
+              <div><div style="font-size: 15px; font-weight: 600">Mathem</div><div style="font-size: 13px; color: #5C6066">12 varor · 15 förp. · ca 684 kr<span style="color: #B45309"> · 1 extrapris att ta ställning till</span></div></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <button style="height: 40px; padding: 0 16px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; border: 0; font-size: 14px; font-weight: 600">Fyll korgen på Mathem</button>
+              <button style="height: 40px; padding: 0 16px; border-radius: 999px; background: #F5F4EF; border: 0; font-size: 14px; font-weight: 500; color: #15171A">Kopiera till Claude</button>
+              <button style="height: 40px; padding: 0 12px; border-radius: 999px; background: transparent; border: 0; font-size: 14px; color: #5C6066">Hämta om alla</button>
+            </div>
+            <button style="align-self: flex-start; border: 0; background: transparent; padding: 0; font-size: 12px; color: #5C6066">Hur fungerar det? ▼</button>
+          </section>
+
+          <section style="background: #FFFFFF; border-radius: 24px; padding: 4px; display: flex; flex-direction: column; gap: 4px">
+            <div style="padding: 10px 12px 0; font-size: 15px; font-weight: 700">Kycklingfilé <span style="font-size: 13px; font-weight: 400; color: #5C6066">900 g</span></div>
+            <div style="border: 1px solid #EEEDE7; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px">
+              <div style="font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5C6066">Hur köper ni den här?</div>
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #F5F4EF; border-radius: 999px; padding: 4px">
+                <sc-for list="{{modes}}" as="m" hint-placeholder-count="3"><button onClick="{{m.pick}}" style="height: 36px; border-radius: 999px; border: 0; font-size: 12.5px; background: {{m.bg}}; font-weight: {{m.w}}; color: {{m.fg}}; box-shadow: {{m.sh}}">{{m.label}}</button></sc-for>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #5C6066">{{modeHint}}</p>
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3D4046"><input type="checkbox" checked="{{yes}}" style="accent-color: #1F6B45; width: 16px; height: 16px">Lägg i korgen</label>
+                <span style="display: flex; align-items: center; gap: 4px"><button aria-label="Färre" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: #F5F4EF; display: flex; align-items: center; justify-content: center; color: #15171A"><dc-import name="Icon" icon="minus" size="14" hint-size="14px,14px"></dc-import></button><span style="width: 24px; text-align: center; font-size: 14px; font-weight: 600">1</span><button aria-label="Fler" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: #F5F4EF; display: flex; align-items: center; justify-content: center; color: #15171A"><dc-import name="Icon" icon="plus" size="14" hint-size="14px,14px"></dc-import></button></span>
+              </div>
+              <div style="background: #F5F4EF; border-radius: 999px; padding: 0 4px 0 12px; display: flex; align-items: center; gap: 6px">
+                <span style="color: #8A8E94"><dc-import name="Icon" icon="search" size="14" hint-size="14px,14px"></dc-import></span>
+                <input aria-label="Sök annan produkt" placeholder="Sök annan produkt" style="flex: 1; min-width: 0; height: 36px; border: 0; background: transparent; font-size: 14px; font-family: inherit">
+                <button style="height: 28px; padding: 0 12px; border-radius: 999px; border: 0; background: #FFFFFF; font-size: 12px; font-weight: 600; color: #16503A">Sök</button>
+              </div>
+              <div>
+                <sc-for list="{{results}}" as="r" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-top: {{r.border}}; background: {{r.bg}}; border-radius: 8px">
+                    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5F4EF; flex-shrink: 0"></span>
+                    <div style="flex: 1; min-width: 0"><div style="font-size: 13px">{{r.name}}</div><div style="font-size: 11px; color: #5C6066">{{r.meta}}</div></div>
+                    <span style="font-size: 13px; color: {{r.priceColor}}; font-weight: {{r.priceW}}; white-space: nowrap">{{r.price}}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center"><button style="border: 0; background: transparent; padding: 0; font-size: 12px; color: #5C6066">Inte denna produkt igen</button><button style="height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: #15171A; color: #FFFFFF; font-size: 12px; font-weight: 600">Klar</button></div>
+            </div>
+          </section>
+
+          <section style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+            <div style="display: flex; align-items: center; padding: 0 8px 0 16px; height: 44px"><h2 style="flex: 1; margin: 0; font-family: Inter, sans-serif; font-size: 15px; font-weight: 700">Borttagna denna vecka (3)</h2><button style="height: 36px; padding: 0 8px; border: 0; background: transparent; font-size: 12.5px; font-weight: 600; color: #16503A">Återställ alla</button></div>
+            <sc-for list="{{removed}}" as="r" hint-placeholder-count="3">
+              <div style="border-top: 1px solid #EEEDE7; padding: 8px 8px 8px 16px; display: flex; align-items: center; gap: 8px">
+                <div style="flex: 1"><div style="font-size: 14px; color: #5C6066; text-decoration: line-through">{{r.name}}</div><div style="font-size: 11.5px; color: #5C6066">{{r.meta}}</div></div>
+                <button style="height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #F5F4EF; font-size: 12.5px; font-weight: 600; color: #15171A">Återställ</button>
+              </div>
+            </sc-for>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { done: { mjolk: true, lime: true, ris: true }, show: true, mode: 0 }; }
+  renderVals() {
+    const I = (id, name, amt, from, m) => ({ id, name, amt, from: from || [], m });
+    const raw = [
+      { name: 'Grönsaker & örter', items: [I('lok', 'Gul lök', '2 st', ['Butter chicken', 'Köttfärssås med spagetti'], { prod: 'Gul lök Klass 1 · 1 kg', src: 'AI-val', price: '1 st · 22 kr', sale: true }), I('koriander', 'Koriander', '1 kruka', ['Grön curry']), I('lime', 'Lime', '2 st', ['Grön curry']), I('zucchini', 'Zucchini', '1 st', ['Grön curry'])] },
+      { name: 'Mejeri & ägg', items: [I('creme', 'Crème fraiche', '2 dl', ['Tacos']), I('smor', 'Smör', '50 g', ['Butter chicken']), I('mjolk', 'Mjölk', '1 l', ['Fiskpinnar med potatismos'])] },
+      { name: 'Kött & chark', items: [I('kyckling', 'Kycklingfilé', '900 g', ['Butter chicken', 'Grön curry'], { prod: 'Kycklingfilé Sverige · 2 x 450 g', src: 'Som förra gången', price: '1 st · 159 kr', open: true }), I('farsk', 'Nötfärs', '1 kg', ['Tacos', 'Köttfärssås med spagetti'])] },
+      { name: 'Torrvaror', items: [I('ris', 'Jasminris', '4 dl', ['Grön curry']), I('spagetti', 'Spagetti', '400 g', ['Köttfärssås med spagetti']), I('tortilla', 'Tortillabröd', '8 st', ['Tacos'])] },
+      { name: 'Konserver', items: [I('tomat', 'Krossade tomater', '800 g', ['Butter chicken', 'Köttfärssås med spagetti']), I('kokos', 'Kokosmjölk', '4 dl', ['Grön curry'])] }
+    ];
+    const done = this.state.done, show = this.state.show;
+    let total = 0, n = 0;
+    const cats = raw.map(c => ({ ...c, items: c.items.map(it => {
+      total++; const d = !!done[it.id]; if (d) n++;
+      return { ...it, done: d, hide: d && !show, boxBorder: d ? '0' : '2px solid rgba(138,142,148,0.6)', boxBg: d ? '#1F6B45' : 'transparent', nameColor: d ? '#8A8E94' : '#15171A', deco: d ? 'line-through' : 'none', amtColor: d ? '#8A8E94' : '#5C6066', showChips: !d && it.from.length > 0, mathem: !d && !!it.m, prod: it.m ? it.m.prod : '', src: it.m ? it.m.src : '', price: it.m ? it.m.price : '', sale: !!(it.m && it.m.sale), mBg: it.m && it.m.open ? '#EEF7F1' : '#F5F4EF', mRing: it.m && it.m.open ? '0 0 0 1px #8FCBA6' : 'none', toggle: () => this.setState({ done: { ...done, [it.id]: !d } }) };
+    }).filter(it => !it.hide).map((it, i) => ({ ...it, border: i ? '1px solid #EEEDE7' : '0' })) })).filter(c => c.items.length);
+    const home = [
+      { name: 'Olivolja', amt: '2 msk', reason: 'Förrådsvara, ca 70 % kvar', reasonColor: '#16503A' },
+      { name: 'Spiskummin', amt: '1 tsk', reason: 'Krydda', reasonColor: '#5C6066' },
+      { name: 'Garam masala', amt: '2 tsk', reason: 'Hemma 3 av 4 gånger', reasonColor: '#5C6066' }
+    ];
+    const hints = ['Köps i den mängd recepten behöver.', 'Köps i stor förpackning och bara när den tar slut. Appen räknar av recepten och frågar när den börjar ta slut.', 'Kommer aldrig upp på listan.'];
+    const mode = this.state.mode;
+    const modes = ['Efter recept', 'Förråd', 'Alltid hemma'].map((label, i) => ({ label, bg: i === mode ? '#FFFFFF' : 'transparent', w: i === mode ? 600 : 400, fg: i === mode ? '#15171A' : '#3D4046', sh: i === mode ? '0 1px 2px rgba(0,0,0,0.06)' : 'none', pick: () => this.setState({ mode: i }) }));
+    const results = [
+      { name: 'Kycklingfilé Sverige', meta: '2 x 450 g · 176.67 kr/kg · Svenskt', price: '159.00 kr', sel: true },
+      { name: 'Garant Kycklingfilé', meta: '900 g · 155.44 kr/kg', price: '139.90 kr', sale: true },
+      { name: 'Kronfågel Kycklingfilé', meta: '1 kg · 169.00 kr/kg · Svenskt', price: '169.00 kr' }
+    ].map((r, i) => ({ ...r, border: i ? '1px solid #EEEDE7' : '0', bg: r.sel ? '#EEF7F1' : 'transparent', priceColor: r.sale ? '#B91C1C' : '#5C6066', priceW: r.sale ? 600 : 400 }));
+    const removed = [{ name: 'Salt', meta: 'Alltid hemma · i dag' }, { name: 'Olivolja', meta: 'Har hemma · nyss' }, { name: 'Paprika', meta: 'Borttagen · i går' }];
+    return { cats, home, modes, modeHint: hints[mode], results, removed, yes: true, done: n, total, left: total - n, pct: Math.round(n / total * 100) + '%', showLabel: show ? 'Dölj handlade' : 'Visa handlade', toggleShow: () => this.setState({ show: !show }) };
+  }
+}
+</script>
+</body>
+</html>

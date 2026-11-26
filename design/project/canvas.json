@@ -1,0 +1,71 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-26T10:40:00Z"},
+  "title": "Matplanering – appen",
+  "launch": {"view": "canvas"},
+  "pages": [{"id": "mobil", "name": "Mobil"}, {"id": "desktop", "name": "Desktop"}],
+  "boards": {
+    "Main.dc.html":              {"x": 0,    "y": 0,    "w": 390, "h": 1640, "title": "Vecka (start)", "is_interactive": true},
+    "PlaneraPortioner.dc.html":  {"x": 470,  "y": 0,    "w": 390, "h": 1500, "title": "Planera · 1 Portioner", "is_interactive": true},
+    "PlaneraBrainstorm.dc.html": {"x": 940,  "y": 0,    "w": 390, "h": 1900, "title": "Planera · 2 Brainstorm", "is_interactive": true},
+    "PlaneraSchema.dc.html":     {"x": 1410, "y": 0,    "w": 390, "h": 1700, "title": "Planera · 3 Schema", "is_interactive": true},
+    "ValjRatt.dc.html":          {"x": 1880, "y": 0,    "w": 390, "h": 844,  "title": "Modal · Välj rätt", "is_interactive": true},
+    "Tilldela.dc.html":          {"x": 2350, "y": 0,    "w": 390, "h": 844,  "title": "Modal · Tilldela matlagning", "is_interactive": true},
+
+    "Recept.dc.html":            {"x": 0,    "y": 2300, "w": 390, "h": 844,  "title": "Recept · lista", "is_interactive": true},
+    "ReceptDetalj.dc.html":      {"x": 470,  "y": 2300, "w": 390, "h": 1240, "title": "Recept · detalj", "is_interactive": true},
+    "ReceptAI.dc.html":          {"x": 940,  "y": 2300, "w": 390, "h": 844,  "title": "Modal · AI-förslag", "is_interactive": true},
+    "Bibliotek.dc.html":         {"x": 1410, "y": 2300, "w": 390, "h": 1400, "title": "Bibliotek", "is_interactive": true},
+    "Filter.dc.html":            {"x": 1880, "y": 2300, "w": 390, "h": 844,  "title": "Modal · Filter", "is_interactive": true},
+    "RattEditor.dc.html":        {"x": 2350, "y": 2300, "w": 390, "h": 844,  "title": "Modal · Redigera rätt", "is_interactive": true},
+
+    "Inkop.dc.html":             {"x": 0,    "y": 4300, "w": 390, "h": 1800, "title": "Inköp", "is_interactive": true},
+    "Forrad.dc.html":            {"x": 470,  "y": 4300, "w": 390, "h": 1100, "title": "Förråd", "is_interactive": true},
+
+    "Mer.dc.html":               {"x": 0,    "y": 6500, "w": 390, "h": 844,  "title": "Modal · Mer", "is_interactive": true},
+    "Spel.dc.html":              {"x": 470,  "y": 6500, "w": 390, "h": 1500, "title": "Spel", "is_interactive": true},
+    "Installningar.dc.html":     {"x": 940,  "y": 6500, "w": 390, "h": 1700, "title": "Inställningar", "is_interactive": true},
+    "Login.dc.html":             {"x": 1410, "y": 6500, "w": 390, "h": 844,  "title": "Logga in", "is_interactive": true},
+    "Feedback.dc.html":          {"x": 1880, "y": 6500, "w": 390, "h": 844,  "title": "Modal · Feedback", "is_interactive": true},
+
+    "TabBar.dc.html":            {"x": 0,    "y": 8700, "w": 390, "h": 104,  "title": "Komponent · Flikmeny"},
+    "Icon.dc.html":              {"x": 470,  "y": 8700, "w": 48,  "h": 48,   "title": "Komponent · Ikon"},
+
+    "DVecka.dc.html":            {"x": 0,    "y": 0,    "w": 1440, "h": 1100, "title": "Desktop · Vecka", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DPlanera.dc.html":          {"x": 1520, "y": 0,    "w": 1440, "h": 1500, "title": "Desktop · Planera", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DRecept.dc.html":           {"x": 0,    "y": 1900, "w": 1440, "h": 900,  "title": "Desktop · Recept", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DBibliotek.dc.html":        {"x": 1520, "y": 1900, "w": 1440, "h": 1100, "title": "Desktop · Bibliotek", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DRattEditor.dc.html":       {"x": 0,    "y": 3400, "w": 1440, "h": 900,  "title": "Desktop · Dialog Redigera rätt", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DValjRatt.dc.html":         {"x": 1520, "y": 3400, "w": 1440, "h": 900,  "title": "Desktop · Dialog Välj rätt", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DInkop.dc.html":            {"x": 0,    "y": 4700, "w": 1440, "h": 1300, "title": "Desktop · Inköp", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DForrad.dc.html":           {"x": 1520, "y": 4700, "w": 1440, "h": 900,  "title": "Desktop · Förråd", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DSpel.dc.html":             {"x": 0,    "y": 6400, "w": 1440, "h": 1500, "title": "Desktop · Spel", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "DInstallningar.dc.html":    {"x": 1520, "y": 6400, "w": 1440, "h": 1900, "title": "Desktop · Inställningar", "page": "desktop", "expand": "fill", "is_interactive": true},
+    "SideNav.dc.html":           {"x": 0,    "y": 8700, "w": 240,  "h": 900,  "title": "Komponent · Sidomeny", "page": "desktop"}
+  },
+  "order": [
+    "Main.dc.html", "PlaneraPortioner.dc.html", "PlaneraBrainstorm.dc.html", "PlaneraSchema.dc.html", "ValjRatt.dc.html", "Tilldela.dc.html",
+    "Recept.dc.html", "ReceptDetalj.dc.html", "ReceptAI.dc.html", "Bibliotek.dc.html", "Filter.dc.html", "RattEditor.dc.html",
+    "Inkop.dc.html", "Forrad.dc.html",
+    "Mer.dc.html", "Spel.dc.html", "Installningar.dc.html", "Login.dc.html", "Feedback.dc.html",
+    "TabBar.dc.html", "Icon.dc.html",
+    "DVecka.dc.html", "DPlanera.dc.html", "DRecept.dc.html", "DBibliotek.dc.html", "DRattEditor.dc.html", "DValjRatt.dc.html",
+    "DInkop.dc.html", "DForrad.dc.html", "DSpel.dc.html", "DInstallningar.dc.html", "SideNav.dc.html"
+  ],
+  "notes": {
+    "t-vecka":   {"x": 0, "y": -300, "text": "Vecka & planering", "kind": "title1", "maxW": 2740},
+    "t-recept":  {"x": 0, "y": 2000, "text": "Recept & bibliotek", "kind": "title1", "maxW": 2740},
+    "t-inkop":   {"x": 0, "y": 4000, "text": "Inköp & förråd", "kind": "title1", "maxW": 2740},
+    "t-mer":     {"x": 0, "y": 6200, "text": "Mer, spel & inställningar", "kind": "title1", "maxW": 2740},
+    "t-komp":    {"x": 0, "y": 8400, "text": "Delade komponenter", "kind": "title1", "maxW": 2740},
+    "s-info":    {"x": 2820, "y": 0, "w": 360, "text": "Mobil (390 px) – källan är src/ i repot. Tryck Play för att klicka runt: flikmenyn, kort, knappar och modaler länkar mellan skärmarna. Exempeldata: vecka 47 (lör 21 – lör 28 nov 2026).", "fill": "green"},
+    "d-vecka":   {"x": 0, "y": -300, "text": "Vecka & planering", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-recept":  {"x": 0, "y": 1600, "text": "Recept & bibliotek", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-dialog":  {"x": 0, "y": 3100, "text": "Dialoger", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-inkop":   {"x": 0, "y": 4400, "text": "Inköp & förråd", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-mer":     {"x": 0, "y": 6100, "text": "Spel & inställningar", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-komp":    {"x": 0, "y": 8400, "text": "Delade komponenter", "kind": "title1", "maxW": 2960, "page": "desktop"},
+    "d-info":    {"x": 3040, "y": 0, "w": 380, "text": "Desktop (från 768 px; recept och inköp får extra kolumner från 1180 px). Sidomenyn länkar mellan skärmarna i Play. Modaler visas som centrerade dialoger. Filter-, Tilldela-, AI- och Feedback-dialogerna har samma innehåll som på mobil.", "fill": "green", "page": "desktop"}
+  },
+  "designSystems": []
+}

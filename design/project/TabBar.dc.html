@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Flikmeny</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>body{margin:0}.tab{transition:background .2s}.tab:hover{color:#15171A}</style>
+</helmet>
+<nav aria-label="Huvudmeny" style="width: 390px; box-sizing: border-box; padding: 24px 16px 12px; background: linear-gradient(to bottom, rgba(245,244,239,0), rgba(245,244,239,0.9) 40%, #F5F4EF); font-family: Inter, system-ui, sans-serif">
+  <div style="height: 64px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 8px 24px rgba(21,23,26,0.10), 0 0 0 1px rgba(21,23,26,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 8px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <sc-if value="{{t.on}}" hint-placeholder-val="{{false}}">
+        <a class="tab" href="{{t.href}}" aria-label="{{t.label}}" aria-current="page" style="height: 48px; padding: 0 16px; border-radius: 999px; background: #15171A; color: #FFFFFF; display: flex; align-items: center; gap: 8px; text-decoration: none">
+          <dc-import name="Icon" icon="{{t.icon}}" size="22" hint-size="22px,22px"></dc-import>
+          <span style="font-size: 14px; font-weight: 600; white-space: nowrap">{{t.label}}</span>
+        </a>
+      </sc-if>
+      <sc-if value="{{t.off}}" hint-placeholder-val="{{true}}">
+        <a class="tab" href="{{t.href}}" aria-label="{{t.label}}" style="height: 48px; width: 48px; border-radius: 999px; color: #5C6066; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <dc-import name="Icon" icon="{{t.icon}}" size="22" hint-size="22px,22px"></dc-import>
+        </a>
+      </sc-if>
+    </sc-for>
+  </div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","default":"vecka","options":["vecka","recept","bibliotek","inkop","mer"]},"$preview":{"width":390,"height":104}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'vecka';
+    const tabs = [
+      { id: 'vecka', label: 'Vecka', icon: 'calendar', href: 'Main.dc.html' },
+      { id: 'recept', label: 'Recept', icon: 'utensils', href: 'Recept.dc.html' },
+      { id: 'bibliotek', label: 'Bibliotek', icon: 'book', href: 'Bibliotek.dc.html' },
+      { id: 'inkop', label: 'Inköp', icon: 'cart', href: 'Inkop.dc.html' },
+      { id: 'mer', label: 'Mer', icon: 'more', href: 'Mer.dc.html' }
+    ].map(t => ({ ...t, on: t.id === active, off: t.id !== active }));
+    return { tabs };
+  }
+}
+</script>
+</body>
+</html>

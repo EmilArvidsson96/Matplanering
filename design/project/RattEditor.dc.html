@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Redigera rätt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder,textarea::placeholder{color:#8A8E94}
+button,select{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #8B8A86; font-family: Inter, system-ui, sans-serif; color: #15171A; -webkit-font-smoothing: antialiased">
+  <div role="dialog" aria-label="Redigera rätt" style="position: absolute; left: 0; right: 0; bottom: 0; height: 793px; background: #F5F4EF; border-radius: 28px 28px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.18); display: flex; flex-direction: column">
+    <div style="padding: 8px 20px 12px">
+      <div style="display: flex; justify-content: center; padding-bottom: 8px"><span style="width: 40px; height: 5px; border-radius: 999px; background: #E2E0D8"></span></div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 13px; font-weight: 500; color: #5C6066">Redigera rätt</div>
+          <h2 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Butter chicken</h2>
+        </div>
+        <a href="Bibliotek.dc.html" aria-label="Stäng" style="width: 40px; height: 40px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="x" size="18" hint-size="18px,18px"></dc-import></a>
+      </div>
+    </div>
+    <div style="padding: 0 16px 12px">
+      <div role="tablist" style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); box-sizing: border-box">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+          <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="border: 0; border-radius: 999px; font-size: 13px; background: {{t.bg}}; color: {{t.fg}}; font-weight: {{t.w}}; box-shadow: {{t.sh}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 4px 16px 24px">
+      <sc-if value="{{grund}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 24px">
+          <label style="font-size: 13px; font-weight: 600; color: #5C6066">Namn<input value="Butter chicken" placeholder="T.ex. Linsgryta" style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; height: 48px; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 16px; font-size: 17px; font-weight: 600; font-family: inherit; color: #15171A"></label>
+          <sc-for list="{{chipGroups}}" as="g" hint-placeholder-count="3">
+            <div>
+              <div style="font-size: 13px; font-weight: 600; color: #5C6066; margin-bottom: 6px">{{g.label}}</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{g.chips}}" as="c" hint-placeholder-count="6">
+                  <button style="height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; border: 1px solid {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font-weight: {{c.w}}">{{c.label}}</button>
+                </sc-for>
+                <sc-if value="{{g.more}}" hint-placeholder-val="{{false}}"><button style="height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; border: 1px dashed rgba(138,142,148,0.6); background: transparent; color: #5C6066">+10 fler</button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <label style="font-size: 13px; font-weight: 600; color: #5C6066">Kök<select style="display: block; margin-top: 6px; width: 100%; height: 48px; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 12px; font-size: 16px; color: #15171A"><option>Indisk</option><option>Svensk</option><option>Övrigt</option></select></label>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ingr}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div style="padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 8px; border-radius: 24px; background: #FFFFFF">
+            <span style="color: #5C6066"><dc-import name="Icon" icon="link" size="18" hint-size="18px,18px"></dc-import></span>
+            <input type="url" aria-label="Receptlänk" placeholder="Klistra in receptlänk" value="https://www.ica.se/recept/butter-chicken" style="flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; font-size: 16px; font-family: inherit">
+            <button style="height: 40px; padding: 0 16px; border-radius: 999px; background: #DDF3E4; color: #0F4A2E; border: 0; font-weight: 600; font-size: 14px">Hämta</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 0 4px">
+            <span style="font-size: 13px; font-weight: 600; color: #5C6066">8 ingredienser</span>
+            <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5C6066">Receptet gäller
+              <span style="display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E2E0D8; border-radius: 999px; padding: 2px"><button aria-label="Färre" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent">−</button><span style="width: 40px; text-align: center; font-family: Manrope, Inter, sans-serif; font-weight: 800; color: #15171A">4</span><button aria-label="Fler" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent">+</button></span>
+            </span>
+          </div>
+          <div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+            <sc-for list="{{ingList}}" as="i" hint-placeholder-count="8">
+              <button style="width: 100%; min-height: 52px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border: 0; border-top: {{i.border}}; background: transparent; text-align: left">
+                <span style="flex: 1; font-size: 15px">{{i.name}}</span>
+                <span style="font-size: 15px; font-weight: 600">{{i.amt}}</span>
+                <span style="color: #8A8E94"><dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></span>
+              </button>
+            </sc-for>
+          </div>
+          <button style="width: 100%; height: 48px; border-radius: 24px; border: 1.5px dashed rgba(138,142,148,0.6); background: transparent; font-weight: 600; font-size: 15px; color: #15171A; display: flex; align-items: center; justify-content: center; gap: 6px"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import>Lägg till ingrediens</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{steg}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <button style="align-self: flex-start; height: 44px; padding: 0 16px; border-radius: 999px; background: #DDF3E4; color: #0F4A2E; border: 0; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px"><dc-import name="Icon" icon="download" size="16" hint-size="16px,16px"></dc-import>Hämta instruktioner från länken</button>
+          <sc-for list="{{stepList}}" as="s" hint-placeholder-count="5">
+            <div style="padding: 12px; display: flex; gap: 12px; align-items: flex-start; border-radius: 24px; background: #FFFFFF">
+              <span style="width: 28px; height: 28px; margin-top: 6px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-family: Manrope, Inter, sans-serif; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{s.n}}</span>
+              <textarea aria-label="Steg {{s.n}}" rows="3" style="flex: 1; min-width: 0; border-radius: 12px; border: 0; background: #F5F4EF; padding: 8px 12px; font-size: 16px; line-height: 1.6; font-family: inherit; resize: none">{{s.t}}</textarea>
+              <div style="display: flex; flex-direction: column">
+                <button aria-label="Flytta upp" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: #5C6066"><dc-import name="Icon" icon="chevron-up" size="16" hint-size="16px,16px"></dc-import></button>
+                <button aria-label="Flytta ned" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: #5C6066"><dc-import name="Icon" icon="chevron-down" size="16" hint-size="16px,16px"></dc-import></button>
+                <button aria-label="Ta bort steg" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: #8A8E94"><dc-import name="Icon" icon="x" size="16" hint-size="16px,16px"></dc-import></button>
+              </div>
+            </div>
+          </sc-for>
+          <button style="width: 100%; height: 48px; border-radius: 24px; border: 1.5px dashed rgba(138,142,148,0.6); background: transparent; font-weight: 600; font-size: 15px; color: #15171A; display: flex; align-items: center; justify-content: center; gap: 6px"><dc-import name="Icon" icon="plus" size="18" hint-size="18px,18px"></dc-import>Lägg till steg</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{mer}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; flex-direction: column; gap: 24px">
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: #5C6066; margin-bottom: 6px">Säsong <span style="font-weight: 400; margin-left: 8px">(vanligast i historiken: Nov)</span></div>
+            <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+              <sc-for list="{{months}}" as="m" hint-placeholder-count="12">
+                <button aria-pressed="{{m.on}}" style="height: 44px; border-radius: 12px; font-size: 13px; border: 1px solid {{m.border}}; background: {{m.bg}}; color: {{m.fg}}; font-weight: {{m.w}}">{{m.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+          <label style="font-size: 13px; font-weight: 600; color: #5C6066">Anteckningar<textarea rows="4" style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 12px 16px; font-size: 16px; font-family: inherit; color: #15171A; resize: none">• Servera med naan: Värm naanbröd i ugnen sista fem minuterna.</textarea></label>
+          <a href="Bibliotek.dc.html" style="width: 100%; height: 48px; border-radius: 24px; background: #FFFFFF; color: #B91C1C; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px"><dc-import name="Icon" icon="trash" size="16" hint-size="16px,16px"></dc-import>Ta bort rätten</a>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="border-top: 1px solid #EEEDE7; padding: 12px 16px 20px">
+      <a href="Bibliotek.dc.html" style="width: 100%; height: 56px; border-radius: 999px; background: #1F6B45; color: #FFFFFF; font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center">Spara</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'grund' }; }
+  renderVals() {
+    const t = this.state.tab;
+    const on = { bg: '#FFFFFF', fg: '#15171A', w: 600, sh: '0 1px 2px rgba(0,0,0,0.06)' };
+    const off = { bg: 'transparent', fg: '#5C6066', w: 500, sh: 'none' };
+    const tabs = [['grund', 'Grund'], ['ingr', 'Ingred. 8'], ['steg', 'Gör så 5'], ['mer', 'Mer']].map(([id, label]) => ({ label, on: t === id, ...(t === id ? on : off), pick: () => this.setState({ tab: id }) }));
+    const chip = (label, sel) => ({ label, border: sel ? '#15171A' : '#E2E0D8', bg: sel ? '#15171A' : '#FFFFFF', fg: sel ? '#FFFFFF' : '#15171A', w: sel ? 600 : 400 });
+    const chipGroups = [
+      { label: 'Protein', chips: ['Kyckling', 'Nöt', 'Fläsk', 'Fisk', 'Skaldjur', 'Lamm', 'Vilt', 'Vegetarisk', 'Vegan'].map(l => chip(l, l === 'Kyckling')), more: false },
+      { label: 'Kolhydrat', chips: ['Ris', 'Pasta', 'Potatis', 'Nudlar', 'Bröd', 'Lågkolhydrat'].map(l => chip(l, l === 'Ris')), more: false },
+      { label: 'Typ', chips: ['Soppa', 'Sallad', 'Paj', 'Gryta', 'Grillat', 'Bowl', 'Burgare', 'Taco'].map(l => chip(l, l === 'Gryta')), more: true },
+      { label: 'Taggar', chips: ['Snabb', 'Festlig', 'Barnvänlig', 'Low FODMAP', 'LCHF', 'Stark', 'Låg fetthalt'].map(l => chip(l, false)), more: false }
+    ];
+    const ingList = [['Kycklingfilé', '600 g'], ['Gul lök', '1 st'], ['Vitlök', '3 klyftor'], ['Krossade tomater', '400 g'], ['Grädde', '2 dl'], ['Smör', '30 g'], ['Garam masala', '2 tsk'], ['Basmatiris', '3 dl']].map(([name, amt], i) => ({ name, amt, border: i ? '1px solid #EEEDE7' : '0' }));
+    const stepList = ['Skär kycklingfilé i bitar och marinera med garam masala.', 'Fräs gul lök och vitlök i smör.', 'Tillsätt krossade tomater och grädde, låt puttra 15 min.', 'Lägg i kycklingen och sjud tills genomstekt.', 'Servera med basmatiris.'].map((tx, i) => ({ n: i + 1, t: tx }));
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'].map((label, i) => {
+      const s = [0, 1, 9, 10, 11].includes(i);
+      return { label, on: s, bg: s ? '#1F6B45' : '#FFFFFF', fg: s ? '#FFFFFF' : '#15171A', border: s ? '#1F6B45' : '#E2E0D8', w: s ? 600 : 400 };
+    });
+    return { tabs, grund: t === 'grund', ingr: t === 'ingr', steg: t === 'steg', mer: t === 'mer', chipGroups, ingList, stepList, months };
+  }
+}
+</script>
+</body>
+</html>

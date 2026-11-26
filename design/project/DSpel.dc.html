@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Spel – desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4EF}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.q:hover{border-color:#F9A8D4}
+@keyframes shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+h2.s{margin:0;font-family:Inter,sans-serif;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+</style>
+</helmet>
+<div style="min-height: 1500px; background: {{pageBg}}; background-size: 400% 400%; animation: shift 18s ease-in-out infinite; color: {{pageFg}}; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; -webkit-font-smoothing: antialiased">
+  <div style="flex: 0 0 240px; background: {{navBg}}"><dc-import name="SideNav" active="spel" hint-size="240px,900px"></dc-import></div>
+  <div style="flex: 999 1 560px; min-width: 0; padding: 12px 12px 12px 0">
+    <main style="max-width: 1152px; padding: 20px 20px 48px; box-sizing: border-box">
+      <header style="margin-bottom: 28px"><h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Spel</h1></header>
+      <div style="max-width: 896px; display: flex; flex-direction: column; gap: 24px">
+        <section style="position: relative; overflow: hidden; border-radius: 24px; padding: 24px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); background: linear-gradient(135deg, #ff3b8c 0%, #a855f7 50%, #4f9cff 100%); background-size: 200% 200%; animation: shift 8s ease-in-out infinite; color: #FFFFFF; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+          <div style="flex: 1 1 400px">
+            <h2 style="margin: 0; font-family: Inter, sans-serif; font-size: 30px; font-weight: 800; display: flex; align-items: center; gap: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.2)"><dc-import name="Icon" icon="gamepad" size="32" hint-size="32px,32px"></dc-import>Matplaneringen — spelläget</h2>
+            <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.9); max-width: 448px">Samla poäng genom att planera veckor, fylla i recept, äta klimatsmart, hålla budget och bygga ditt receptbibliotek.</p>
+          </div>
+          <button onClick="{{toggle}}" aria-pressed="{{on}}" style="border-radius: 999px; padding: 10px 16px; font-weight: 700; border: 0; box-shadow: 0 10px 15px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 8px; background: {{btnBg}}; color: {{btnFg}}"><dc-import name="Icon" icon="power" size="16" hint-size="16px,16px"></dc-import>{{btnLabel}}</button>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <h2 class="s"><span style="color: #EAB308"><dc-import name="Icon" icon="trophy" size="20" hint-size="20px,20px"></dc-import></span>Topplista</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px">
+            <sc-for list="{{players}}" as="p" hint-placeholder-count="2">
+              <div style="position: relative; padding: 16px; border-radius: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: {{p.bg}}; outline: {{p.ring}}; outline-offset: 2px">
+                <span style="position: absolute; top: 12px; right: 14px; font-size: 22px">{{p.medal}}</span>
+                <div style="display: flex; gap: 12px; align-items: center">
+                  <span style="width: 56px; height: 56px; border-radius: 24px; background: {{p.color}}; font-size: 30px; display: flex; align-items: center; justify-content: center">{{p.emoji}}</span>
+                  <div style="flex: 1">
+                    <div style="display: flex; align-items: center; gap: 6px"><b>{{p.name}}</b><sc-if value="{{p.active}}" hint-placeholder-val="{{false}}"><span style="font-size: 10px; text-transform: uppercase; background: rgba(255,255,255,0.8); color: {{p.color}}; padding: 1px 6px; border-radius: 999px; font-weight: 700">Aktiv</span></sc-if></div>
+                    <div style="font-size: 12px; color: #5C6066; margin-top: 2px">Nivå {{p.level}} · {{p.points}} p · 🔥 {{p.streak}}</div>
+                    <div style="height: 8px; border-radius: 999px; background: rgba(255,255,255,0.6); margin-top: 6px; overflow: hidden"><div style="height: 100%; border-radius: 999px; background: {{p.color}}; width: {{p.xp}}"></div></div>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 12px; font-size: 12px">
+                  <span style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 4px; text-align: center">📅 {{p.weeks}}</span><span style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 4px; text-align: center">📖 {{p.recipes}}</span><span style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 4px; text-align: center">🌍 {{p.eco}}</span><span style="background: rgba(255,255,255,0.6); border-radius: 8px; padding: 4px; text-align: center">🥗 {{p.healthy}}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="background: rgba(255,255,255,0.8); border-radius: 24px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+            <h2 class="s" style="font-size: 16px"><span style="color: #EC4899"><dc-import name="Icon" icon="target" size="18" hint-size="18px,18px"></dc-import></span>Receptmål <span style="font-weight: 400; color: #5C6066; font-size: 14px">— polera dina recept</span></h2>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5C6066"><span>8/23 kompletta</span><span style="width: 128px; height: 8px; border-radius: 999px; background: #EEEDE7; overflow: hidden"><span style="display: block; height: 100%; width: 35%; background: linear-gradient(to right, #F472B6, #A855F7)"></span></span><span>35%</span></div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px">
+            <sc-for list="{{quests}}" as="q" hint-placeholder-count="4">
+              <a class="q" href="DRattEditor.dc.html" style="padding: 12px; border-radius: 12px; border: 1px solid #E2E0D8; background: #FFFFFF; display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-weight: 600; font-size: 14px">{{q.name}} <span style="color: #FACC15">{{q.stars}}</span><span style="color: #E5E7EB">{{q.empty}}</span></span><span style="font-size: 12px; font-weight: 700; color: #DB2777; white-space: nowrap">+{{q.p}} p möjliga</span></div>
+                <div style="height: 4px; border-radius: 999px; background: #EEEDE7; overflow: hidden"><div style="height: 100%; background: linear-gradient(to right, #F472B6, #A855F7); width: {{q.pct}}"></div></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px"><sc-for list="{{q.missing}}" as="m" hint-placeholder-count="2"><span style="font-size: 10px; background: #FDF2F8; color: #BE185D; border: 1px solid #FCE7F3; border-radius: 999px; padding: 1px 6px">{{m}}</span></sc-for></div>
+              </a>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 12px">
+          <h2 class="s">🏅 Bedrifter</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px">
+            <sc-for list="{{achievements}}" as="a" hint-placeholder-count="8">
+              <div style="padding: 12px; border-radius: 12px; border: 1px solid {{a.border}}; background: {{a.bg}}; opacity: {{a.opacity}}"><div style="font-size: 22px">{{a.emoji}}</div><div style="font-size: 13px; font-weight: 700; margin-top: 4px">{{a.name}}</div><div style="font-size: 11px; color: #5C6066">{{a.desc}}</div></div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 6px">
+          <h2 class="s" style="margin-bottom: 6px">📜 Senaste händelser</h2>
+          <sc-for list="{{events}}" as="e" hint-placeholder-count="3">
+            <div style="background: rgba(255,255,255,0.7); border-radius: 8px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px"><span>{{e.emoji}}</span><b style="color: {{e.color}}">{{e.who}}</b><span style="flex: 1; color: #3D4046">{{e.label}}</span><b style="color: #16503A">+{{e.p}}</b></div>
+          </sc-for>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { on: false }; }
+  renderVals() {
+    const on = this.state.on;
+    const players = [
+      { name: 'Spelare 1', emoji: '🦊', color: '#ff3b8c', level: 5, points: 420, streak: 3, xp: '64%', weeks: 6, recipes: 9, eco: 14, healthy: 11, medal: '🥇', active: true },
+      { name: 'Spelare 2', emoji: '🐼', color: '#4f9cff', level: 4, points: 380, streak: 2, xp: '40%', weeks: 5, recipes: 7, eco: 12, healthy: 9, medal: '🥈', active: false }
+    ].map(p => ({ ...p, bg: 'linear-gradient(135deg, ' + p.color + '22, ' + p.color + '11)', ring: p.active ? '2px solid ' + p.color : '0' }));
+    const quests = [
+      { name: 'Shakshuka', n: 2, p: 40, missing: ['🥕 Ingredienser', '📝 Instruktioner', '🌱 Säsong'] },
+      { name: 'Carbonara', n: 3, p: 26, missing: ['🔗 Receptlänk', '🌱 Säsong'] },
+      { name: 'Renskavsgryta', n: 4, p: 12, missing: ['🌱 Säsong'] },
+      { name: 'Citronpasta', n: 3, p: 22, missing: ['📝 Instruktioner', '🌱 Säsong'] }
+    ].map(q => ({ ...q, stars: '★'.repeat(q.n), empty: '★'.repeat(5 - q.n), pct: q.n * 20 + '%' }));
+    const A = (emoji, name, desc, u) => ({ emoji: u ? emoji : '🔒', name, desc, border: u ? '#FACC15' : '#E2E0D8', bg: u ? 'linear-gradient(135deg, #FEF9C3, #FFEDD5)' : '#F5F4EF', opacity: u ? 1 : 0.6 });
+    const achievements = [A('🌱', 'Första poängen', 'Få din första poäng.', true), A('📅', 'Veckoplaneraren', 'Slutför en hel veckoplan.', true), A('🔥', 'På rad', '3 veckor i streck.', true), A('📖', 'Receptpolerare', 'Gör 5 recept kompletta.', true), A('🌍', 'Klimathjälte', '10 måltider med betyg A.', false), A('💰', 'Budgetkoll', '4 veckor under budget.', false), A('🥗', 'Grönt veckoslut', 'En helt vegetarisk vecka.', false), A('🏆', 'Mästerkock', 'Nå nivå 10.', false)];
+    const events = [
+      { emoji: '🦊', who: 'Spelare 1', color: '#ff3b8c', label: 'Veckoplan klar', p: 30 },
+      { emoji: '🐼', who: 'Spelare 2', color: '#4f9cff', label: 'Polerade Grön curry', p: 15 },
+      { emoji: '🦊', who: 'Spelare 1', color: '#ff3b8c', label: 'Under budget', p: 10 }
+    ];
+    return {
+      on, players, quests, achievements, events,
+      pageBg: on ? 'linear-gradient(120deg, #fff7ad 0%, #ffcad4 25%, #cdb4db 50%, #b5e2fa 75%, #c1fba4 100%)' : '#F5F4EF',
+      pageFg: on ? '#2d1858' : '#15171A',
+      navBg: on ? 'linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,224,236,0.7))' : 'transparent',
+      btnBg: on ? '#FFFFFF' : 'rgba(0,0,0,0.3)', btnFg: on ? '#DB2777' : '#FFFFFF', btnLabel: on ? 'Spelläge PÅ' : 'Aktivera spelläge',
+      toggle: () => this.setState({ on: !on })
+    };
+  }
+}
+</script>
+</body>
+</html>

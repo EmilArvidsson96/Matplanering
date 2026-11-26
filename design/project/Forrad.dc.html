@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Förråd</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1100px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased">
+  <header style="padding: 20px 20px 16px">
+    <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Förråd</h1>
+  </header>
+  <main style="padding: 0 16px 24px; display: flex; flex-direction: column; gap: 16px">
+    <p style="margin: 0; font-size: 14px; color: #5C6066; line-height: 1.5">Det ni köper stort och bara när det tar slut. Nivån räknas av från planerade recept, och appen frågar när något börjar ta slut. Tryck Slut så hamnar det på veckans inköpslista.</p>
+    <div role="tablist" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #EEEDE7; border-radius: 999px; padding: 4px">
+      <button role="tab" aria-selected="{{stock}}" onClick="{{showStock}}" style="height: 40px; border-radius: 999px; border: 0; font-size: 14px; background: {{tA.bg}}; font-weight: {{tA.w}}; box-shadow: {{tA.sh}}; color: #15171A">Förråd (3)</button>
+      <button role="tab" aria-selected="{{pantry}}" onClick="{{showPantry}}" style="height: 40px; border-radius: 999px; border: 0; font-size: 14px; background: {{tB.bg}}; font-weight: {{tB.w}}; box-shadow: {{tB.sh}}; color: #15171A">Alltid hemma (5)</button>
+    </div>
+
+    <sc-if value="{{stock}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="background: #FFFFFF; border-radius: 24px; overflow: hidden">
+          <sc-for list="{{items}}" as="s" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 12px; border-top: {{s.border}}">
+              <span style="width: 40px; height: 40px; border-radius: 12px; background: #F5F4EF; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #8A8E94"><dc-import name="Icon" icon="package" size="18" hint-size="18px,18px"></dc-import></span>
+              <div style="flex: 1; min-width: 0">
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="font-size: 15px; font-weight: 600">{{s.name}}</span> <span style="font-size: 12px; color: #5C6066">{{s.prod}}</span></div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px">
+                  <div style="flex: 1; height: 6px; border-radius: 999px; background: #E2E0D8; overflow: hidden"><div style="height: 100%; border-radius: 999px; background: {{s.bar}}; width: {{s.pct}}"></div></div>
+                  <span style="font-size: 11.5px; font-weight: 600; color: {{s.labelColor}}; white-space: nowrap">{{s.label}}</span>
+                </div>
+              </div>
+              <sc-if value="{{s.out}}" hint-placeholder-val="{{false}}"><button style="height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #EEF7F1; color: #16503A; font-size: 12.5px; font-weight: 600; white-space: nowrap">Köpt, full igen</button></sc-if>
+              <sc-if value="{{s.notOut}}" hint-placeholder-val="{{true}}"><a href="Inkop.dc.html" style="height: 36px; padding: 0 12px; border-radius: 999px; background: {{s.slutBg}}; color: {{s.slutFg}}; font-size: 12.5px; font-weight: 600; display: flex; align-items: center">Slut</a></sc-if>
+              <button aria-label="Inte längre förrådsvara" title="Inte längre förrådsvara" style="width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: #8A8E94; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="x" size="16" hint-size="16px,16px"></dc-import></button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 999px; padding: 6px 6px 6px 16px; box-shadow: 0 0 0 1px rgba(21,23,26,0.06); display: flex; align-items: center; gap: 8px">
+          <input aria-label="Lägg till förrådsvara" placeholder="Lägg till förrådsvara, t.ex. soja" style="flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; font-size: 16px; font-family: inherit">
+          <button aria-label="Lägg till" style="width: 40px; height: 40px; border-radius: 999px; border: 0; background: #1F6B45; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="plus" size="20" hint-size="20px,20px"></dc-import></button>
+        </div>
+        <section style="background: #DDF3E4; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <h2 style="margin: 0; font-family: Inter, sans-serif; font-size: 15px; font-weight: 700; color: #0F4A2E">Förslag från era val</h2>
+          <p style="margin: 0; font-size: 13px; color: #0F4A2E">Ni köper 500 ml Fisksås när recepten behöver 2 msk.</p>
+          <div style="display: flex; gap: 8px">
+            <button style="height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: #1F6B45; color: #FFFFFF; font-size: 13px; font-weight: 600">Gör till förrådsvara</button>
+            <button style="height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: #0F4A2E; font-size: 13px">Nej tack</button>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{pantry}}" hint-placeholder-val="{{false}}">
+      <section style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-family: Inter, sans-serif; font-size: 15px; font-weight: 700">Alltid hemma</h2>
+        <p style="margin: 0; font-size: 12.5px; color: #5C6066">Kommer aldrig upp på listan och spåras inte.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{pantryItems}}" as="p" hint-placeholder-count="5">
+            <span style="background: #F5F4EF; border-radius: 999px; padding: 4px 4px 4px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px">{{p}}<button aria-label="Ta bort {{p}}" style="width: 24px; height: 24px; border-radius: 999px; border: 0; background: #FFFFFF; color: #5C6066; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="x" size="12" hint-size="12px,12px"></dc-import></button></span>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+  <div style="position: sticky; bottom: 0; margin-top: auto; z-index: 5">
+    <dc-import name="TabBar" active="mer" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'stock' }; }
+  renderVals() {
+    const raw = [
+      { name: 'Sojasås', prod: 'Kikkoman Sojasås · 500 ml', pct: 70, label: 'ca 70 %', lvl: 'ok' },
+      { name: 'Olivolja', prod: 'Zeta Extra Virgin · 1 l', pct: 15, label: 'snart slut', lvl: 'low' },
+      { name: 'Jasminris', prod: 'Garant Jasminris · 2 kg', pct: 0, label: 'slut', lvl: 'out' }
+    ];
+    const items = raw.map((s, i) => ({
+      ...s, pct: s.pct + '%', border: i ? '1px solid #EEEDE7' : '0',
+      bar: s.lvl === 'ok' ? '#1F6B45' : s.lvl === 'low' ? '#D97706' : '#B91C1C',
+      labelColor: s.lvl === 'ok' ? '#3D4046' : s.lvl === 'low' ? '#92400E' : '#B91C1C',
+      out: s.lvl === 'out', notOut: s.lvl !== 'out',
+      slutBg: s.lvl === 'low' ? '#15171A' : '#F5F4EF', slutFg: s.lvl === 'low' ? '#FFFFFF' : '#15171A'
+    }));
+    const st = this.state.tab === 'stock';
+    const on = { bg: '#FFFFFF', w: 600, sh: '0 1px 2px rgba(0,0,0,0.06)' }, off = { bg: 'transparent', w: 400, sh: 'none' };
+    return {
+      items, stock: st, pantry: !st, tA: st ? on : off, tB: st ? off : on,
+      showStock: () => this.setState({ tab: 'stock' }), showPantry: () => this.setState({ tab: 'pantry' }),
+      pantryItems: ['Salt', 'Svartpeppar', 'Vatten', 'Socker', 'Vetemjöl']
+    };
+  }
+}
+</script>
+</body>
+</html>

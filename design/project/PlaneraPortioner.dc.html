@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Planera – Portioner</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+input::placeholder{color:#8A8E94}
+button{font-family:inherit;cursor:pointer}
+.step{transition:color .2s}.step:hover{color:#15171A}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1500px; background: #F5F4EF; color: #15171A; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased">
+
+  <header style="padding: 20px 20px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 13px; font-weight: 500; color: #5C6066">21 nov – 28 nov</div>
+      <h1 style="margin: 0; font-family: Manrope, Inter, sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1">Vecka 47</h1>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <button aria-label="Föregående vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-left" size="20" hint-size="20px,20px"></dc-import></button>
+      <button aria-label="Nästa vecka" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E0D8; color: #15171A; display: flex; align-items: center; justify-content: center"><dc-import name="Icon" icon="chevron-right" size="20" hint-size="20px,20px"></dc-import></button>
+    </div>
+  </header>
+
+  <main style="padding: 0 16px 24px; display: flex; flex-direction: column; gap: 20px">
+    <nav aria-label="Planeringssteg" style="height: 48px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+      <a href="PlaneraPortioner.dc.html" aria-current="page" style="border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600"><span style="width: 20px; height: 20px; border-radius: 999px; background: #15171A; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">1</span>Portioner</a>
+      <a class="step" href="PlaneraBrainstorm.dc.html" style="border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; color: #5C6066"><span style="width: 20px; height: 20px; border-radius: 999px; background: #E2E0D8; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span>Brainstorm</a>
+      <a class="step" href="PlaneraSchema.dc.html" style="border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; color: #5C6066"><span style="width: 20px; height: 20px; border-radius: 999px; background: #E2E0D8; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>Schema</a>
+    </nav>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+      <h2 style="margin: 0 0 16px; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Antal i hushållet (standard)</h2>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <button onClick="{{dec}}" aria-label="Minska" style="width: 44px; height: 44px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; font-size: 18px; color: #15171A">−</button>
+          <span style="width: 32px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums">{{household}}</span>
+          <button onClick="{{inc}}" aria-label="Öka" style="width: 44px; height: 44px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; font-size: 18px; color: #15171A">+</button>
+        </div>
+        <span style="font-size: 14px; color: #5C6066">portioner per måltid som standard</span>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+      <h2 style="margin: 0 0 4px; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Planeringsfönster</h2>
+      <div style="font-size: 12px; color: #5C6066; margin-bottom: 16px">8 dagar · 15 måltider</div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label style="font-size: 13px; font-weight: 600; color: #5C6066">Från<input type="date" value="2026-11-21" style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; height: 48px; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 12px; font-size: 16px; font-family: inherit; color: #15171A"></label>
+          <div style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); box-sizing: border-box">
+            <button style="border: 0; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 500; color: #5C6066">Lunch</button>
+            <button style="border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-size: 14px; font-weight: 600; color: #15171A">Middag</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label style="font-size: 13px; font-weight: 600; color: #5C6066">Till<input type="date" value="2026-11-28" style="display: block; margin-top: 6px; width: 100%; box-sizing: border-box; height: 48px; border-radius: 16px; border: 1px solid #E2E0D8; background: #FFFFFF; padding: 0 12px; font-size: 16px; font-family: inherit; color: #15171A"></label>
+          <div style="height: 44px; border-radius: 999px; background: #EEEDE7; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); box-sizing: border-box">
+            <button style="border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); font-size: 14px; font-weight: 600; color: #15171A">Lunch</button>
+            <button style="border: 0; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 500; color: #5C6066">Middag</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="background: #FFFFFF; border-radius: 24px; padding: 20px">
+      <h2 style="margin: 0 0 16px; font-family: Manrope, Inter, sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Portioner per dag</h2>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <sc-for list="{{days}}" as="day" hint-placeholder-count="8">
+          <div style="border: 1px solid #EEEDE7; border-radius: 12px">
+            <div style="padding: 12px 12px 4px; font-size: 14px; font-weight: 500; color: #3D4046">{{day.label}}</div>
+            <sc-for list="{{day.slots}}" as="s" hint-placeholder-count="2">
+              <div style="border-top: 1px solid #EEEDE7; padding: 8px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+                <span style="font-size: 12px; color: #5C6066; width: 48px">{{s.type}}</span>
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <button aria-label="Minska" style="width: 36px; height: 36px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; color: #15171A">−</button>
+                  <span style="width: 24px; text-align: center; font-family: Manrope, Inter, sans-serif; font-size: 15px; font-weight: 800">{{s.n}}</span>
+                  <button aria-label="Öka" style="width: 36px; height: 36px; border-radius: 999px; background: #EEEDE7; border: 0; font-weight: 700; color: #15171A">+</button>
+                </div>
+                <input aria-label="Notering" placeholder="Notering…" value="{{s.note}}" style="flex: 1; min-width: 80px; border: 0; background: transparent; font-size: 12px; font-style: italic; color: #5C6066; font-family: inherit">
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="display: flex; justify-content: flex-end">
+      <a href="PlaneraBrainstorm.dc.html" style="background: #1F6B45; color: #FFFFFF; font-weight: 600; padding: 10px 20px; border-radius: 999px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px">Uppdaterat – gå till brainstorm <dc-import name="Icon" icon="chevron-right" size="16" hint-size="16px,16px"></dc-import></a>
+    </div>
+  </main>
+
+  <div style="position: sticky; bottom: 0; margin-top: auto; z-index: 5">
+    <dc-import name="TabBar" active="vecka" hint-size="390px,104px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { household: 2 }; }
+  renderVals() {
+    const L = (t, n, note) => ({ type: t, n, note: note || '' });
+    const days = [
+      { label: 'Lördag 21 nov', slots: [L('Middag', 4, 'Farmor äter med')] },
+      { label: 'Söndag 22 nov', slots: [L('Lunch', 2), L('Middag', 2)] },
+      { label: 'Måndag 23 nov', slots: [L('Lunch', 0, 'Jobb'), L('Middag', 2)] },
+      { label: 'Tisdag 24 nov', slots: [L('Lunch', 0), L('Middag', 2)] },
+      { label: 'Onsdag 25 nov', slots: [L('Lunch', 0), L('Middag', 2)] },
+      { label: 'Torsdag 26 nov', slots: [L('Lunch', 0), L('Middag', 2)] },
+      { label: 'Fredag 27 nov', slots: [L('Lunch', 1), L('Middag', 3, 'Fotbollsträning 18')] },
+      { label: 'Lördag 28 nov', slots: [L('Lunch', 2)] }
+    ];
+    const h = this.state.household;
+    return {
+      days, household: h,
+      dec: () => this.setState({ household: Math.max(1, h - 1) }),
+      inc: () => this.setState({ household: h + 1 })
+    };
+  }
+}
+</script>
+</body>
+</html>
