@@ -5,7 +5,12 @@ import { cartHandoffUrl, claudeCartPrompt, MATHEM_BOOKMARKLET } from '../../api/
 import { useMathemJob, learnChoice } from '../../store/mathemStore'
 
 /** Summary of the Mathem suggestions on the list, and the hand-off to mathem.se. */
-export default function MathemCartBar({ weekId, items }: { weekId: string; items: ShoppingItem[] }) {
+export default function MathemCartBar({ weekId, items, waiting }: {
+  weekId: string
+  items: ShoppingItem[]
+  /** Rows still waiting for an answer in "Har du redan hemma?" (not put in the cart). */
+  waiting: Set<string>
+}) {
   const job = useMathemJob()
   const [sent, setSent] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -13,11 +18,11 @@ export default function MathemCartBar({ weekId, items }: { weekId: string; items
 
   const open = items.filter(i => !i.isPurchased && !i.isExcluded)
   const withSuggestion = open.filter(i => i.mathem)
-  const chosen = withSuggestion.filter(i => i.mathem!.include && i.mathem!.product && i.mathem!.quantity > 0)
+  const chosen = withSuggestion.filter(i => !waiting.has(i.id) && i.mathem!.include && i.mathem!.product && i.mathem!.quantity > 0)
   const missing = open.length - withSuggestion.length
   const swaps = chosen.filter(i => i.mathem!.saleAlt).length
   const packs = chosen.reduce((s, i) => s + i.mathem!.quantity, 0)
-  const total = chosen.reduce((s, i) => s + i.mathem!.product!.price * i.mathem!.quantity, 0)
+  const total = chosen.reduce((s, i) => s + (Number.isFinite(i.mathem!.product!.price) ? i.mathem!.product!.price * i.mathem!.quantity : 0), 0)
   const runningHere = job.running && job.weekId === weekId
   const done = job.total - job.pending.size
 
@@ -56,6 +61,7 @@ export default function MathemCartBar({ weekId, items }: { weekId: string; items
               : <>
                   {chosen.length} varor · {packs} förp. · ca {Math.round(total)} kr
                   {swaps > 0 && <span className="text-amber-700"> · {swaps} extrapris att ta ställning till</span>}
+                  {waiting.size > 0 && <span> · {waiting.size} väntar på svar om de finns hemma</span>}
                 </>}
           </p>
           {runningHere && (

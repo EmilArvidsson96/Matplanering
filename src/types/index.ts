@@ -136,6 +136,13 @@ export interface ShoppingItem {
   dishIds: string[]   // dishes this item came from (multiple if merged)
   isPurchased: boolean
   isExcluded: boolean
+  /** Why it's excluded: marked at home this week, always at home, or in stock. */
+  excludedReason?: 'home' | 'pantry' | 'stock'
+  excludedAt?: string
+  /** Soft delete: shown under Borttagna until the list is rebuilt. */
+  deletedAt?: string
+  /** Answered "Köp" to "Har du redan hemma?". */
+  homeAnswer?: 'buy'
   /** Suggested Mathem product (fetched on demand, saved with the week). */
   mathem?: MathemSuggestion
 }
@@ -211,6 +218,32 @@ export interface AppSettings {
   shoppingRules?: ShoppingRules
   /** Extra free-text household rules for picking products. */
   productRules?: string
+  /** Things bought in a big pack and only when they run out, by ingredient key. */
+  stockItems?: Record<string, StockItem>
+  /** Ingredient keys where the user said no to "Gör till förrådsvara?". */
+  stockDeclined?: string[]
+  /** Products never to suggest again, per ingredient key. */
+  productAvoid?: Record<string, number[]>
+  /** How often each ingredient was at home vs bought when asked. */
+  homeStats?: Record<string, { home: number; buy: number }>
+}
+
+/** A förrådsvara: bought in a big pack, only when it runs out. */
+export interface StockItem {
+  name: string
+  category?: ShoppingCategory
+  productId?: number
+  productName?: string
+  packSize?: string
+  imageUrl?: string
+  /** Estimate baseline: fraction left at the start of this week (1 = new pack). */
+  baseline: { weekId: string; fraction: number }
+  /** Share of the pack used by planned recipes per week (-1 = couldn't measure). */
+  usage: Record<string, number>
+  /** Set by hand: 'out' puts it on the list; 'low' asks. */
+  manual?: 'low' | 'out'
+  /** Don't ask "Har du kvar?", the user says when it's out. */
+  neverAsk?: boolean
 }
 
 export interface ShoppingRules {
@@ -228,6 +261,8 @@ export interface ProductPreference {
   packSize: string    // e.g. "5 dl", "Sverige, 900 g"
   chosenAt: string    // ISO date of the latest choice
   timesChosen: number
+  /** Always buy this many packs, whatever recipes need. */
+  fixedQuantity?: number
 }
 
 /** CSS selectors learned (via AI) for scraping recipes from a site without AI next time. */

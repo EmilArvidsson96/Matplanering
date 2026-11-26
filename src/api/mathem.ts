@@ -17,6 +17,8 @@ export interface MathemProduct {
   packSize: string      // name_extra, e.g. "5 dl"
   price: number         // SEK per pack
   unitPrice: string     // e.g. "48.00 kr/l"
+  /** Comparison price as a number (kr per kg/l/st), NaN when missing. */
+  unitPriceValue: number
   onSale: boolean
   /** Store labels, e.g. "Lactose free", "Från Sverige", "Ekologisk". */
   tags: string[]
@@ -54,6 +56,7 @@ function toProduct(a: RawProduct): MathemProduct {
     unitPrice: a.gross_unit_price
       ? `${a.gross_unit_price} kr/${a.unit_price_quantity_abbreviation ?? ''}`
       : '',
+    unitPriceValue: Number(a.gross_unit_price ?? NaN),
     // "Prismatch" is also a promotion but not an offer, so only count real discounts.
     onSale: !!a.discount?.is_discounted || /extrapris/i.test(a.promotion?.title ?? ''),
     tags: (a.client_classifiers ?? []).map(c => c.name ?? '').filter(n => n && !/färskvarugaranti/i.test(n)),
@@ -69,8 +72,8 @@ function toProduct(a: RawProduct): MathemProduct {
 // Search hits are kept as id lists for SEARCH_TTL, so reopening the page or
 // switching alternatives never refetches.
 
-const PRODUCTS_KEY = 'matplan.mathem.products.v2'
-const SEARCHES_KEY = 'matplan.mathem.searches.v2'
+const PRODUCTS_KEY = 'matplan.mathem.products.v3'
+const SEARCHES_KEY = 'matplan.mathem.searches.v3'
 const SEARCH_TTL = 24 * 3600_000
 const MAX_PRODUCTS = 4000
 const MAX_SEARCHES = 600

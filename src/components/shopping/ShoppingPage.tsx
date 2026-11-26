@@ -11,9 +11,15 @@ import { cleanupShoppingList } from '../../api/anthropic'
 import { componentCookPortions, isExtraMeal } from '../../utils/weekUtils'
 import type { AiCleanupResult } from '../../api/anthropic'
 import MathemCartBar from './MathemCartBar'
-import MathemSuggestionLine from './MathemSuggestionLine'
+import MathemSuggestionLine, { MathemRowEditor } from './MathemSuggestionLine'
+import AtHomeSection from './AtHomeSection'
+import RemovedSection from './RemovedSection'
 import { useMathemJob, packsFor } from '../../store/mathemStore'
 import { ingredientKey } from '../../utils/productMatch'
+import { guessAtHome, stockLevel, usageFraction } from '../../utils/stock'
+import { markAtHome, removeItem, recordStockUsage } from '../../store/shoppingActions'
+import { batch } from '../../store/undoStore'
+import { useMinWidth } from '../../hooks/useDevice'
 
 const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   grönsaker: 'Grönsaker & örter', frukt: 'Frukt', mejeri: 'Mejeri & ägg',
@@ -37,13 +43,18 @@ export default function ShoppingPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError]     = useState<string | null>(null)
   const mathemJob = useMathemJob()
+  const wide = useMinWidth(1180)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const items = week.shoppingList
+  const allItems = week.shoppingList
+  /** Everything that's not deleted (deleted rows only show under Borttagna). */
+  const items = useMemo(() => allItems.filter(i => !i.deletedAt), [allItems])
   const dismissed = week.dismissedMergePairs ?? []
 
   function rebuildAutoItems() {
     const raw: ShoppingItem[] = []
     const pantry = new Set(settings.pantryItems.map(p => p.toLowerCase()))
+    const pantrySkipped = new Map<string, ShoppingItem>()
 
     for (const meal of week.meals) {
       if (meal.isRemainder && !isExtraMeal(meal)) continue
@@ -57,7 +68,14 @@ export default function ShoppingPage() {
         const effectivePortions = componentCookPortions(comp, meal)
 
         for (const ing of dish.ingredients) {
-          if (pantry.has(ing.name.toLowerCase())) continue
+          if (pantry.has(ing.name.toLowerCase())) {
+            // Shown under Borttagna ("Alltid hemma") so it can be brought back for one week.
+            if (!pantrySkipped.has(ing.name.toLowerCase())) pantrySkipped.set(ing.name.toLowerCase(), {
+              id: uuid(), name: ing.name, amount: '', unit: '', category: ing.category, isAutoAdded: true,
+              dishIds: [comp.dishId], isPurchased: false, isExcluded: true, excludedReason: 'pantry',
+            })
+            continue
+          }
           const scale = effectivePortions / (ing.portionsBase || 1)
           raw.push({
             id: uuid(),
@@ -74,16 +92,39 @@ export default function ShoppingPage() {
       }
     }
 
-    // Keep Mathem suggestions for ingredients that are still on the list.
+    // Keep answers and Mathem suggestions for ingredients that are still on the list.
     const previous = new Map(
-      items.filter(i => i.isAutoAdded && i.mathem).map(i => [ingredientKey(i.name), i.mathem!]),
+      items.filter(i => i.isAutoAdded && i.excludedReason !== 'pantry').map(i => [ingredientKey(i.name), i]),
     )
-    const rebuilt = mergeExactDuplicates(raw, settings.unitConversions).map(item => {
-      const m = previous.get(ingredientKey(item.name))
-      if (!m) return item
-      return { ...item, mathem: m.product ? { ...m, quantity: packsFor(item, m.product.packSize, m.quantity) } : m }
+    const rebuilt: ShoppingItem[] = mergeExactDuplicates(raw, settings.unitConversions).map(item => {
+      const prev = previous.get(ingredientKey(item.name))
+      if (!prev) return item
+      const m = prev.mathem
+      return {
+        ...item,
+        isPurchased: prev.isPurchased,
+        isExcluded: prev.isExcluded, excludedReason: prev.excludedReason, excludedAt: prev.excludedAt,
+        homeAnswer: prev.homeAnswer,
+        mathem: m?.product ? { ...m, quantity: m.note === 'Förrådsvara' ? m.quantity : packsFor(item, m.product.packSize, m.quantity) } : m,
+      }
     })
-    store.rebuildShoppingFromIngredients(rebuilt)
+
+    // Stock items marked as out go on the list even when no recipe needs them.
+    const keys = new Set(rebuilt.map(i => ingredientKey(i.name)))
+    const manualKeys = new Set(items.filter(i => !i.isAutoAdded).map(i => ingredientKey(i.name)))
+    for (const [key, st] of Object.entries(settings.stockItems ?? {})) {
+      if (stockLevel(st).state === 'out' && !keys.has(key) && !manualKeys.has(key)) {
+        rebuilt.push({
+          id: uuid(), name: st.name, amount: '', unit: '', category: st.category ?? 'övrigt', isAutoAdded: true,
+          dishIds: [], isPurchased: false, isExcluded: false, homeAnswer: 'buy',
+        })
+      }
+    }
+
+    batch(() => {
+      store.rebuildShoppingFromIngredients([...rebuilt, ...pantrySkipped.values()])
+      recordStockUsage(week.id, rebuilt, (row, st) => row.amount ? usageFraction(row, st) : 0)
+    })
   }
 
   function addManual() {
@@ -96,9 +137,9 @@ export default function ShoppingPage() {
   }
 
   function markAllPurchased() {
-    items.filter(i => !i.isPurchased).forEach(i =>
+    batch(() => items.filter(i => !i.isPurchased && !i.isExcluded).forEach(i =>
       store.updateShoppingItem(i.id, { isPurchased: true })
-    )
+    ))
   }
 
   function approveMerge(suggestion: MergeSuggestion) {
@@ -122,13 +163,8 @@ export default function ShoppingPage() {
       }
     }
 
-    // Remove all items in the suggestion
-    for (const item of suggestion.items) {
-      store.deleteShoppingItem(item.id)
-    }
-
-    // Add the merged item (keep category from first item)
-    store.addShoppingItem({
+    // Replace the items with the merged one (keep category from first item)
+    store.replaceShoppingItems(suggestion.items.map(i => i.id), {
       name: suggestion.suggestedName,
       amount: mergedAmount,
       unit: mergedUnit,
@@ -162,8 +198,7 @@ export default function ShoppingPage() {
     if (mergeItems.length < 2) return
 
     const { amount, unit } = computeMergedAmount(mergeItems, settings.unitConversions)
-    for (const item of mergeItems) store.deleteShoppingItem(item.id)
-    store.addShoppingItem({
+    store.replaceShoppingItems(mergeItems.map(i => i.id), {
       name: merge.name,
       amount,
       unit,
@@ -188,14 +223,22 @@ export default function ShoppingPage() {
 
   function applyAllAi() {
     if (!aiResult) return
-    for (const m of aiResult.merges) applyAiMerge(m)
-    for (const r of aiResult.recategorizations) applyAiRecat(r)
-    for (const t of aiResult.translations) applyAiTranslation(t)
+    batch(() => {
+      for (const m of aiResult.merges) applyAiMerge(m)
+      for (const r of aiResult.recategorizations) applyAiRecat(r)
+      for (const t of aiResult.translations) applyAiTranslation(t)
+    })
     setAiResult(null)
   }
 
+  const guesses = useMemo(
+    () => guessAtHome(items, settings, store.weeks, week.id),
+    [items, settings, store.weeks, week.id],
+  )
+
   const grouped = useMemo(() => {
-    const visible = items.filter(i => !i.isExcluded && (showPurchased || !i.isPurchased))
+    const asked = new Set(guesses.map(g => g.item.id))   // shown in "Har du redan hemma?" instead
+    const visible = items.filter(i => !i.isExcluded && !asked.has(i.id) && (showPurchased || !i.isPurchased))
     const map = new Map<ShoppingCategory, ShoppingItem[]>()
     for (const cat of CATEGORY_ORDER) map.set(cat, [])
     for (const item of visible) {
@@ -203,7 +246,7 @@ export default function ShoppingPage() {
       list.push(item)
     }
     return [...map.entries()].filter(([, list]) => list.length > 0)
-  }, [items, showPurchased])
+  }, [items, showPurchased, guesses])
 
   const suggestions = useMemo(
     () => computeMergeSuggestions(items, dismissed, settings.unitConversions),
@@ -223,8 +266,30 @@ export default function ShoppingPage() {
   const purchasedCount = activeItems.filter(i => i.isPurchased).length
   const progressPct = activeItems.length ? Math.round((purchasedCount / activeItems.length) * 100) : 0
 
+  const waitingIds = new Set(guesses.map(g => g.item.id))
+  const editingItem = editingId ? items.find(i => i.id === editingId && i.mathem && !i.isExcluded) : undefined
+  const side = (
+    <>
+      <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />
+      {wide && editingItem && (
+        <section aria-label={`Redigera ${editingItem.name}`} className="card p-1 space-y-1">
+          <p className="px-3 pt-2.5 text-[15px] font-bold">
+            {editingItem.name} <span className="text-[13px] font-normal text-ink-muted">{editingItem.amount} {editingItem.unit}</span>
+          </p>
+          <MathemRowEditor
+            item={editingItem}
+            onUpdate={p => store.updateShoppingItem(editingItem.id, p)}
+            onClose={() => setEditingId(null)}
+          />
+        </section>
+      )}
+      <RemovedSection items={allItems} defaultOpen={wide} />
+    </>
+  )
+
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className={wide ? 'grid grid-cols-[minmax(0,1fr)_minmax(320px,380px)] gap-6 items-start' : 'max-w-2xl'}>
+    <div className="space-y-5 min-w-0">
       {/* Progress */}
       {activeItems.length > 0 && (
         <div className="space-y-2">
@@ -271,7 +336,9 @@ export default function ShoppingPage() {
         )}
       </div>
 
-      <MathemCartBar weekId={week.id} items={items} />
+      {!wide && <MathemCartBar weekId={week.id} items={items} waiting={waitingIds} />}
+
+      <AtHomeSection guesses={guesses} wide={wide} />
 
       {/* AI cleanup */}
       {aiError && (
@@ -320,9 +387,12 @@ export default function ShoppingPage() {
                     recipeNames={(item.dishIds ?? []).map(id => dishNameById.get(id)).filter((n): n is string => !!n)}
                     mathemPending={mathemRunning && mathemJob.pending.has(item.id)}
                     onToggle={() => store.updateShoppingItem(item.id, { isPurchased: !item.isPurchased })}
-                    onExclude={() => store.updateShoppingItem(item.id, { isExcluded: !item.isExcluded })}
-                    onDelete={() => store.deleteShoppingItem(item.id)}
+                    onExclude={() => markAtHome(item)}
+                    onDelete={() => removeItem(item)}
                     onUpdate={(p) => store.updateShoppingItem(item.id, p)}
+                    mathemOpen={editingId === item.id}
+                    onMathemToggle={() => setEditingId(id => id === item.id ? null : item.id)}
+                    inlineEditor={!wide}
                   />
                 ))}
               </div>
@@ -330,6 +400,8 @@ export default function ShoppingPage() {
           ))}
         </div>
       )}
+
+      {!wide && <RemovedSection items={allItems} />}
 
       {/* Add item — sticks above the tab bar on mobile so it stays in thumb reach */}
       <div className="sticky bottom-28 md:bottom-6 z-10">
@@ -364,6 +436,8 @@ export default function ShoppingPage() {
           </button>
         </div>
       </div>
+    </div>
+    {wide && <aside className="space-y-4 sticky top-0">{side}</aside>}
     </div>
   )
 }
@@ -532,11 +606,14 @@ function AiCleanupPanel({
 }
 
 function ShoppingItemRow({
-  item, recipeNames, mathemPending, onToggle, onExclude, onDelete, onUpdate,
+  item, recipeNames, mathemPending, onToggle, onExclude, onDelete, onUpdate, mathemOpen, onMathemToggle, inlineEditor,
 }: {
   item: ShoppingItem
   recipeNames: string[]
   mathemPending: boolean
+  mathemOpen: boolean
+  onMathemToggle: () => void
+  inlineEditor: boolean
   onToggle: () => void
   onExclude: () => void
   onDelete: () => void
@@ -638,7 +715,7 @@ function ShoppingItemRow({
     </div>
     {!editing && !item.isPurchased && (
       item.mathem
-        ? <MathemSuggestionLine item={item} onUpdate={onUpdate} />
+        ? <MathemSuggestionLine item={item} onUpdate={onUpdate} open={mathemOpen} onToggle={onMathemToggle} inlineEditor={inlineEditor} />
         : mathemPending && <p className="pl-[52px] pb-2 -mt-1 text-[12px] text-ink-faint">Söker på Mathem…</p>
     )}
     </div>

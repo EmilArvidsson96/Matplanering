@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { record } from './undoStore'
 import { v4 as uuid } from 'uuid'
 import type { AppSettings, ProductPreference, RecipeSiteRule, UnitConversion } from '../types'
 
@@ -32,16 +33,21 @@ const DEFAULT: AppSettings = {
   costOverrides: {},
 }
 
+let loading = false
+
 export const useSettingsStore = create<SettingsStore>((set) => ({
   settings: DEFAULT,
   sha: undefined,
   isDirty: false,
 
-  load: (settings, sha) => set({
-    settings: { ...DEFAULT, ...settings },
-    sha,
-    isDirty: false,
-  }),
+  load: (settings, sha) => {
+    loading = true
+    try {
+      set({ settings: { ...DEFAULT, ...settings }, sha, isDirty: false })
+    } finally {
+      loading = false
+    }
+  },
 
   update: (patch) =>
     set((s) => ({ settings: { ...s.settings, ...patch }, isDirty: true })),
@@ -124,3 +130,16 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
 
   markClean: (sha) => set({ isDirty: false, sha }),
 }))
+
+// Every settings change by the user is undoable (⌘Z). Quick successive
+// changes (typing in a field) merge into one step.
+useSettingsStore.subscribe((state, prev) => {
+  if (loading || state.settings === prev.settings) return
+  const before = prev.settings
+  const after = state.settings
+  record(
+    () => useSettingsStore.setState({ settings: before, isDirty: true }),
+    () => useSettingsStore.setState({ settings: after, isDirty: true }),
+    'settings',
+  )
+})
