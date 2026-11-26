@@ -112,7 +112,7 @@ produkt.
 ### ICA och andra butiker
 
 Samma upplägg fungerar om butiken har ett sök-API och ett korg-API i
-webbläsaren. ICA är inte undersökt än. Gör `store` till ett adapter-interface
+webbläsaren. ICA är nu gjort på det sättet, se [`ica.md`](ica.md). Butiken är ett adapter-interface
 (`search(q)`, `buildCartScript(plan)`) så att varje butik bara är en ny adapter.
 
 ## Testkörningen v.48: hur raderna hanterades

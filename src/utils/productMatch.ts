@@ -60,9 +60,10 @@ const SEED: Record<string, ProductPreference> = Object.fromEntries(
 export function findPreference(
   name: string,
   learned: Record<string, ProductPreference> | undefined,
+  useMathemSeed = true,
 ): ProductPreference | null {
   const key = ingredientKey(name)
-  for (const source of [learned ?? {}, SEED]) {
+  for (const source of useMathemSeed ? [learned ?? {}, SEED] : [learned ?? {}]) {
     if (source[key]) return source[key]
     const contained = Object.keys(source)
       .filter(k => k.length >= 3 && new RegExp(`(^|\\s)${escapeRe(k)}(\\s|$)`).test(key))
@@ -89,7 +90,7 @@ function parseAmount(n: string): number {
   return Number(n.replace(',', '.'))
 }
 
-/** Pack size from Mathem's name_extra ("Sverige, 900 g", "3x28g", "1,5 l", "12 st"). */
+/** Pack size from the store's text ("Sverige, 900 g", "3x28g", "1,5 l", "0,5 L", "12 st"). */
 function parsePack(packSize: string): { qty: number; kind: 'mass' | 'vol' | 'count' } | null {
   const multi = packSize.match(/(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|dl|cl|ml)\b/i)
   if (multi) {

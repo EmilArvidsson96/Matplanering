@@ -18,3 +18,10 @@ Free tier: 100,000 requests/day, no credit card, no expiry.
 
 - `ALLOWED_ORIGIN` in `worker.js` is hardcoded to `https://emilarvidsson96.github.io` — update it if the app ever moves to a different domain.
 - The worker refuses non-`https://` targets and private/loopback IPs as a basic SSRF guard, but does not restrict which public hostnames it can fetch — treat the worker URL as effectively public once deployed.
+
+## ICA routes
+
+`GET /ica/search?store=<nr>&q=<text>&limit=8` and `GET /ica/products?store=<nr>&ids=<uuid>,…`
+return ICA Handla products with that store's prices (see `docs/ica.md`). The Worker keeps an
+anonymous ICA Handla session per store for 10 minutes; no customer login is involved.
+After changing `worker.js`, paste it into the dashboard editor again and **Deploy**.

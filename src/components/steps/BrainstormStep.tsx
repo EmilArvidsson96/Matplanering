@@ -17,9 +17,8 @@ import DishPicker from './DishPicker'
 import DishEditor from '../library/DishEditor'
 import type { Dish, PlannedMeal, MealComponent, TemporaryIngredient, ShoppingCategory } from '../../types'
 
-const SHOPPING_CATS: ShoppingCategory[] = [
-  'grönsaker','frukt','mejeri','kött','fisk','bröd','torrvaror','konserver','frys','kryddor','övrigt',
-]
+import { CATEGORY_ORDER, CATEGORY_LABELS, categoryFor } from '../../data/categories'
+import { useSettingsStore } from '../../store/settingsStore'
 
 export default function BrainstormStep() {
   const store       = useWeekStore()
@@ -311,10 +310,17 @@ function MealRow({
   }
 
   function updateTempIngredient(id: string, patch: Partial<TemporaryIngredient>) {
+    const { settings, setCategoryOverride } = useSettingsStore.getState()
     onUpdate({
-      temporaryIngredients: (meal.temporaryIngredients ?? []).map(i =>
-        i.id === id ? { ...i, ...patch } : i
-      ),
+      temporaryIngredients: (meal.temporaryIngredients ?? []).map(i => {
+        if (i.id !== id) return i
+        const next = { ...i, ...patch }
+        if (patch.name !== undefined && i.category === 'övrigt') {
+          next.category = categoryFor(patch.name, 'övrigt', settings.categoryOverrides)
+        }
+        if (patch.category && i.name.trim()) setCategoryOverride(i.name, patch.category)
+        return next
+      }),
     })
   }
 
@@ -643,7 +649,7 @@ function MealRow({
                   onChange={e => updateTempIngredient(ing.id, { category: e.target.value as ShoppingCategory })}
                   className="border border-line rounded px-1 py-1 text-xs bg-white"
                 >
-                  {SHOPPING_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORY_ORDER.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
                 </select>
                 <button onClick={() => removeTempIngredient(ing.id)} className="text-ink-faint hover:text-red-500">✕</button>
               </div>

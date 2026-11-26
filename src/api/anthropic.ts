@@ -1,6 +1,7 @@
 /** Anthropic API — calls the Messages API directly from the browser. */
 
 import type { AiModel, AppSettings, Dish, RecipeImprovement, ShoppingCategory, ShoppingItem } from '../types'
+import { CATEGORY_ORDER, CATEGORY_LABELS } from '../data/categories'
 import { LEX_BY_NAME } from '../data/ingredientLexicon'
 
 const MODEL_IDS: Record<AiModel, string> = {
@@ -63,10 +64,8 @@ function writeCache<T>(key: string, hash: string, data: T): void {
   }
 }
 
-const CATEGORIES: ShoppingCategory[] = [
-  'mejeri', 'kött', 'fisk', 'grönsaker', 'frukt',
-  'torrvaror', 'konserver', 'frys', 'bröd', 'kryddor', 'övrigt',
-]
+const CATEGORIES: ShoppingCategory[] = CATEGORY_ORDER
+const CATEGORY_GUIDE = CATEGORY_ORDER.map(c => `${c} = ${CATEGORY_LABELS[c]}`).join(', ')
 
 export interface AiMerge {
   itemIds: string[]
@@ -142,10 +141,10 @@ const CLEANUP_TOOL = {
   },
 } as const
 
-const SYSTEM_PROMPT = `Du är en assistent som städar en svensk inköpslista. Du får en lista med varor (med id, namn, mängd, enhet och kategori) och ska föreslå tre sorters ändringar:
+const SYSTEM_PROMPT = () => `Du är en assistent som städar en svensk inköpslista. Du får en lista med varor (med id, namn, mängd, enhet och kategori) och ska föreslå tre sorters ändringar:
 
 1. merges: Hitta varor som egentligen är samma produkt men inte slogs ihop automatiskt (t.ex. olika stavning, synonymer, en med och en utan beskrivande ord). Slå ENDAST ihop varor som verkligen är samma sak att köpa. Slå inte ihop olika produkter (t.ex. "färsk lax" och "rökt lax" är olika).
-2. recategorizations: För varor som ligger i kategorin "övrigt", välj den mest passande kategorin.
+2. recategorizations: För varor som ligger i fel kategori eller i "övrigt", välj den kategori där varan ligger i en ICA-butik. Kategorierna följer ICA:s varugrupper: ${CATEGORY_GUIDE}. Konserver, torra kryddor, oljor, såser, buljong, pasta, ris och bakvaror är skafferi. Frysta varor är djupfryst. Korv, skinka, bacon, hummus och färdigmat är chark.
 3. translations: Översätt eventuella engelska varunamn till svenska.
 
 Var konservativ – föreslå bara ändringar du är säker på. Returnera tomma listor om inget behöver ändras.`
@@ -179,7 +178,7 @@ export async function cleanupShoppingList(
     body: JSON.stringify({
       model,
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT(),
       tools: [CLEANUP_TOOL],
       tool_choice: { type: 'tool', name: 'submit_cleanup' },
       messages: [
@@ -767,7 +766,7 @@ export interface ProductMatchInput {
   unit: string
   /** Product the household picked last time, if any. */
   current?: number
-  candidates: Array<{ id: number; name: string; packSize: string; price: number; onSale: boolean; tags: string[] }>
+  candidates: Array<{ id: number; name: string; packSize: string; price: number; onSale: boolean; offer?: string; tags: string[] }>
 }
 
 export interface ProductMatch {
@@ -821,7 +820,7 @@ function rulesText(settings: AppSettings): string {
   return lines.join('\n')
 }
 
-const MATCH_SYSTEM = `Du hjälper ett svenskt hushåll att handla mat online på Mathem. För varje vara på inköpslistan får du mängd, enhet och produktkandidater från butikens sök (id, namn, förpackningsstorlek, pris, om den är på extrapris, och butikens etiketter som "Lactose free", "Från Sverige", "Ekologisk").
+const MATCH_SYSTEM = `Du hjälper ett svenskt hushåll att handla mat online (Mathem eller ICA). För varje vara på inköpslistan får du mängd, enhet och produktkandidater från butikens sök (id, namn, förpackningsstorlek, pris, om den är på extrapris, och butikens etiketter som "Lactose free", "Från Sverige", "Ekologisk", samt eventuellt erbjudande som "3 för 56 kr").
 
 Välj den kandidat som bäst motsvarar varan och räkna ut hur många förpackningar som behövs för att täcka mängden (minst 1). Tänk på:
 - Välj rätt sorts produkt, inte bara det som rankas högst (t.ex. "gul lök" ska vara lök, inte läsk; "fryst majs" ska vara fryst).
