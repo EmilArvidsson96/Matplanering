@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AnimatedDiv, AnimatedUl } from '../common/Animated'
 import { Minus, Plus, Search } from 'lucide-react'
 import type { MathemSuggestion, ShoppingItem } from '../../types'
@@ -23,8 +23,10 @@ function kr(n: number) {
 }
 
 /** The Mathem product suggested for one shopping row, shown under its name. */
-export default function MathemSuggestionLine({ item, onUpdate, open, onToggle, inlineEditor }: {
+export default function MathemSuggestionLine({ item, onUpdate, open, onToggle, inlineEditor, other }: {
   item: ShoppingItem
+  /** The other store's price for the same row, e.g. "ICA 13 kr". */
+  other?: ReactNode
   onUpdate: (patch: Partial<ShoppingItem>) => void
   open: boolean
   onToggle: () => void
@@ -64,6 +66,7 @@ export default function MathemSuggestionLine({ item, onUpdate, open, onToggle, i
           <span className="text-[13px] text-ink-muted whitespace-nowrap shrink-0">
             {s.quantity} st{Number.isFinite(p.price) ? ` · ${kr(p.price * s.quantity)}` : ''}
             {p.onSale && <span className="text-red-700"> %</span>}
+            {other && <span className="block text-[11px] text-right text-ink-faint">{other}</span>}
           </span>
         )}
       </button>
@@ -137,7 +140,6 @@ export function MathemRowEditor({ item, onUpdate, onClose }: {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mode = buyModeOf(item)
-  const stock = lookupByKey(item.name, settings.stockItems)?.[1]
   const pref = settings.productPreferences?.[ingredientKey(item.name)]
   const avoid = new Set(settings.productAvoid?.[ingredientKey(item.name)] ?? [])
 
@@ -176,24 +178,7 @@ export function MathemRowEditor({ item, onUpdate, onClose }: {
 
   return (
     <div className="border border-line-soft rounded-2xl p-3 space-y-3 bg-white">
-      <div className="space-y-1.5">
-        <p className="text-[11.5px] font-semibold tracking-wider uppercase text-ink-muted">Hur köper ni den här?</p>
-        <div role="radiogroup" aria-label="Hur köper ni den här?" className="grid grid-cols-3 gap-1 bg-canvas rounded-full p-1">
-          {MODES.map(m => (
-            <button
-              key={m.mode}
-              role="radio"
-              aria-checked={mode === m.mode}
-              onClick={() => mode !== m.mode && setBuyMode(item, m.mode)}
-              className={`h-9 rounded-full text-[12.5px] ${mode === m.mode ? 'bg-white font-semibold shadow-sm' : 'text-ink-soft'}`}
-            >{m.label}</button>
-          ))}
-        </div>
-        <p className="text-[12px] text-ink-muted">
-          {MODES.find(m => m.mode === mode)!.hint}
-          {stock && <> Nu: {levelLabel(stock)} kvar.</>}
-        </p>
-      </div>
+      <BuyModePicker item={item} />
 
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-2 text-[13px] text-ink-soft mr-auto">
@@ -288,6 +273,33 @@ export function MathemRowEditor({ item, onUpdate, onClose }: {
           : <span />}
         <button onClick={onClose} className="h-8 px-3 rounded-full bg-ink text-white text-xs font-semibold">Klar</button>
       </div>
+    </div>
+  )
+}
+
+/** "Hur köper ni den här?": by recipe, stock item, or always at home. */
+export function BuyModePicker({ item }: { item: ShoppingItem }) {
+  const { settings } = useSettingsStore()
+  const mode = buyModeOf(item)
+  const stock = lookupByKey(item.name, settings.stockItems)?.[1]
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11.5px] font-semibold tracking-wider uppercase text-ink-muted">Hur köper ni den här?</p>
+      <div role="radiogroup" aria-label="Hur köper ni den här?" className="grid grid-cols-3 gap-1 bg-canvas rounded-full p-1">
+        {MODES.map(m => (
+          <button
+            key={m.mode}
+            role="radio"
+            aria-checked={mode === m.mode}
+            onClick={() => mode !== m.mode && setBuyMode(item, m.mode)}
+            className={`h-9 rounded-full text-[12.5px] ${mode === m.mode ? 'bg-white font-semibold shadow-sm' : 'text-ink-soft'}`}
+          >{m.label}</button>
+        ))}
+      </div>
+      <p className="text-[12px] text-ink-muted">
+        {MODES.find(m => m.mode === mode)!.hint}
+        {stock && <> Nu: {levelLabel(stock)} kvar.</>}
+      </p>
     </div>
   )
 }

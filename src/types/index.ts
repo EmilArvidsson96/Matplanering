@@ -144,8 +144,30 @@ export interface ShoppingItem {
   deletedAt?: string
   /** Answered "Köp" to "Har du redan hemma?". */
   homeAnswer?: 'buy'
-  /** Suggested Mathem product (fetched on demand, saved with the week). */
+  /** Suggested Mathem product (fetched in the background, saved with the week). */
   mathem?: MathemSuggestion
+  /** Suggested ICA Handla product in the chosen ICA store (same idea as mathem). */
+  ica?: IcaSuggestion
+}
+
+/** What we keep about an ICA Handla product on a shopping row (price = last seen). */
+export interface IcaSnapshot {
+  /** Product UUID (used by the cart). */
+  productId: string
+  name: string
+  packSize: string
+  imageUrl?: string
+  price: number
+  onSale: boolean
+  /** e.g. "3 för 56 kr". */
+  offer?: string
+  url?: string
+}
+
+export interface IcaSuggestion extends Omit<MathemSuggestion, 'product' | 'saleAlt' | 'saleReason'> {
+  product: IcaSnapshot | null
+  /** ICA store number the price is from. */
+  store: string
 }
 
 /** What we keep about a Mathem product on a shopping row (price = last seen). */

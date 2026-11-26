@@ -23,8 +23,11 @@ interface MathemJob {
   total: number
   error: string | null
   /** Find products for rows without a suggestion (or all rows with refresh). */
-  start: (weekId: string, items: ShoppingItem[], opts?: { refresh?: boolean }) => void
+  start: (weekId: string, items: ShoppingItem[], opts?: { refresh?: boolean; retry?: boolean }) => void
 }
+
+/** Rows tried this session, so the automatic start doesn't retry a failing row in a loop. */
+const tried = new Set<string>()
 
 const AI_CHUNK = 15
 const SEARCH_CONCURRENCY = 4
@@ -70,8 +73,10 @@ export const useMathemJob = create<MathemJob>((set, get) => ({
 
   start: (weekId, allItems, opts) => {
     if (get().running) return
-    const items = allItems.filter(i => !i.isPurchased && !i.isExcluded && !i.deletedAt && (opts?.refresh || !i.mathem))
+    const items = allItems.filter(i => !i.isPurchased && !i.isExcluded && !i.deletedAt
+      && (opts?.refresh || (!i.mathem && (opts?.retry || !tried.has(i.id)))))
     if (items.length === 0) return
+    for (const i of items) tried.add(i.id)
     set({ running: true, weekId, pending: new Set(items.map(i => i.id)), total: items.length, error: null })
     run(weekId, items).finally(() => set({ running: false, pending: new Set() }))
   },
