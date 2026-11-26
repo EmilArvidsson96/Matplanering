@@ -1,15 +1,9 @@
 /**
- * Online stores behind one interface, so the cart review works the same for
- * Mathem and ICA Handla. Product ids are strings here (Mathem's numeric ids
- * are stringified).
+ * Store products in one shape (ICA Handla products are mapped into it) and
+ * the bookmarklet that fills a store's cart or the ICA list.
  */
 
-import type { ProductPreference, ShopId } from '../types'
-import { waitForIca } from '../store/icaPrefetch'
-import { searchMathem, cartHandoffUrl, claudeCartPrompt, type MathemProduct } from './mathem'
-import {
-  searchIca, icaProducts, icaCartHandoffUrl, icaCartClaudePrompt, ICA_HANDLA, type IcaProduct,
-} from './ica'
+import { ICA_HANDLA, type IcaProduct } from './ica'
 
 export interface StoreProduct {
   id: string
@@ -25,42 +19,9 @@ export interface StoreProduct {
   url: string
 }
 
-export interface CartLine { productId: string; quantity: number; label: string }
-
-export interface Shop {
-  id: ShopId
-  /** Short name for buttons and tabs, e.g. "Mathem", "ICA Häggvik". */
-  label: string
-  /** Where the bookmarklet runs, shown in the instructions. */
-  site: string
-  search: (query: string, limit?: number) => Promise<StoreProduct[]>
-  /** Look up an earlier choice (by id, falling back to a search on its name). */
-  findPreferred: (pref: ProductPreference) => Promise<StoreProduct | undefined>
-  handoffUrl: (lines: CartLine[]) => string
-  claudePrompt: (lines: CartLine[]) => string
-  /** Optional: get ready to search these queries (ICA fetches them slowly in the background). */
-  prepare?: (queries: string[]) => Promise<void>
-}
-
-// ── Mathem ──────────────────────────────────────────────────────────────────
-
-function fromMathem(p: MathemProduct): StoreProduct {
-  return { ...p, id: String(p.id) }
-}
-
-export const mathemShop: Shop = {
-  id: 'mathem',
-  label: 'Mathem',
-  site: 'mathem.se',
-  search: async (q, limit) => (await searchMathem(q, limit)).map(fromMathem),
-  findPreferred: async pref => (await searchMathem(pref.name, 12)).map(fromMathem).find(p => p.id === String(pref.productId)),
-  handoffUrl: lines => cartHandoffUrl(lines.map(l => ({ productId: Number(l.productId), quantity: l.quantity }))),
-  claudePrompt: lines => claudeCartPrompt(lines.map(l => ({ productId: Number(l.productId), quantity: l.quantity, label: l.label }))),
-}
-
 // ── ICA Handla ──────────────────────────────────────────────────────────────
 
-function fromIca(store: string, p: IcaProduct): StoreProduct {
+export function fromIca(store: string, p: IcaProduct): StoreProduct {
   const tags: string[] = []
   if (/sverige/i.test(p.country)) tags.push('Från Sverige')
   else if (p.country) tags.push(`Ursprung: ${p.country}`)
@@ -84,23 +45,6 @@ function fromIca(store: string, p: IcaProduct): StoreProduct {
 export function shortIcaName(name: string): string {
   const place = name.replace(/^(maxi\s+)?ica\s+(nära|supermarket|kvantum|stormarknad)?\s*/i, '').trim()
   return place ? `ICA ${place}` : name
-}
-
-export function icaShop(store: { id: string; name: string }): Shop {
-  return {
-    id: 'ica',
-    label: shortIcaName(store.name),
-    site: 'handlaprivatkund.ica.se',
-    search: async (q, limit) => (await searchIca(store.id, q, limit)).map(p => fromIca(store.id, p)),
-    findPreferred: async pref => {
-      const [byId] = await icaProducts(store.id, [String(pref.productId)])
-      if (byId) return fromIca(store.id, byId)
-      return (await searchIca(store.id, pref.name, 12)).map(p => fromIca(store.id, p)).find(p => p.name === pref.name)
-    },
-    handoffUrl: lines => icaCartHandoffUrl(store.id, lines),
-    claudePrompt: lines => icaCartClaudePrompt(store.id, lines),
-    prepare: queries => waitForIca(store.id, queries),
-  }
 }
 
 // ── Bookmarklet ─────────────────────────────────────────────────────────────

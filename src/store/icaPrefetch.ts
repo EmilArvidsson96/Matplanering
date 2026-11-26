@@ -1,6 +1,6 @@
 /**
  * Fetches ICA prices for the shopping list in the background, slowly, so the
- * cart review is ready when you open it and ICA isn't asked too much at once.
+ * store comparison fills in on its own and ICA isn't asked too much at once.
  * Runs while the app is open. When ICA asks us to wait (202), the job pauses
  * for several minutes instead of retrying.
  */
@@ -72,14 +72,4 @@ async function run() {
   } finally {
     useIcaPrefetch.setState({ running: false, pausedUntil: null })
   }
-}
-
-/** Resolves when every query has an answer in the cache (or the store changed). */
-export function waitForIca(store: string, queries: string[]): Promise<void> {
-  useIcaPrefetch.getState().want(store, queries)
-  const ready = () => queries.every(q => cachedIca(store, q)) || useIcaPrefetch.getState().store !== store
-  if (ready()) return Promise.resolve()
-  return new Promise(resolve => {
-    const unsub = useIcaPrefetch.subscribe(() => { if (ready()) { unsub(); resolve() } })
-  })
 }
